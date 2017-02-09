@@ -51,6 +51,83 @@ func init() {
 
 // ============================================================================
 
-func Test(t *testing.T) {
-	t.Logf("TODO")
+func TestAbort(t *testing.T) {
+	m, err := newMachine(nil, nil, 0, 0, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() {
+		if err := m.close(); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	thread, err := m.newThread(mmapPage)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if g, _ := thread.cpu.run([]Operation{
+		{Abort, 0},
+	}); g == 0 {
+		t.Fatal("expected non zero exit code")
+	}
+}
+
+func TestExit(t *testing.T) {
+	m, err := newMachine(nil, nil, 0, 0, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() {
+		if err := m.close(); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	thread, err := m.newThread(mmapPage)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	e := 42
+	if g, _ := thread.cpu.run([]Operation{
+		{Int32, e},
+		{Exit, 0},
+	}); g != e {
+		t.Fatal("exit code", g, e)
+	}
+}
+
+func TestKill(t *testing.T) {
+	m, err := newMachine(nil, nil, 0, 0, nil, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() {
+		if err := m.close(); err != nil {
+			t.Error(err)
+		}
+	}()
+
+	thread, err := m.newThread(mmapPage)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ch := make(chan int)
+	go func() {
+		es, _ := thread.cpu.run([]Operation{
+			{Jmp, 0},
+		})
+		ch <- es
+	}()
+
+	m.kill()
+	if g, e := <-ch, -1; g != e {
+		t.Fatal("kill", g, e)
+	}
 }

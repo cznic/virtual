@@ -32,7 +32,7 @@ cpu: clean
 edit:
 	@ 1>/dev/null 2>/dev/null gvim -p Makefile *.go
 
-editor:
+editor: opcode_string.go
 	gofmt -l -s -w *.go
 	go test -i
 	go test 2>&1 | tee log
@@ -51,6 +51,9 @@ mem: clean
 
 nuke: clean
 	go clean -i
+
+opcode_string.go: enum.go
+	stringer -type Opcode enum.go
 
 todo:
 	@grep -nr $(grep) ^[[:space:]]*_[[:space:]]*=[[:space:]][[:alpha:]][[:alnum:]]* * | grep -v $(ngrep) || true
