@@ -40,6 +40,17 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 	for i, op := range code {
 		lo := strings.ToLower(op.Opcode.String())
 		switch op.Opcode {
+		case AP:
+			switch {
+			case op.N == 0:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sap\n", start+i, width, "push"); err != nil {
+					return err
+				}
+			default:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sap%+#x\n", start+i, width, "push", op.N); err != nil {
+					return err
+				}
+			}
 		case AddSP:
 			switch {
 			case op.N > 0:
@@ -71,12 +82,14 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 				return err
 			}
 		case // no N
-			Abort,
 			Arguments,
-			Exit,
 			Panic,
 			Return,
-			Store32:
+			Store32,
+			abort,
+			exit,
+			printf:
+
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
 				return err
 			}
@@ -105,17 +118,6 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 		case Int32:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, "push32", uint(op.N)); err != nil {
 				return err
-			}
-		case RP:
-			switch {
-			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*srp\n", start+i, width, "push"); err != nil {
-					return err
-				}
-			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*srp%+#x\n", start+i, width, "push", op.N); err != nil {
-					return err
-				}
 			}
 		case Text:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sts%+#x\n", start+i, width, "push", op.N); err != nil {

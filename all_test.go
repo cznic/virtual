@@ -69,7 +69,7 @@ func TestAbort(t *testing.T) {
 	}
 
 	if g, _ := thread.cpu.run([]Operation{
-		{Abort, 0},
+		{abort, 0},
 	}); g == 0 {
 		t.Fatal("expected non zero exit code")
 	}
@@ -95,7 +95,7 @@ func TestExit(t *testing.T) {
 	e := 42
 	if g, _ := thread.cpu.run([]Operation{
 		{Int32, e},
-		{Exit, 0},
+		{exit, 0},
 	}); g != e {
 		t.Fatal("exit code", g, e)
 	}

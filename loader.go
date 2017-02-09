@@ -12,6 +12,26 @@ import (
 	"github.com/cznic/mathutil"
 )
 
+var (
+	builtins   = map[ir.NameID]Opcode{}
+	nonReturns = map[Opcode]struct{}{
+		abort: {},
+		exit:  {},
+		Panic: {},
+	}
+)
+
+func registerBuiltins(m map[int]Opcode) {
+	for k, v := range m {
+		nm := ir.NameID(k)
+		if _, ok := builtins[nm]; ok {
+			panic("internal error")
+		}
+
+		builtins[nm] = v
+	}
+}
+
 type PCInfo struct {
 	PC     int
 	Line   int
@@ -89,7 +109,15 @@ func (l *loader) emitOne(op Operation) {
 	ip := len(l.out.Code)
 	if ip != 0 {
 		prev = l.out.Code[ip-1]
+		if _, ok := nonReturns[prev.Opcode]; ok {
+			switch op.Opcode {
+			case Func:
+			default:
+				return
+			}
+		}
 	}
+
 	switch op.Opcode {
 	case AddSP:
 		if prev.Opcode == AddSP {
@@ -220,12 +248,17 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 		case *ir.Call:
 			fn := calls[len(calls)-1]
 			calls = calls[:len(calls)-1]
-			switch {
-			case fn < 0: // fn ptr
+			if fn < 0 { // fn ptr
 				panic("TODO")
-			default:
-				l.emit(l.pos(x), Operation{Opcode: Call, N: fn})
+				break
 			}
+
+			if opcode, ok := builtins[l.objects[fn].(*ir.FunctionDefinition).NameID]; ok {
+				l.emit(l.pos(x), Operation{Opcode: opcode})
+				break
+			}
+
+			l.emit(l.pos(x), Operation{Opcode: Call, N: fn})
 		case *ir.StringConst:
 			p, ok := l.strings[x.Value]
 			if !ok {
@@ -253,7 +286,7 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 		case *ir.Result:
 			switch {
 			case x.Address:
-				l.emit(l.pos(x), Operation{Opcode: RP, N: results[x.Index].off})
+				l.emit(l.pos(x), Operation{Opcode: AP, N: results[x.Index].off})
 			default:
 				panic("TODO")
 			}
@@ -307,6 +340,10 @@ func (l *loader) load() {
 	for i, v := range l.objects {
 		switch x := v.(type) {
 		case *ir.FunctionDefinition:
+			if _, ok := builtins[x.NameID]; ok {
+				break
+			}
+
 			l.m[i] = len(l.out.Code)
 			l.loadFunctionDefinition(x)
 		}

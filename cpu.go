@@ -72,12 +72,13 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		}
 
-		fmt.Printf("# cpu\t%s", dumpCodeStr(code[c.ip:c.ip+1], int(c.ip))) //TODO-
-		op := code[c.ip]                                                   //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
+		//fmt.Printf("# cpu\t%s", dumpCodeStr(code[c.ip:c.ip+1], int(c.ip))) //TODO-
+		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
-		case Abort: // -
-			return 1, nil
+		case AP: // -> ptr
+			c.sp -= i32StackSz
+			c.writePtr(c.sp, c.ap+uintptr(op.N))
 		case AddSP: // -
 			c.sp += uintptr(op.N)
 		case Argument32: // -> val
@@ -89,16 +90,13 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Arguments: // -
 			c.rpStack = append(c.rpStack, c.rp)
 			c.rp = c.sp
-		case BP: // -> val
+		case BP: // -> ptr
 			c.sp -= ptrSize
 			c.writePtr(c.sp, c.bp+uintptr(op.N))
 		case Call: // -> results
 			c.sp -= ptrStackSz
 			c.writePtr(c.sp, c.ip)
 			c.ip = uintptr(op.N)
-		case Exit: // -
-			// void __builtin_exit(int status);
-			return int(c.readI32(c.sp)), nil
 		case Func: // N: bp offset of variable[n-1])
 			// ...higher addresses
 			//
@@ -170,6 +168,19 @@ func (c *cpu) run(code []Operation) (int, error) {
 			// nop
 		case Panic: // -
 			panic(c.trace(code))
+		case Return:
+			c.sp = c.bp
+			c.bp = c.readPtr(c.sp)
+			c.sp += ptrStackSz
+			ap := c.readPtr(c.sp)
+			c.sp += ptrStackSz
+			c.ip = c.readPtr(c.sp)
+			c.sp += ptrStackSz
+			n := len(c.rpStack)
+			c.rp = c.rpStack[n-1]
+			c.rpStack = c.rpStack[:n-1]
+			c.sp = c.ap
+			c.ap = ap
 		case Store32: // adr, val -> val
 			v := c.readI32(c.sp)
 			c.sp += i32StackSz
@@ -182,11 +193,27 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Variable32: // -> val
 			c.sp -= i32StackSz
 			c.writeI32(c.sp, c.readI32(c.bp+uintptr(op.N)))
+
+		case abort:
+			return 1, nil
+		case exit:
+			return int(c.readI32(c.sp)), nil
+		case printf:
+			c.builtin(c.printf)
+
 		default:
 			s := dumpCodeStr(code[c.ip-1:c.ip], int(c.ip)-1)
-			panic(fmt.Errorf("%s\t// %s", s[:len(s)-1], op))
+			panic(fmt.Errorf("instruction trap:\t%s\t// %s", s[:len(s)-1], op))
 		}
 	}
+}
+
+func (c *cpu) builtin(f func()) {
+	f()
+	n := len(c.rpStack)
+	c.sp = c.rp
+	c.rp = c.rpStack[n-1]
+	c.rpStack = c.rpStack[:n-1]
 }
 
 func (c *cpu) trace(code []Operation) error {

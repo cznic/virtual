@@ -9,21 +9,25 @@ type Opcode int
 const (
 	Nop Opcode = iota
 
-	Abort
 	AddSP      // N
 	Argument32 // N
 	Argument64 // N
 	Arguments
-	BP   // N
-	Call // N
-	Exit
+	BP    // N
+	Call  // N
 	Func  // N
 	Int32 // N
 	Jmp   // N
 	Panic
-	RP // N
+	AP // N
 	Return
 	Store32
 	Text       // N
 	Variable32 // N
+
+	// builtins
+
+	abort
+	exit
+	printf
 )
