@@ -6,7 +6,6 @@ package virtual
 
 import (
 	"errors"
-	"sort"
 
 	"github.com/cznic/internal/buffer"
 )
@@ -35,6 +34,7 @@ type cpu struct {
 	ts      uintptr // Text segment
 }
 
+func (c *cpu) addPtr(p uintptr, v uintptr)       { *(*uintptr)(unsafe.Pointer(p)) += v }
 func (c *cpu) readC128(p uintptr) complex128     { return *(*complex128)(unsafe.Pointer(p)) }
 func (c *cpu) readC64(p uintptr) complex64       { return *(*complex64)(unsafe.Pointer(p)) }
 func (c *cpu) readF32(p uintptr) float32         { return *(*float32)(unsafe.Pointer(p)) }
@@ -79,6 +79,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case AP: // -> ptr
 			c.sp -= i32StackSz
 			c.writePtr(c.sp, c.ap+uintptr(op.N))
+		case AddI32: // a, b -> a + b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			c.writeI32(c.sp, c.readI32(c.sp)+b)
+		case AddPtr:
+			c.addPtr(c.sp, uintptr(op.N))
 		case AddSP: // -
 			c.sp += uintptr(op.N)
 		case Argument32: // -> val
@@ -97,6 +103,15 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp -= ptrStackSz
 			c.writePtr(c.sp, c.ip)
 			c.ip = uintptr(op.N)
+		case Dup32:
+			v := c.readI32(c.sp)
+			c.sp -= i32StackSz
+			c.writeI32(c.sp, v)
+		case EqI32: // a, b -> a == b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			a := c.readI32(c.sp)
+			c.bool(a == b)
 		case Func: // N: bp offset of variable[n-1])
 			// ...higher addresses
 			//
@@ -159,15 +174,57 @@ func (c *cpu) run(code []Operation) (int, error) {
 			// result[i]	ap + sum(stack size result[0..n-1]) - sum(stack size result[0..i])
 			// argument[i]	ap - sum(stack size argument[0..i])
 			// variable[i]	bp - sum(stack size variable[0..i])
+		case IndexI32: // addr, index -> addr + n*index
+			x := c.readI32(c.sp)
+			c.sp += i32StackSz
+			c.addPtr(c.sp, uintptr(op.N*int(x)))
 		case Int32: // -> val
 			c.sp -= i32StackSz
 			c.writeI32(c.sp, int32(op.N))
 		case Jmp: // -
 			c.ip = uintptr(op.N)
+		case Jnz: // val ->
+			v := c.readI32(c.sp)
+			c.sp += i32StackSz
+			if v != 0 {
+				c.ip = uintptr(op.N)
+			}
+		case Jz: // val ->
+			v := c.readI32(c.sp)
+			c.sp += i32StackSz
+			if v == 0 {
+				c.ip = uintptr(op.N)
+			}
+		case Label: // -
+			// nop
+		case LeqI32: // a, b -> a <= b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			a := c.readI32(c.sp)
+			c.bool(a <= b)
+		case LtI32: // a, b -> a < b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			a := c.readI32(c.sp)
+			c.bool(a < b)
+		case Load32: // addr -> (addr+n)
+			p := c.readPtr(c.sp)
+			c.sp += ptrStackSz - i32StackSz
+			c.writeI32(c.sp, c.readI32(p+uintptr(op.N)))
+		case MulI32: // a, b -> a * b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			c.writeI32(c.sp, c.readI32(c.sp)*b)
 		case Nop: // -
 			// nop
 		case Panic: // -
-			panic(c.trace(code))
+			return -1, c.trace(code)
+		case PostIncI32: // adr -> (*adr)++
+			p := c.readPtr(c.sp)
+			c.sp += ptrStackSz - i32StackSz
+			v := c.readI32(p)
+			c.writeI32(c.sp, v)
+			c.writeI32(p, v+1)
 		case Return:
 			c.sp = c.bp
 			c.bp = c.readPtr(c.sp)
@@ -187,6 +244,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.writeI32(c.readPtr(c.sp), v)
 			c.sp += ptrStackSz - i32StackSz
 			c.writeI32(c.sp, v)
+		case SubI32: // a, b -> a - b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			c.writeI32(c.sp, c.readI32(c.sp)-b)
 		case Text:
 			c.sp -= ptrStackSz
 			c.writePtr(c.sp, c.ts+uintptr(op.N))
@@ -202,10 +263,18 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.printf)
 
 		default:
-			s := dumpCodeStr(code[c.ip-1:c.ip], int(c.ip)-1)
-			panic(fmt.Errorf("instruction trap:\t%s\t// %s", s[:len(s)-1], op))
+			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.trace(code))
 		}
 	}
+}
+
+func (c *cpu) bool(b bool) {
+	if b {
+		c.writeI32(c.sp, 1)
+		return
+	}
+
+	c.writeI32(c.sp, 0)
 }
 
 func (c *cpu) builtin(f func()) {
@@ -221,21 +290,24 @@ func (c *cpu) trace(code []Operation) error {
 	bp := c.bp
 	ip := c.ip - 1
 	sp := c.sp
+	ap := c.ap
+	rpStack := c.rpStack
 	for ip < uintptr(len(code)) {
-		var fi, li PCInfo
-		if i := sort.Search(len(c.m.functions), func(i int) bool { return c.m.functions[i].PC >= int(ip) }); i <= len(c.m.functions) {
-			if i > 0 {
-				fi = c.m.functions[i-1]
-			}
-		}
-		if i := sort.Search(len(c.m.lines), func(i int) bool { return c.m.lines[i].PC >= int(ip) }); i < len(c.m.lines) {
-			li = c.m.lines[i]
-		}
+		fi := c.m.pcInfo(int(ip), c.m.functions)
+		li := c.m.pcInfo(int(ip), c.m.lines)
 		switch p := li.Position(); {
 		case p.IsValid():
-			fp := fi.Position()
-			fp.Filename = p.Filename
-			fmt.Fprintf(&buf, "%s: %s\n", fp, dict.S(int(fi.Name)))
+			fmt.Fprintf(&buf, "%s.%s(", p.Filename, dict.S(int(fi.Name)))
+			for i := 0; i < fi.C; i++ {
+				if i != 0 {
+					fmt.Fprintf(&buf, ", ")
+				}
+				ap -= stackAlign
+				fmt.Fprintf(&buf, "%#x", c.readI64(ap))
+			}
+			ap = rpStack[len(rpStack)-1] - stackAlign
+			rpStack = rpStack[:len(rpStack)-1]
+			fmt.Fprintf(&buf, ")\n")
 			fmt.Fprintf(&buf, "\t%s\t", li.Position())
 			dumpCode(&buf, code[ip:ip+1], int(ip))
 		default:

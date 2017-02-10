@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/cznic/internal/buffer"
+	"github.com/cznic/ir"
 )
 
 type KillError struct{}
@@ -77,15 +78,43 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			}
-		case Call: // default
+		case // default format
+			AddPtr,
+			Call,
+			IndexI32,
+			Jmp,
+			Jnz,
+			Jz,
+			Load32:
+
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, lo, op.N); err != nil {
 				return err
 			}
+		case Label:
+			switch {
+			case op.N < 0:
+				if _, err := fmt.Fprintf(w, "%#05x\t%v:\n", start+i, ir.NameID(-op.N)); err != nil {
+					return err
+				}
+			default:
+				if _, err := fmt.Fprintf(w, "%#05x\t%v:\n", start+i, op.N); err != nil {
+					return err
+				}
+			}
 		case // no N
+			AddI32,
 			Arguments,
+			Dup32,
+			EqI32,
+			LeqI32,
+			LtI32,
+			MulI32,
 			Panic,
+			PostIncI32,
 			Return,
 			Store32,
+			SubI32,
+
 			abort,
 			exit,
 			printf:

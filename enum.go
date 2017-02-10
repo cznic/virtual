@@ -9,19 +9,34 @@ type Opcode int
 const (
 	Nop Opcode = iota
 
+	AP // N
+	AddI32
+	AddPtr     // N
 	AddSP      // N
 	Argument32 // N
 	Argument64 // N
 	Arguments
-	BP    // N
-	Call  // N
-	Func  // N
-	Int32 // N
-	Jmp   // N
+	BP   // N
+	Call // N
+	Dup32
+	EqI32
+	Func     // N
+	Index    // N
+	IndexI32 // N
+	Int32    // N
+	Jmp      // N
+	Jnz      // N
+	Jz       // N
+	Label    // N //TODO-
+	LeqI32
+	Load32 // N
+	LtI32
+	MulI32
 	Panic
-	AP // N
+	PostIncI32
 	Return
 	Store32
+	SubI32
 	Text       // N
 	Variable32 // N
 
