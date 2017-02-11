@@ -15,6 +15,7 @@ import (
 	"unsafe"
 )
 
+// Operation is the machine code.
 type Operation struct {
 	Opcode
 	N int
@@ -23,6 +24,7 @@ type Operation struct {
 type cpu struct {
 	ap      uintptr // Arguments pointer
 	bp      uintptr // Base pointer
+	bss     uintptr // Zero data in data segment
 	ds      uintptr // Data segment
 	ip      uintptr // Instruction pointer
 	m       *machine
@@ -62,7 +64,70 @@ func (c *cpu) writeU32(p uintptr, v uint32)      { *(*uint32)(unsafe.Pointer(p))
 func (c *cpu) writeU64(p uintptr, v uint64)      { *(*uint64)(unsafe.Pointer(p)) = v }
 func (c *cpu) writeU8(p uintptr, v uint8)        { *(*uint8)(unsafe.Pointer(p)) = v }
 
+func (c *cpu) bool(b bool) {
+	if b {
+		c.writeI32(c.sp, 1)
+		return
+	}
+
+	c.writeI32(c.sp, 0)
+}
+
+func (c *cpu) builtin(f func()) {
+	f()
+	n := len(c.rpStack)
+	c.sp = c.rp
+	c.rp = c.rpStack[n-1]
+	c.rpStack = c.rpStack[:n-1]
+}
+
+func (c *cpu) trace(code []Operation) error {
+	var buf buffer.Bytes
+	bp := c.bp
+	ip := c.ip - 1
+	sp := c.sp
+	ap := c.ap
+	rpStack := c.rpStack
+	for ip < uintptr(len(code)) {
+		fi := c.m.pcInfo(int(ip), c.m.functions)
+		li := c.m.pcInfo(int(ip), c.m.lines)
+		switch p := li.Position(); {
+		case p.IsValid():
+			fmt.Fprintf(&buf, "%s.%s(", p.Filename, dict.S(int(fi.Name)))
+			for i := 0; i < fi.C; i++ {
+				if i != 0 {
+					fmt.Fprintf(&buf, ", ")
+				}
+				ap -= stackAlign
+				fmt.Fprintf(&buf, "%#x", c.readI64(ap))
+			}
+			ap = rpStack[len(rpStack)-1] - stackAlign
+			rpStack = rpStack[:len(rpStack)-1]
+			fmt.Fprintf(&buf, ")\n")
+			fmt.Fprintf(&buf, "\t%s\t", li.Position())
+			dumpCode(&buf, code[ip:ip+1], int(ip))
+		default:
+			dumpCode(&buf, code[ip:ip+1], int(ip))
+		}
+		sp = bp
+		bp = c.readPtr(sp)
+		sp += 2 * ptrStackSz
+		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem) {
+			break
+		}
+
+		ip = c.readPtr(sp) - 1
+	}
+	return errors.New(string(buf.Bytes()))
+}
+
 func (c *cpu) run(code []Operation) (int, error) {
+	defer func() {
+		if err := recover(); err != nil {
+			panic(fmt.Errorf("%v\n%s", err, c.trace(code)))
+		}
+	}()
+
 	for i := 0; ; i++ {
 		if i&1024 == 0 {
 			select {
@@ -72,7 +137,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		}
 
-		//fmt.Printf("# cpu\t%s", dumpCodeStr(code[c.ip:c.ip+1], int(c.ip))) //TODO-
+		// fmt.Printf("# cpu\t%s", dumpCodeStr(code[c.ip:c.ip+1], int(c.ip))) //TODO-
 		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
@@ -99,6 +164,9 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case BP: // -> ptr
 			c.sp -= ptrSize
 			c.writePtr(c.sp, c.bp+uintptr(op.N))
+		case BSS: // -> ptr
+			c.sp -= ptrSize
+			c.writePtr(c.sp, c.bss+uintptr(op.N))
 		case Call: // -> results
 			c.sp -= ptrStackSz
 			c.writePtr(c.sp, c.ip)
@@ -195,8 +263,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			if v == 0 {
 				c.ip = uintptr(op.N)
 			}
-		case Label: // -
-			// nop
+		//TODO- case Label: // -
+		//TODO- 	// nop
 		case LeqI32: // a, b -> a <= b
 			b := c.readI32(c.sp)
 			c.sp += i32StackSz
@@ -244,6 +312,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.writeI32(c.readPtr(c.sp), v)
 			c.sp += ptrStackSz - i32StackSz
 			c.writeI32(c.sp, v)
+		case Store64: // adr, val -> val
+			v := c.readI64(c.sp)
+			c.sp += i64StackSz
+			c.writeI64(c.readPtr(c.sp), v)
+			c.sp += ptrStackSz - i64StackSz
+			c.writeI64(c.sp, v)
 		case SubI32: // a, b -> a - b
 			b := c.readI32(c.sp)
 			c.sp += i32StackSz
@@ -254,6 +328,9 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Variable32: // -> val
 			c.sp -= i32StackSz
 			c.writeI32(c.sp, c.readI32(c.bp+uintptr(op.N)))
+		case Variable64: // -> val
+			c.sp -= i64StackSz
+			c.writeI64(c.sp, c.readI64(c.bp+uintptr(op.N)))
 
 		case abort:
 			return 1, nil
@@ -266,61 +343,4 @@ func (c *cpu) run(code []Operation) (int, error) {
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.trace(code))
 		}
 	}
-}
-
-func (c *cpu) bool(b bool) {
-	if b {
-		c.writeI32(c.sp, 1)
-		return
-	}
-
-	c.writeI32(c.sp, 0)
-}
-
-func (c *cpu) builtin(f func()) {
-	f()
-	n := len(c.rpStack)
-	c.sp = c.rp
-	c.rp = c.rpStack[n-1]
-	c.rpStack = c.rpStack[:n-1]
-}
-
-func (c *cpu) trace(code []Operation) error {
-	var buf buffer.Bytes
-	bp := c.bp
-	ip := c.ip - 1
-	sp := c.sp
-	ap := c.ap
-	rpStack := c.rpStack
-	for ip < uintptr(len(code)) {
-		fi := c.m.pcInfo(int(ip), c.m.functions)
-		li := c.m.pcInfo(int(ip), c.m.lines)
-		switch p := li.Position(); {
-		case p.IsValid():
-			fmt.Fprintf(&buf, "%s.%s(", p.Filename, dict.S(int(fi.Name)))
-			for i := 0; i < fi.C; i++ {
-				if i != 0 {
-					fmt.Fprintf(&buf, ", ")
-				}
-				ap -= stackAlign
-				fmt.Fprintf(&buf, "%#x", c.readI64(ap))
-			}
-			ap = rpStack[len(rpStack)-1] - stackAlign
-			rpStack = rpStack[:len(rpStack)-1]
-			fmt.Fprintf(&buf, ")\n")
-			fmt.Fprintf(&buf, "\t%s\t", li.Position())
-			dumpCode(&buf, code[ip:ip+1], int(ip))
-		default:
-			dumpCode(&buf, code[ip:ip+1], int(ip))
-		}
-		sp = bp
-		bp = c.readPtr(sp)
-		sp += 2 * ptrStackSz
-		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem) {
-			break
-		}
-
-		ip = c.readPtr(sp) - 1
-	}
-	return errors.New(string(buf.Bytes()))
 }

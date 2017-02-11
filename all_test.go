@@ -126,7 +126,7 @@ func TestKill(t *testing.T) {
 		ch <- es
 	}()
 
-	m.kill()
+	m.Kill()
 	if g, e := <-ch, -1; g != e {
 		t.Fatal("kill", g, e)
 	}

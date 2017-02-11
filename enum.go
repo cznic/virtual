@@ -4,8 +4,10 @@
 
 package virtual
 
+// Opcode encodes the particular operation.
 type Opcode int
 
+// Values of Opcode.
 const (
 	Nop Opcode = iota
 
@@ -17,6 +19,7 @@ const (
 	Argument64 // N
 	Arguments
 	BP   // N
+	BSS  // N
 	Call // N
 	Dup32
 	EqI32
@@ -27,7 +30,7 @@ const (
 	Jmp      // N
 	Jnz      // N
 	Jz       // N
-	Label    // N //TODO-
+	Label    // N
 	LeqI32
 	Load32 // N
 	LtI32
@@ -36,9 +39,11 @@ const (
 	PostIncI32
 	Return
 	Store32
+	Store64
 	SubI32
 	Text       // N
 	Variable32 // N
+	Variable64 // N
 
 	// builtins
 

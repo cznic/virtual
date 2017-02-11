@@ -13,17 +13,22 @@ import (
 	"github.com/cznic/ir"
 )
 
+// KillError is the error returned by the CPU of a killed machine.
 type KillError struct{}
 
+// Error implements error.
 func (e KillError) Error() string { return "SIGKILL" }
 
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
 func roundup(n, m int) int { return (n + m - 1) &^ (m - 1) }
 
+// DumpCode outputs code to w, assuming it is located at start.
 func DumpCode(w io.Writer, code []Operation, start int) error {
 	return dumpCode(w, code, 0)
 }
 
+// DumpCodeStr is like DumpCode but it returns a buffer.Bytes instead. Recycle
+// the result using its Close method.
 func DumpCodeStr(code []Operation, start int) buffer.Bytes {
 	var buf buffer.Bytes
 	dumpCode(&buf, code, start)
@@ -78,6 +83,17 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			}
+		case BSS:
+			switch {
+			case op.N == 0:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sbss\n", start+i, width, "push"); err != nil {
+					return err
+				}
+			default:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sbss%+#x\n", start+i, width, "push", op.N); err != nil {
+					return err
+				}
+			}
 		case // default format
 			AddPtr,
 			Call,
@@ -113,6 +129,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			PostIncI32,
 			Return,
 			Store32,
+			Store64,
 			SubI32,
 
 			abort,
@@ -154,6 +171,10 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			}
 		case Variable32:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push32", op.N); err != nil {
+				return err
+			}
+		case Variable64:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push64", op.N); err != nil {
 				return err
 			}
 		default:

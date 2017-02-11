@@ -115,7 +115,7 @@ func (m *machine) CString(s string) uintptr {
 }
 
 func (m *machine) close() (err error) {
-	m.kill()
+	m.Kill()
 	if m.dsMem != nil {
 		if e := m.dsMem.Unmap(); e != nil && err == nil {
 			err = e
@@ -163,7 +163,7 @@ func (m *machine) pcInfo(pc int, infos []PCInfo) PCInfo {
 	return PCInfo{}
 }
 
-func (m *machine) kill() {
+func (m *machine) Kill() {
 	m.stopMu.Lock()
 	if !m.stopped {
 		close(m.stop)
@@ -192,6 +192,7 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 	t := &thread{
 		cpu: cpu{
 			bp:   0xdeadbeef,
+			bss:  m.bss,
 			ds:   m.ds,
 			m:    m,
 			sp:   ss + uintptr(stackSize),

@@ -32,17 +32,20 @@ func registerBuiltins(m map[int]Opcode) {
 	}
 }
 
+// PCInfo represents a line/function for a particular program counter location.
 type PCInfo struct {
 	PC   int
 	Line int
-	C    int       // Column of # of arguments.
-	Name ir.NameID // File name of func name.
+	C    int       // Column or # of arguments.
+	Name ir.NameID // File name or func name.
 }
 
-func (l *PCInfo) Position() token.Position {
-	return token.Position{Line: l.Line, Column: l.C, Filename: string(dict.S(int(l.Name)))}
+// Position returns a token.Position from p.
+func (p *PCInfo) Position() token.Position {
+	return token.Position{Line: p.Line, Column: p.C, Filename: string(dict.S(int(p.Name)))}
 }
 
+// Binary represents a loaded program image. It can be run via Exec.
 type Binary struct {
 	BSS       int
 	Code      []Operation
@@ -63,7 +66,6 @@ type nfo struct {
 }
 
 type loader struct {
-	bss        int
 	m          map[int]int // Object #: {BSS,Code,Data,Text} index.
 	model      ir.MemoryModel
 	objects    []ir.Object
@@ -102,7 +104,16 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition) int {
 	case d.Value != nil:
 		panic("TODO")
 	default:
-		panic("TODO")
+		r := l.out.BSS
+		sz := l.model.Sizeof(l.tc.MustType(d.TypeID))
+		if sz > mathutil.MaxInt {
+			panic(fmt.Errorf("sizeof(%s) overflows int", d.TypeID))
+		}
+		l.out.BSS += roundup(int(sz), mallocAlign)
+		if l.out.BSS < r {
+			panic(fmt.Errorf("%s: bss overflow on %s", d.Position, d.NameID))
+		}
+		return r
 	}
 }
 
@@ -230,7 +241,7 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 		n = variables[m-1].off
 	}
 	fp := f.Position
-	fi := PCInfo{PC: len(l.out.Code), Line: fp.Line, C: len(arguments), Name: ir.NameID(f.NameID)}
+	fi := PCInfo{PC: len(l.out.Code), Line: fp.Line, C: len(arguments), Name: f.NameID}
 	l.out.Functions = append(l.out.Functions, fi)
 	l.emit(l.pos(f.Body[0]), Operation{Opcode: Func, N: n})
 	ip0 := l.ip()
@@ -315,10 +326,23 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 			}
 		case *ir.Extern:
 			switch ex := l.objects[x.Index].(type) {
+			case *ir.DataDefinition:
+				switch {
+				case x.Address:
+					switch {
+					case ex.Value != nil:
+						panic(fmt.Errorf("TODO %#x", ip))
+					default:
+						l.emit(l.pos(x), Operation{Opcode: BSS, N: l.m[x.Index]})
+					}
+				default:
+					panic(fmt.Errorf("TODO %#x", ip))
+				}
 			case *ir.FunctionDefinition:
 				if !x.Address {
 					panic(fmt.Errorf("invalid IR"))
 				}
+
 				calls = append(calls, x.Index)
 			default:
 				panic(fmt.Errorf("TODO %T(%v)", ex, ex))
@@ -370,6 +394,13 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 			default:
 				panic(fmt.Errorf("TODO %v", t.Kind()))
 			}
+		case *ir.Load:
+			switch l.sizeof(l.tc.MustType(x.TypeID).(*ir.PointerType).Element.ID()) {
+			case 4:
+				l.emit(l.pos(x), Operation{Opcode: Load32})
+			default:
+				panic(fmt.Errorf("%s: internal error %s", x.Position, x.TypeID))
+			}
 		case *ir.Lt:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
@@ -413,8 +444,10 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 			switch l.sizeof(x.TypeID) {
 			case 4:
 				l.emit(l.pos(x), Operation{Opcode: Store32})
+			case 8:
+				l.emit(l.pos(x), Operation{Opcode: Store64})
 			default:
-				panic(fmt.Errorf("internal error %s", x.TypeID))
+				panic(fmt.Errorf("%s: internal error %s", x.Position, x.TypeID))
 			}
 		case *ir.StringConst:
 			p, ok := l.strings[x.Value]
@@ -438,6 +471,8 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 				switch val := variables[x.Index]; val.sz {
 				case 4:
 					l.emit(l.pos(x), Operation{Opcode: Variable32, N: val.off})
+				case 8:
+					l.emit(l.pos(x), Operation{Opcode: Variable64, N: val.off})
 				default:
 					panic(fmt.Errorf("internal error %v", val))
 				}
@@ -446,6 +481,29 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 			switch v := x.Value.(type) {
 			case nil:
 				// nop
+			case *ir.AddressValue:
+				switch v.Linkage {
+				case ir.ExternalLinkage:
+					switch ex := l.objects[v.Index].(type) {
+					case *ir.DataDefinition:
+						switch {
+						case ex.Value != nil:
+							panic("TODO")
+						default:
+							l.emit(l.pos(x),
+								Operation{Opcode: BP, N: variables[x.Index].off},
+								Operation{Opcode: BSS, N: l.m[v.Index]},
+								Operation{Opcode: Store64},
+							)
+						}
+					default:
+						panic(fmt.Errorf("%s.%05x: TODO %T(%v)", f.NameID, ip, ex, ex))
+					}
+				case ir.InternalLinkage:
+					panic(fmt.Errorf("%s.%05x: TODO %T(%v)", f.NameID, ip, v, v))
+				default:
+					panic(fmt.Errorf("%s.%05x: internal error %T(%v)", f.NameID, ip, v, v))
+				}
 			case *ir.Int32Value:
 				l.emit(l.pos(x),
 					Operation{Opcode: BP, N: variables[x.Index].off},
@@ -453,7 +511,7 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 					Operation{Opcode: Store32},
 				)
 			default:
-				panic(fmt.Errorf("TODO %T(%v)", v, v))
+				panic(fmt.Errorf("%05x: TODO %T(%v)", ip, v, v))
 			}
 		default:
 			panic(fmt.Errorf("TODO %T\n\t%#05x\t%v", x, ip, x))
@@ -493,6 +551,7 @@ func (l *loader) load() {
 	}
 }
 
+// Load translates objects into a Binary or an error, if any.
 func Load(model string, objects []ir.Object) (_ *Binary, err error) {
 	if !Testing {
 		defer func() {

@@ -4,9 +4,9 @@ package virtual
 
 import "fmt"
 
-const _Opcode_name = "NopAPAddI32AddPtrAddSPArgument32Argument64ArgumentsBPCallDup32EqI32FuncIndexIndexI32Int32JmpJnzJzLabelLeqI32Load32LtI32MulI32PanicPostIncI32ReturnStore32SubI32TextVariable32abortexitprintf"
+const _Opcode_name = "NopAPAddI32AddPtrAddSPArgument32Argument64ArgumentsBPBSSCallDup32EqI32FuncIndexIndexI32Int32JmpJnzJzLabelLeqI32Load32LtI32MulI32PanicPostIncI32ReturnStore32Store64SubI32TextVariable32Variable64abortexitprintf"
 
-var _Opcode_index = [...]uint8{0, 3, 5, 11, 17, 22, 32, 42, 51, 53, 57, 62, 67, 71, 76, 84, 89, 92, 95, 97, 102, 108, 114, 119, 125, 130, 140, 146, 153, 159, 163, 173, 178, 182, 188}
+var _Opcode_index = [...]uint8{0, 3, 5, 11, 17, 22, 32, 42, 51, 53, 56, 60, 65, 70, 74, 79, 87, 92, 95, 98, 100, 105, 111, 117, 122, 128, 133, 143, 149, 156, 163, 169, 173, 183, 193, 198, 202, 208}
 
 func (i Opcode) String() string {
 	if i < 0 || i >= Opcode(len(_Opcode_index)-1) {
