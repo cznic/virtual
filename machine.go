@@ -26,6 +26,7 @@ const (
 	i32StackSz  = (4 + stackAlign - 1) &^ (stackAlign - 1)
 	i64StackSz  = (8 + stackAlign - 1) &^ (stackAlign - 1)
 	i8StackSz   = (1 + stackAlign - 1) &^ (stackAlign - 1)
+	intSize     = mathutil.IntBits / 8
 	mallocAlign = ptrSize
 	mmapPage    = 1 << 16
 	ptrSize     = mathutil.UintPtrBits / 8
@@ -192,7 +193,6 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 	t := &thread{
 		cpu: cpu{
 			bp:   0xdeadbeef,
-			bss:  m.bss,
 			ds:   m.ds,
 			m:    m,
 			sp:   ss + uintptr(stackSize),

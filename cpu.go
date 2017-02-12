@@ -6,6 +6,7 @@ package virtual
 
 import (
 	"errors"
+	"math"
 
 	"github.com/cznic/internal/buffer"
 )
@@ -24,7 +25,6 @@ type Operation struct {
 type cpu struct {
 	ap      uintptr // Arguments pointer
 	bp      uintptr // Base pointer
-	bss     uintptr // Zero data in data segment
 	ds      uintptr // Data segment
 	ip      uintptr // Instruction pointer
 	m       *machine
@@ -87,22 +87,19 @@ func (c *cpu) trace(code []Operation) error {
 	ip := c.ip - 1
 	sp := c.sp
 	ap := c.ap
-	rpStack := c.rpStack
 	for ip < uintptr(len(code)) {
 		fi := c.m.pcInfo(int(ip), c.m.functions)
 		li := c.m.pcInfo(int(ip), c.m.lines)
 		switch p := li.Position(); {
 		case p.IsValid():
 			fmt.Fprintf(&buf, "%s.%s(", p.Filename, dict.S(int(fi.Name)))
-			for i := 0; i < fi.C; i++ {
+			for i := 0; ap > bp+3*stackAlign; i++ {
 				if i != 0 {
 					fmt.Fprintf(&buf, ", ")
 				}
 				ap -= stackAlign
 				fmt.Fprintf(&buf, "%#x", c.readI64(ap))
 			}
-			ap = rpStack[len(rpStack)-1] - stackAlign
-			rpStack = rpStack[:len(rpStack)-1]
 			fmt.Fprintf(&buf, ")\n")
 			fmt.Fprintf(&buf, "\t%s\t", li.Position())
 			dumpCode(&buf, code[ip:ip+1], int(ip))
@@ -111,7 +108,9 @@ func (c *cpu) trace(code []Operation) error {
 		}
 		sp = bp
 		bp = c.readPtr(sp)
-		sp += 2 * ptrStackSz
+		sp += ptrStackSz
+		ap = c.readPtr(sp)
+		sp += ptrStackSz
 		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem) {
 			break
 		}
@@ -137,13 +136,17 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		}
 
-		// fmt.Printf("# cpu\t%s", dumpCodeStr(code[c.ip:c.ip+1], int(c.ip))) //TODO-
+		//fmt.Printf("# cpu\t%s", dumpCodeStr(code[c.ip:c.ip+1], int(c.ip))) //TODO-
 		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
 		case AP: // -> ptr
 			c.sp -= i32StackSz
 			c.writePtr(c.sp, c.ap+uintptr(op.N))
+		case AddF64: // a, b -> a + b
+			b := c.readF64(c.sp)
+			c.sp += f64StackSz
+			c.writeF64(c.sp, c.readF64(c.sp)+b)
 		case AddI32: // a, b -> a + b
 			b := c.readI32(c.sp)
 			c.sp += i32StackSz
@@ -152,6 +155,13 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.addPtr(c.sp, uintptr(op.N))
 		case AddSP: // -
 			c.sp += uintptr(op.N)
+		case And32: // a, b -> a & b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			c.writeI32(c.sp, c.readI32(c.sp)&b)
+		case Argument8: // -> val
+			c.sp -= i8StackSz
+			c.writeI8(c.sp, c.readI8(c.ap+uintptr(op.N)))
 		case Argument32: // -> val
 			c.sp -= i32StackSz
 			c.writeI32(c.sp, c.readI32(c.ap+uintptr(op.N)))
@@ -164,22 +174,72 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case BP: // -> ptr
 			c.sp -= ptrSize
 			c.writePtr(c.sp, c.bp+uintptr(op.N))
-		case BSS: // -> ptr
+		case DS: // -> ptr
 			c.sp -= ptrSize
-			c.writePtr(c.sp, c.bss+uintptr(op.N))
+			c.writePtr(c.sp, c.ds+uintptr(op.N))
 		case Call: // -> results
 			c.sp -= ptrStackSz
 			c.writePtr(c.sp, c.ip)
 			c.ip = uintptr(op.N)
+		case ConvF32F64:
+			v := c.readF32(c.sp)
+			c.sp += f32StackSz - f64StackSz
+			c.writeF64(c.sp, float64(v))
+		case ConvF64F32:
+			v := c.readF64(c.sp)
+			c.sp += f64StackSz - f32StackSz
+			c.writeF32(c.sp, float32(v))
+		case ConvF64I32:
+			v := c.readF64(c.sp)
+			c.sp += f64StackSz - i32StackSz
+			c.writeI32(c.sp, int32(v))
+		case ConvF64I8:
+			v := c.readF64(c.sp)
+			c.sp += f64StackSz - i8StackSz
+			c.writeI8(c.sp, int8(v))
+		case ConvI32F32:
+			v := c.readI32(c.sp)
+			c.sp += i32StackSz - f32StackSz
+			c.writeF32(c.sp, float32(v))
+		case ConvI32F64:
+			v := c.readI32(c.sp)
+			c.sp += i32StackSz - f64StackSz
+			c.writeF64(c.sp, float64(v))
+		case ConvI32I8:
+			c.writeI8(c.sp, int8(c.readI32(c.sp)))
+		case ConvI8I32:
+			c.writeI32(c.sp, int32(c.readI8(c.sp)))
+		case DivF64: // a, b -> a / b
+			b := c.readF64(c.sp)
+			c.sp += f64StackSz
+			c.writeF64(c.sp, c.readF64(c.sp)/b)
+		case DivI32: // a, b -> a / b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			c.writeI32(c.sp, c.readI32(c.sp)/b)
 		case Dup32:
 			v := c.readI32(c.sp)
 			c.sp -= i32StackSz
 			c.writeI32(c.sp, v)
+		case Dup64:
+			v := c.readI64(c.sp)
+			c.sp -= i64StackSz
+			c.writeI64(c.sp, v)
 		case EqI32: // a, b -> a == b
 			b := c.readI32(c.sp)
 			c.sp += i32StackSz
 			a := c.readI32(c.sp)
 			c.bool(a == b)
+		case EqI64: // a, b -> a == b
+			b := c.readI64(c.sp)
+			c.sp += i64StackSz
+			a := c.readI64(c.sp)
+			c.bool(a == b)
+		case Float32:
+			c.sp -= f32StackSz
+			c.writeF32(c.sp, math.Float32frombits(uint32(op.N)))
+		case Float64:
+			c.float64(op.N, code[c.ip].N)
 		case Func: // N: bp offset of variable[n-1])
 			// ...higher addresses
 			//
@@ -263,8 +323,6 @@ func (c *cpu) run(code []Operation) (int, error) {
 			if v == 0 {
 				c.ip = uintptr(op.N)
 			}
-		//TODO- case Label: // -
-		//TODO- 	// nop
 		case LeqI32: // a, b -> a <= b
 			b := c.readI32(c.sp)
 			c.sp += i32StackSz
@@ -275,16 +333,38 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp += i32StackSz
 			a := c.readI32(c.sp)
 			c.bool(a < b)
+		case Load8: // addr -> (addr+n)
+			p := c.readPtr(c.sp)
+			c.sp += ptrStackSz - i8StackSz
+			c.writeI8(c.sp, c.readI8(p+uintptr(op.N)))
 		case Load32: // addr -> (addr+n)
 			p := c.readPtr(c.sp)
 			c.sp += ptrStackSz - i32StackSz
 			c.writeI32(c.sp, c.readI32(p+uintptr(op.N)))
+		case MulF64: // a, b -> a * b
+			b := c.readF64(c.sp)
+			c.sp += f64StackSz
+			c.writeF64(c.sp, c.readF64(c.sp)*b)
 		case MulI32: // a, b -> a * b
 			b := c.readI32(c.sp)
 			c.sp += i32StackSz
 			c.writeI32(c.sp, c.readI32(c.sp)*b)
+		case NeqI32: // a, b -> a |= b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			a := c.readI32(c.sp)
+			c.bool(a != b)
+		case NeqI64: // a, b -> a |= b
+			b := c.readI64(c.sp)
+			c.sp += i64StackSz
+			a := c.readI64(c.sp)
+			c.bool(a != b)
 		case Nop: // -
 			// nop
+		case Or32: // a, b -> a | b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			c.writeI32(c.sp, c.readI32(c.sp)|b)
 		case Panic: // -
 			return -1, c.trace(code)
 		case PostIncI32: // adr -> (*adr)++
@@ -293,6 +373,11 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := c.readI32(p)
 			c.writeI32(c.sp, v)
 			c.writeI32(p, v+1)
+		case PostIncPtr: // adr -> (*adr)++
+			p := c.readPtr(c.sp)
+			v := c.readPtr(p)
+			c.writePtr(c.sp, v)
+			c.writePtr(p, v+uintptr(op.N))
 		case Return:
 			c.sp = c.bp
 			c.bp = c.readPtr(c.sp)
@@ -306,6 +391,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.rpStack = c.rpStack[:n-1]
 			c.sp = c.ap
 			c.ap = ap
+		case Store8: // adr, val -> val
+			v := c.readI8(c.sp)
+			c.sp += i8StackSz
+			c.writeI8(c.readPtr(c.sp), v)
+			c.sp += ptrStackSz - i8StackSz
+			c.writeI8(c.sp, v)
 		case Store32: // adr, val -> val
 			v := c.readI32(c.sp)
 			c.sp += i32StackSz
@@ -318,6 +409,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.writeI64(c.readPtr(c.sp), v)
 			c.sp += ptrStackSz - i64StackSz
 			c.writeI64(c.sp, v)
+		case SubF64: // a, b -> a - b
+			b := c.readF64(c.sp)
+			c.sp += f64StackSz
+			c.writeF64(c.sp, c.readF64(c.sp)-b)
 		case SubI32: // a, b -> a - b
 			b := c.readI32(c.sp)
 			c.sp += i32StackSz
@@ -325,12 +420,25 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Text:
 			c.sp -= ptrStackSz
 			c.writePtr(c.sp, c.ts+uintptr(op.N))
+		case Variable8: // -> val
+			c.sp -= i8StackSz
+			c.writeI8(c.sp, c.readI8(c.bp+uintptr(op.N)))
 		case Variable32: // -> val
 			c.sp -= i32StackSz
 			c.writeI32(c.sp, c.readI32(c.bp+uintptr(op.N)))
 		case Variable64: // -> val
 			c.sp -= i64StackSz
 			c.writeI64(c.sp, c.readI64(c.bp+uintptr(op.N)))
+		case Xor32: // a, b -> a ^ b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			c.writeI32(c.sp, c.readI32(c.sp)^b)
+		case Zero32:
+			c.sp -= i32StackSz
+			c.writeI32(c.sp, 0)
+		case Zero64:
+			c.sp -= i64StackSz
+			c.writeI64(c.sp, 0)
 
 		case abort:
 			return 1, nil
@@ -338,6 +446,42 @@ func (c *cpu) run(code []Operation) (int, error) {
 			return int(c.readI32(c.sp)), nil
 		case printf:
 			c.builtin(c.printf)
+		case sinh:
+			c.builtin(c.sinh)
+		case cosh:
+			c.builtin(c.cosh)
+		case tanh:
+			c.builtin(c.tanh)
+		case sin:
+			c.builtin(c.sin)
+		case cos:
+			c.builtin(c.cos)
+		case tan:
+			c.builtin(c.tan)
+		case asin:
+			c.builtin(c.asin)
+		case acos:
+			c.builtin(c.acos)
+		case atan:
+			c.builtin(c.atan)
+		case exp:
+			c.builtin(c.exp)
+		case fabs:
+			c.builtin(c.fabs)
+		case log:
+			c.builtin(c.log)
+		case log10:
+			c.builtin(c.log10)
+		case pow:
+			c.builtin(c.pow)
+		case sqrt:
+			c.builtin(c.sqrt)
+		case round:
+			c.builtin(c.round)
+		case ceil:
+			c.builtin(c.ceil)
+		case floor:
+			c.builtin(c.floor)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.trace(code))

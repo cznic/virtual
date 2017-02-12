@@ -4,9 +4,9 @@ package virtual
 
 import "fmt"
 
-const _Opcode_name = "NopAPAddI32AddPtrAddSPArgument32Argument64ArgumentsBPBSSCallDup32EqI32FuncIndexIndexI32Int32JmpJnzJzLabelLeqI32Load32LtI32MulI32PanicPostIncI32ReturnStore32Store64SubI32TextVariable32Variable64abortexitprintf"
+const _Opcode_name = "NopAPAddF64AddI32AddPtrAddSPAnd32Argument8Argument32Argument64ArgumentsBPCallConvF32F64ConvF64F32ConvF64I32ConvF64I8ConvI32F32ConvI32F64ConvI32I8ConvI8I32DSDivF64DivI32Dup32Dup64EqI32EqI64ExtFloat32Float64FuncIndexIndexI32Int32JmpJnzJzLabelLeqI32Load32Load8LtI32MulF64MulI32NeqI32NeqI64Or32PanicPostIncI32PostIncPtrReturnStore32Store64Store8SubF64SubI32TextVariable32Variable64Variable8Xor32Zero32Zero64abortexitprintfceilfloorroundsqrtpowlog10logfabsexpsinhcoshtanhsincostanasinacosatan"
 
-var _Opcode_index = [...]uint8{0, 3, 5, 11, 17, 22, 32, 42, 51, 53, 56, 60, 65, 70, 74, 79, 87, 92, 95, 98, 100, 105, 111, 117, 122, 128, 133, 143, 149, 156, 163, 169, 173, 183, 193, 198, 202, 208}
+var _Opcode_index = [...]uint16{0, 3, 5, 11, 17, 23, 28, 33, 42, 52, 62, 71, 73, 77, 87, 97, 107, 116, 126, 136, 145, 154, 156, 162, 168, 173, 178, 183, 188, 191, 198, 205, 209, 214, 222, 227, 230, 233, 235, 240, 246, 252, 257, 262, 268, 274, 280, 286, 290, 295, 305, 315, 321, 328, 335, 341, 347, 353, 357, 367, 377, 386, 391, 397, 403, 408, 412, 418, 422, 427, 432, 436, 439, 444, 447, 451, 454, 458, 462, 466, 469, 472, 475, 479, 483, 487}
 
 func (i Opcode) String() string {
 	if i < 0 || i >= Opcode(len(_Opcode_index)-1) {

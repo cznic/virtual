@@ -42,7 +42,7 @@ func dumpCodeStr(code []Operation, start int) []byte {
 }
 
 func dumpCode(w io.Writer, code []Operation, start int) error {
-	const width = 12
+	const width = 13
 	for i, op := range code {
 		lo := strings.ToLower(op.Opcode.String())
 		switch op.Opcode {
@@ -83,25 +83,30 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			}
-		case BSS:
+		case DS:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sbss\n", start+i, width, "push"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sds\n", start+i, width, "push"); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sbss%+#x\n", start+i, width, "push", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sds%+#x\n", start+i, width, "push", op.N); err != nil {
 					return err
 				}
 			}
 		case // default format
 			AddPtr,
 			Call,
+			Ext,
+			Float32,
+			Float64,
 			IndexI32,
 			Jmp,
 			Jnz,
 			Jz,
-			Load32:
+			Load32,
+			Load8,
+			PostIncPtr:
 
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, lo, op.N); err != nil {
 				return err
@@ -118,25 +123,70 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 				}
 			}
 		case // no N
+			AddF64,
 			AddI32,
+			And32,
 			Arguments,
+			ConvF32F64,
+			ConvF64F32,
+			ConvF64I32,
+			ConvF64I8,
+			ConvI32F32,
+			ConvI32F64,
+			ConvI32I8,
+			ConvI8I32,
+			DivF64,
+			DivI32,
 			Dup32,
+			Dup64,
 			EqI32,
+			EqI64,
 			LeqI32,
 			LtI32,
+			MulF64,
 			MulI32,
+			NeqI32,
+			NeqI64,
+			Or32,
 			Panic,
 			PostIncI32,
 			Return,
 			Store32,
 			Store64,
+			Store8,
+			SubF64,
 			SubI32,
+			Xor32,
+			Zero32,
+			Zero64,
 
 			abort,
 			exit,
-			printf:
+			printf,
+			ceil,
+			floor,
+			round,
+			sqrt,
+			pow,
+			log10,
+			log,
+			fabs,
+			exp,
+			sinh,
+			cosh,
+			tanh,
+			asin,
+			acos,
+			atan,
+			sin,
+			cos,
+			tan:
 
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
+				return err
+			}
+		case Argument8:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push8", op.N); err != nil {
 				return err
 			}
 		case Argument32:
@@ -167,6 +217,10 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			}
 		case Text:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sts%+#x\n", start+i, width, "push", op.N); err != nil {
+				return err
+			}
+		case Variable8:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push8", op.N); err != nil {
 				return err
 			}
 		case Variable32:
