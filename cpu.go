@@ -81,7 +81,7 @@ func (c *cpu) builtin(f func()) {
 	c.rpStack = c.rpStack[:n-1]
 }
 
-func (c *cpu) trace(code []Operation) error {
+func (c *cpu) stackTrace(code []Operation) error {
 	var buf buffer.Bytes
 	bp := c.bp
 	ip := c.ip - 1
@@ -120,10 +120,19 @@ func (c *cpu) trace(code []Operation) error {
 	return errors.New(string(buf.Bytes()))
 }
 
+func (c *cpu) trace(code []Operation) string {
+	s := dumpCodeStr(code[c.ip:c.ip+1], int(c.ip))
+	a := make([]uintptr, 5)
+	for i := range a {
+		a[i] = c.readPtr(c.sp + uintptr(i*ptrStackSz))
+	}
+	return fmt.Sprintf("%s\t%#x: %x; %v", s[:len(s)-1], c.sp, a, c.m.pcInfo(int(c.ip), c.m.lines).Position())
+}
+
 func (c *cpu) run(code []Operation) (int, error) {
 	defer func() {
 		if err := recover(); err != nil {
-			panic(fmt.Errorf("%v\n%s", err, c.trace(code)))
+			panic(fmt.Errorf("%v\n%s", err, c.stackTrace(code)))
 		}
 	}()
 
@@ -136,8 +145,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		}
 
-		//fmt.Printf("# cpu\t%s", dumpCodeStr(code[c.ip:c.ip+1], int(c.ip))) //TODO-
-		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
+		//println(c.trace(code)) //TODO-
+		op := code[c.ip]       //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
 		case AP: // -> ptr
@@ -153,6 +162,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.writeI32(c.sp, c.readI32(c.sp)+b)
 		case AddPtr:
 			c.addPtr(c.sp, uintptr(op.N))
+		case AddPtrs:
+			v := c.readPtr(c.sp)
+			c.sp += ptrStackSz
+			c.addPtr(c.sp, v)
 		case AddSP: // -
 			c.sp += uintptr(op.N)
 		case And32: // a, b -> a & b
@@ -174,6 +187,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case BP: // -> ptr
 			c.sp -= ptrSize
 			c.writePtr(c.sp, c.bp+uintptr(op.N))
+		case BoolI64:
+			v := c.readI64(c.sp)
+			c.sp += i64StackSz - i32StackSz
+			c.bool(v != 0)
 		case DS: // -> ptr
 			c.sp -= ptrSize
 			c.writePtr(c.sp, c.ds+uintptr(op.N))
@@ -205,6 +222,14 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := c.readI32(c.sp)
 			c.sp += i32StackSz - f64StackSz
 			c.writeF64(c.sp, float64(v))
+		case ConvI32I64:
+			v := c.readI32(c.sp)
+			c.sp += i32StackSz - i64StackSz
+			c.writeI64(c.sp, int64(v))
+		case ConvI64I32:
+			v := c.readI64(c.sp)
+			c.sp += i64StackSz - i32StackSz
+			c.writeI32(c.sp, int32(v))
 		case ConvI32I8:
 			c.writeI8(c.sp, int8(c.readI32(c.sp)))
 		case ConvI8I32:
@@ -217,6 +242,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := c.readI32(c.sp)
 			c.sp += i32StackSz
 			c.writeI32(c.sp, c.readI32(c.sp)/b)
+		case DivU64: // a, b -> a / b
+			b := c.readU64(c.sp)
+			c.sp += i64StackSz
+			c.writeU64(c.sp, c.readU64(c.sp)/b)
 		case Dup32:
 			v := c.readI32(c.sp)
 			c.sp -= i32StackSz
@@ -302,6 +331,16 @@ func (c *cpu) run(code []Operation) (int, error) {
 			// result[i]	ap + sum(stack size result[0..n-1]) - sum(stack size result[0..i])
 			// argument[i]	ap - sum(stack size argument[0..i])
 			// variable[i]	bp - sum(stack size variable[0..i])
+		case GeqI32: // a, b -> a >= b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			a := c.readI32(c.sp)
+			c.bool(a >= b)
+		case GtI32: // a, b -> a > b
+			b := c.readI32(c.sp)
+			c.sp += i32StackSz
+			a := c.readI32(c.sp)
+			c.bool(a > b)
 		case IndexI32: // addr, index -> addr + n*index
 			x := c.readI32(c.sp)
 			c.sp += i32StackSz
@@ -309,6 +348,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Int32: // -> val
 			c.sp -= i32StackSz
 			c.writeI32(c.sp, int32(op.N))
+		case Int64: // -> val
+			c.int64(op.N, code[c.ip].N)
 		case Jmp: // -
 			c.ip = uintptr(op.N)
 		case Jnz: // val ->
@@ -341,6 +382,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			p := c.readPtr(c.sp)
 			c.sp += ptrStackSz - i32StackSz
 			c.writeI32(c.sp, c.readI32(p+uintptr(op.N)))
+		case Load64: // addr -> (addr+n)
+			p := c.readPtr(c.sp)
+			c.sp += ptrStackSz - i64StackSz
+			c.writeI64(c.sp, c.readI64(p+uintptr(op.N)))
 		case MulF64: // a, b -> a * b
 			b := c.readF64(c.sp)
 			c.sp += f64StackSz
@@ -366,7 +411,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp += i32StackSz
 			c.writeI32(c.sp, c.readI32(c.sp)|b)
 		case Panic: // -
-			return -1, c.trace(code)
+			return -1, c.stackTrace(code)
 		case PostIncI32: // adr -> (*adr)++
 			p := c.readPtr(c.sp)
 			c.sp += ptrStackSz - i32StackSz
@@ -378,6 +423,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := c.readPtr(p)
 			c.writePtr(c.sp, v)
 			c.writePtr(p, v+uintptr(op.N))
+		case RemU64: // a, b -> a % b
+			b := c.readU64(c.sp)
+			c.sp += i64StackSz
+			c.writeU64(c.sp, c.readU64(c.sp)%b)
 		case Return:
 			c.sp = c.bp
 			c.bp = c.readPtr(c.sp)
@@ -482,9 +531,31 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.ceil)
 		case floor:
 			c.builtin(c.floor)
+		case strcpy:
+			c.builtin(c.strcpy)
+		case strncpy:
+			c.builtin(c.strncpy)
+		case strcmp:
+			c.builtin(c.strcmp)
+		case strlen:
+			c.builtin(c.strlen)
+		case strcat:
+			c.builtin(c.strcat)
+		case strncmp:
+			c.builtin(c.strncmp)
+		case strchr:
+			c.builtin(c.strchr)
+		case strrchr:
+			c.builtin(c.strrchr)
+		case memset:
+			c.builtin(c.memset)
+		case memcpy:
+			c.builtin(c.memcpy)
+		case memcmp:
+			c.builtin(c.memcmp)
 
 		default:
-			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.trace(code))
+			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace(code))
 		}
 	}
 }

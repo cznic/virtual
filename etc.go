@@ -101,10 +101,13 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Float32,
 			Float64,
 			IndexI32,
+			Int32,
+			Int64,
 			Jmp,
 			Jnz,
 			Jz,
 			Load32,
+			Load64,
 			Load8,
 			PostIncPtr:
 
@@ -123,24 +126,31 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 				}
 			}
 		case // no N
+			AddPtrs,
 			AddF64,
 			AddI32,
 			And32,
 			Arguments,
+			BoolI64,
 			ConvF32F64,
 			ConvF64F32,
 			ConvF64I32,
 			ConvF64I8,
 			ConvI32F32,
 			ConvI32F64,
+			ConvI32I64,
 			ConvI32I8,
+			ConvI64I32,
 			ConvI8I32,
 			DivF64,
 			DivI32,
+			DivU64,
 			Dup32,
 			Dup64,
 			EqI32,
 			EqI64,
+			GeqI32,
+			GtI32,
 			LeqI32,
 			LtI32,
 			MulF64,
@@ -150,6 +160,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Or32,
 			Panic,
 			PostIncI32,
+			RemU64,
 			Return,
 			Store32,
 			Store64,
@@ -178,6 +189,17 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			asin,
 			acos,
 			atan,
+			strcpy,
+			strncpy,
+			strcmp,
+			strncmp,
+			memset,
+			memcmp,
+			memcpy,
+			strrchr,
+			strchr,
+			strlen,
+			strcat,
 			sin,
 			cos,
 			tan:
@@ -210,10 +232,6 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 				if _, err := fmt.Fprintf(w, "%#05x\t%s\n", start+i, lo); err != nil {
 					return err
 				}
-			}
-		case Int32:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, "push32", uint(op.N)); err != nil {
-				return err
 			}
 		case Text:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sts%+#x\n", start+i, width, "push", op.N); err != nil {

@@ -146,22 +146,22 @@ func (m *machine) close() (err error) {
 	return err
 }
 
-func (m *machine) pcInfo(pc int, infos []PCInfo) PCInfo {
+func (m *machine) pcInfo(pc int, infos []PCInfo) *PCInfo {
 	if i := sort.Search(len(infos), func(i int) bool { return infos[i].PC >= pc }); len(infos) != 0 && i <= len(infos) {
 		switch {
 		case i == len(infos):
-			return infos[i-1]
+			return &infos[i-1]
 		default:
 			if pc == infos[i].PC {
-				return infos[i]
+				return &infos[i]
 			}
 
 			if i > 0 {
-				return infos[i-1]
+				return &infos[i-1]
 			}
 		}
 	}
-	return PCInfo{}
+	return &PCInfo{}
 }
 
 func (m *machine) Kill() {

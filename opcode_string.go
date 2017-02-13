@@ -4,9 +4,9 @@ package virtual
 
 import "fmt"
 
-const _Opcode_name = "NopAPAddF64AddI32AddPtrAddSPAnd32Argument8Argument32Argument64ArgumentsBPCallConvF32F64ConvF64F32ConvF64I32ConvF64I8ConvI32F32ConvI32F64ConvI32I8ConvI8I32DSDivF64DivI32Dup32Dup64EqI32EqI64ExtFloat32Float64FuncIndexIndexI32Int32JmpJnzJzLabelLeqI32Load32Load8LtI32MulF64MulI32NeqI32NeqI64Or32PanicPostIncI32PostIncPtrReturnStore32Store64Store8SubF64SubI32TextVariable32Variable64Variable8Xor32Zero32Zero64abortexitprintfceilfloorroundsqrtpowlog10logfabsexpsinhcoshtanhsincostanasinacosatan"
+const _Opcode_name = "NopAPAddF64AddI32AddPtrAddPtrsAddSPAnd32Argument32Argument64Argument8ArgumentsBPBoolI64CallConvF32F64ConvF64F32ConvF64I32ConvF64I8ConvI32F32ConvI32F64ConvI32I64ConvI32I8ConvI64I32ConvI8I32DSDivF64DivI32DivU64Dup32Dup64EqI32EqI64ExtFloat32Float64FuncGeqI32GtI32IndexIndexI32Int32Int64JmpJnzJzLabelLeqI32Load32Load64Load8LtI32MulF64MulI32NeqI32NeqI64Or32PanicPostIncI32PostIncPtrRemU64ReturnStore32Store64Store8SubF64SubI32TextVariable32Variable64Variable8Xor32Zero32Zero64abortacosasinatanceilcoscoshexitexpfabsfloorloglog10powprintfroundsinsinhsqrttantanhstrcpystrncpystrcmpstrlenstrcatstrncmpstrchrstrrchrmemsetmemcpymemcmp"
 
-var _Opcode_index = [...]uint16{0, 3, 5, 11, 17, 23, 28, 33, 42, 52, 62, 71, 73, 77, 87, 97, 107, 116, 126, 136, 145, 154, 156, 162, 168, 173, 178, 183, 188, 191, 198, 205, 209, 214, 222, 227, 230, 233, 235, 240, 246, 252, 257, 262, 268, 274, 280, 286, 290, 295, 305, 315, 321, 328, 335, 341, 347, 353, 357, 367, 377, 386, 391, 397, 403, 408, 412, 418, 422, 427, 432, 436, 439, 444, 447, 451, 454, 458, 462, 466, 469, 472, 475, 479, 483, 487}
+var _Opcode_index = [...]uint16{0, 3, 5, 11, 17, 23, 30, 35, 40, 50, 60, 69, 78, 80, 87, 91, 101, 111, 121, 130, 140, 150, 160, 169, 179, 188, 190, 196, 202, 208, 213, 218, 223, 228, 231, 238, 245, 249, 255, 260, 265, 273, 278, 283, 286, 289, 291, 296, 302, 308, 314, 319, 324, 330, 336, 342, 348, 352, 357, 367, 377, 383, 389, 396, 403, 409, 415, 421, 425, 435, 445, 454, 459, 465, 471, 476, 480, 484, 488, 492, 495, 499, 503, 506, 510, 515, 518, 523, 526, 532, 537, 540, 544, 548, 551, 555, 561, 568, 574, 580, 586, 593, 599, 606, 612, 618, 624}
 
 func (i Opcode) String() string {
 	if i < 0 || i >= Opcode(len(_Opcode_index)-1) {

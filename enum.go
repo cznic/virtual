@@ -15,13 +15,15 @@ const (
 	AddF64
 	AddI32
 	AddPtr // N
-	AddSP  // N
+	AddPtrs
+	AddSP // N
 	And32
-	Argument8  // N
 	Argument32 // N
 	Argument64 // N
+	Argument8  // N
 	Arguments
-	BP   // N
+	BP // N
+	BoolI64
 	Call // N
 	ConvF32F64
 	ConvF64F32
@@ -29,28 +31,35 @@ const (
 	ConvF64I8
 	ConvI32F32
 	ConvI32F64
+	ConvI32I64
 	ConvI32I8
+	ConvI64I32
 	ConvI8I32
 	DS // N
 	DivF64
 	DivI32
+	DivU64
 	Dup32
 	Dup64
 	EqI32
 	EqI64
-	Ext      // N
-	Float32  // N
-	Float64  // N
-	Func     // N
+	Ext     // N
+	Float32 // N
+	Float64 // N
+	Func    // N
+	GeqI32
+	GtI32
 	Index    // N
 	IndexI32 // N
 	Int32    // N
+	Int64    // N
 	Jmp      // N
 	Jnz      // N
 	Jz       // N
 	Label    // N
 	LeqI32
 	Load32 // N
+	Load64 // N
 	Load8  // N
 	LtI32
 	MulF64
@@ -61,6 +70,7 @@ const (
 	Panic
 	PostIncI32
 	PostIncPtr // N
+	RemU64
 	Return
 	Store32
 	Store64
@@ -78,24 +88,35 @@ const (
 	// builtins
 
 	abort
-	exit
-	printf
-	ceil
-	floor
-	round
-	sqrt
-	pow
-	log10
-	log
-	fabs
-	exp
-	sinh
-	cosh
-	tanh
-	sin
-	cos
-	tan
-	asin
 	acos
+	asin
 	atan
+	ceil
+	cos
+	cosh
+	exit
+	exp
+	fabs
+	floor
+	log
+	log10
+	pow
+	printf
+	round
+	sin
+	sinh
+	sqrt
+	tan
+	tanh
+	strcpy
+	strncpy
+	strcmp
+	strlen
+	strcat
+	strncmp
+	strchr
+	strrchr
+	memset
+	memcpy
+	memcmp
 )
