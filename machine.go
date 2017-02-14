@@ -13,6 +13,7 @@ import (
 	"sync"
 	"unsafe"
 
+	"github.com/cznic/internal/buffer"
 	"github.com/cznic/mathutil"
 	"github.com/edsrzf/mmap-go"
 )
@@ -113,6 +114,20 @@ func (m *machine) CString(s string) uintptr {
 	copy(m.dsMem[p-m.ds:], s)
 	m.dsMem[p-m.ds+uintptr(len(s))+1] = 0
 	return p
+}
+
+func (m *machine) GoString(s uintptr) string {
+	var c cpu
+	var b buffer.Bytes
+	for {
+		ch := c.readU8(s)
+		if ch == 0 {
+			return string(b.Bytes())
+		}
+
+		b.WriteByte(ch)
+		s++
+	}
 }
 
 func (m *machine) close() (err error) {

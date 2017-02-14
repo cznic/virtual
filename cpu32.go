@@ -22,7 +22,8 @@ func (c *cpu) float64(n, m int) {
 	c.ip++
 }
 
-func (c *cpu) strncpy() { // char *strncpy(char *dest, const char *src, size_t n)
+// char *strncpy(char *dest, const char *src, size_t n)
+func (c *cpu) strncpy() {
 	ap := c.rp - ptrStackSz
 	dest := c.readPtr(ap)
 	ap -= ptrStackSz
@@ -44,7 +45,8 @@ func (c *cpu) strncpy() { // char *strncpy(char *dest, const char *src, size_t n
 	c.writePtr(c.rp, ret)
 }
 
-func (c *cpu) strlen() { // size_t strlen(const char *s)
+// size_t strlen(const char *s)
+func (c *cpu) strlen() {
 	var n uint32
 	for s := c.readPtr(c.sp); c.readI8(s) != 0; s++ {
 		n++
@@ -52,7 +54,8 @@ func (c *cpu) strlen() { // size_t strlen(const char *s)
 	c.writeU32(c.rp, n)
 }
 
-func (c *cpu) strncmp() { // int strncmp(const char *s1, const char *s2, size_t n)
+// int strncmp(const char *s1, const char *s2, size_t n)
+func (c *cpu) strncmp() {
 	ap := c.rp - ptrStackSz
 	s1 := c.readPtr(ap)
 	ap -= ptrStackSz
@@ -78,7 +81,8 @@ func (c *cpu) strncmp() { // int strncmp(const char *s1, const char *s2, size_t 
 	c.writeI32(c.rp, 0)
 }
 
-func (c *cpu) memset() { // void *memset(void *s, int c, size_t n)
+// void *memset(void *s, int c, size_t n)
+func (c *cpu) memset() {
 	ap := c.rp - ptrStackSz
 	s := c.readPtr(ap)
 	ap -= i32StackSz
@@ -93,7 +97,8 @@ func (c *cpu) memset() { // void *memset(void *s, int c, size_t n)
 	c.writePtr(c.rp, ret)
 }
 
-func (c *cpu) memcpy() { // void *memcpy(void *dest, const void *src, size_t n)
+// void *memcpy(void *dest, const void *src, size_t n)
+func (c *cpu) memcpy() {
 	ap := c.rp - ptrStackSz
 	dest := c.readPtr(ap)
 	ap -= ptrStackSz
@@ -110,7 +115,8 @@ func (c *cpu) memcpy() { // void *memcpy(void *dest, const void *src, size_t n)
 	c.writePtr(c.rp, ret)
 }
 
-func (c *cpu) memcmp() { // int memcmp(const void *s1, const void *s2, size_t n)
+// int memcmp(const void *s1, const void *s2, size_t n)
+func (c *cpu) memcmp() {
 	ap := c.rp - ptrStackSz
 	s1 := c.readPtr(ap)
 	ap -= ptrStackSz

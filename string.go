@@ -20,7 +20,8 @@ func init() {
 	})
 }
 
-func (c *cpu) strcat() { // char *strcat(char *dest, const char *src)
+// char *strcat(char *dest, const char *src)
+func (c *cpu) strcat() {
 	dest := c.readPtr(c.sp + ptrStackSz)
 	src := c.readPtr(c.sp)
 	ret := dest
@@ -39,7 +40,8 @@ func (c *cpu) strcat() { // char *strcat(char *dest, const char *src)
 	}
 }
 
-func (c *cpu) strchr() { // char *strchr(const char *s, int c)
+// char *strchr(const char *s, int c)
+func (c *cpu) strchr() {
 	s := c.readPtr(c.sp + ptrStackSz)
 	ch := byte(c.readI32(c.sp))
 	for {
@@ -58,7 +60,8 @@ func (c *cpu) strchr() { // char *strchr(const char *s, int c)
 	}
 }
 
-func (c *cpu) strcmp() { // int strcmp(const char *s1, const char *s2)
+// int strcmp(const char *s1, const char *s2)
+func (c *cpu) strcmp() {
 	s1 := c.readPtr(c.sp + ptrStackSz)
 	s2 := c.readPtr(c.sp)
 	for {
@@ -73,7 +76,8 @@ func (c *cpu) strcmp() { // int strcmp(const char *s1, const char *s2)
 	}
 }
 
-func (c *cpu) strcpy() { // char *strcpy(char *dest, const char *src)
+// char *strcpy(char *dest, const char *src)
+func (c *cpu) strcpy() {
 	dest := c.readPtr(c.sp + ptrStackSz)
 	src := c.readPtr(c.sp)
 	ret := dest
@@ -89,7 +93,8 @@ func (c *cpu) strcpy() { // char *strcpy(char *dest, const char *src)
 	}
 }
 
-func (c *cpu) strrchr() { // char *strrchr(const char *s, int c)
+// char *strrchr(const char *s, int c)
+func (c *cpu) strrchr() {
 	s := c.readPtr(c.sp + ptrStackSz)
 	ch := byte(c.readI32(c.sp))
 	var ret uintptr

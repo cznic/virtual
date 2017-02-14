@@ -13,14 +13,14 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_printf"): printf,
+		dict.SID("__builtin_printf"):  printf,
+		dict.SID("__builtin_sprintf"): sprintf,
 	})
 }
 
-func (c *cpu) fprintf(w io.Writer, format uintptr) int32 {
+func (c *cpu) fprintf0(w io.Writer, format, argp uintptr) int32 {
 	var b buffer.Bytes
 	written := 0
-	argp := c.rp - ptrStackSz
 	for {
 		ch := c.readI8(format)
 		format++
@@ -35,9 +35,13 @@ func (c *cpu) fprintf(w io.Writer, format uintptr) int32 {
 			return int32(written) + int32(n)
 		case '%':
 			modifiers := ""
+		more:
 			ch := c.readI8(format)
 			format++
 			switch ch {
+			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.':
+				modifiers += string(ch)
+				goto more
 			case 'c':
 				argp -= i32StackSz
 				arg := c.readI32(argp)
@@ -90,4 +94,29 @@ func (c *cpu) fprintf(w io.Writer, format uintptr) int32 {
 	}
 }
 
-func (c *cpu) printf() { c.writeI32(c.rp, c.fprintf(c.m.stdout, c.readPtr(c.rp-ptrStackSz))) }
+// int printf(const char *format, ...);
+func (c *cpu) printf() {
+	c.writeI32(c.rp, c.fprintf0(c.m.stdout, c.readPtr(c.rp-ptrStackSz), c.rp-ptrStackSz))
+}
+
+type memWriter struct {
+	p uintptr
+	c *cpu
+}
+
+func (m *memWriter) Write(p []byte) (int, error) {
+	for _, v := range p {
+		m.c.writeU8(m.p, v)
+		m.p++
+	}
+	return len(p), nil
+}
+
+// int sprintf(char *str, const char *format, ...);
+func (c *cpu) sprintf() {
+	ap := c.rp - ptrStackSz
+	w := memWriter{c.readPtr(ap), c}
+	ap -= ptrStackSz
+	c.writeI32(c.rp, c.fprintf0(&w, c.readPtr(ap), ap))
+	c.writeI8(w.p, 0)
+}

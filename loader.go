@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"go/token"
 	"math"
+	"unsafe"
 
+	"github.com/cznic/internal/buffer"
 	"github.com/cznic/ir"
 	"github.com/cznic/mathutil"
 )
@@ -181,9 +183,14 @@ func (l *loader) sizeof(tid ir.TypeID) int {
 
 func (l *loader) stackSize(tid ir.TypeID) int { return roundup(l.sizeof(tid), l.stackAlign) }
 
-func (l *loader) text(b []byte) int {
+func (l *loader) text(s ir.StringID) int {
+	if p, ok := l.strings[s]; ok {
+		return p
+	}
+
 	p := len(l.out.Text)
-	l.out.Text = append(l.out.Text, b...)
+	l.strings[s] = p
+	l.out.Text = append(l.out.Text, dict.S(int(s))...)
 	sz := roundup(len(l.out.Text)+1, mallocAlign)
 	l.out.Text = append(l.out.Text, make([]byte, sz-len(l.out.Text))...)
 	return p
@@ -240,6 +247,40 @@ func (l *loader) float64(x ir.Operation, n float64) {
 		l.emit(l.pos(x), Operation{Opcode: Float64, N: int(bits)})
 	default:
 		panic("internal error")
+	}
+}
+
+func (l *loader) arrayLiteral(t ir.Type, v ir.Value) *[]byte {
+	p := buffer.CGet(l.sizeof(t.ID()))
+	b := *p
+	itemSz := l.sizeof(t.(*ir.ArrayType).Item.ID())
+	switch x := v.(type) {
+	case *ir.CompositeValue:
+		i := 0
+		for _, v := range x.Values {
+			switch y := v.(type) {
+			case *ir.Int32Value:
+				*(*int32)((unsafe.Pointer)(&b[i*itemSz])) = y.Value
+				i++
+			default:
+				panic(fmt.Errorf("TODO %T", y))
+			}
+		}
+	default:
+		panic(fmt.Errorf("TODO %T", x))
+	}
+	return p
+}
+
+func (l *loader) compositeLiteral(tid ir.TypeID, v ir.Value) int {
+	switch t := l.tc.MustType(tid); t.Kind() {
+	case ir.Array:
+		p := l.arrayLiteral(t, v)
+		r := l.text(ir.StringID(dict.ID(*p)))
+		buffer.Put(p)
+		return r
+	default:
+		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
 }
 
@@ -425,6 +466,8 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 			default:
 				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
+		case *ir.Copy:
+			l.emit(l.pos(x), Operation{Opcode: Copy, N: l.sizeof(x.TypeID)})
 		case *ir.Div:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
@@ -627,6 +670,8 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
 				l.emit(l.pos(x), Operation{Opcode: NeqI32})
+			case ir.Uint64:
+				l.emit(l.pos(x), Operation{Opcode: NeqI64})
 			case ir.Pointer:
 				switch l.ptrSize {
 				case 4:
@@ -637,7 +682,7 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 					panic(fmt.Errorf("internal error %s", x.TypeID))
 				}
 			default:
-				panic(fmt.Errorf("TODO %v", t.Kind()))
+				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
 		case *ir.Or:
 			switch l.sizeof(x.TypeID) {
@@ -651,9 +696,9 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 		case *ir.PostIncrement:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
-				l.emit(l.pos(x), Operation{Opcode: PostIncI32})
+				l.emit(l.pos(x), Operation{Opcode: PostIncI32, N: x.Delta})
 			case ir.Pointer:
-				l.emit(l.pos(x), Operation{Opcode: PostIncPtr, N: l.sizeof(l.tc.MustType(t.ID()).(*ir.PointerType).Element.ID())})
+				l.emit(l.pos(x), Operation{Opcode: PostIncPtr, N: x.Delta})
 			default:
 				panic(fmt.Errorf("TODO %v", t.Kind()))
 			}
@@ -692,12 +737,7 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 				panic(fmt.Errorf("%s: internal error %s", x.Position, x.TypeID))
 			}
 		case *ir.StringConst:
-			p, ok := l.strings[x.Value]
-			if !ok {
-				p = l.text(dict.S(int(x.Value)))
-				l.strings[x.Value] = p
-			}
-			l.emit(l.pos(x), Operation{Opcode: Text, N: p})
+			l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value)})
 		case *ir.Sub:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
@@ -790,12 +830,7 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: AddSP, N: l.stackSize(x.TypeID)})
 			case *ir.StringValue:
 				l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
-				p, ok := l.strings[v.StringID]
-				if !ok {
-					p = l.text(dict.S(int(v.StringID)))
-					l.strings[v.StringID] = p
-				}
-				l.emit(l.pos(x), Operation{Opcode: Text, N: p})
+				l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(v.StringID)})
 				switch l.ptrSize {
 				case 4:
 					l.emit(l.pos(x), Operation{Opcode: Store32})
@@ -804,6 +839,11 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 				default:
 					panic("internal error")
 				}
+				l.emit(l.pos(x), Operation{Opcode: AddSP, N: l.ptrSize})
+			case *ir.CompositeValue:
+				l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
+				l.emit(l.pos(x), Operation{Opcode: Text, N: l.compositeLiteral(x.TypeID, x.Value)})
+				l.emit(l.pos(x), Operation{Opcode: Copy, N: l.sizeof(x.TypeID)})
 				l.emit(l.pos(x), Operation{Opcode: AddSP, N: l.ptrSize})
 			default:
 				panic(fmt.Errorf("%05x: TODO %T(%v)", ip, v, v))

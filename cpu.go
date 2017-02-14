@@ -130,6 +130,7 @@ func (c *cpu) trace(code []Operation) string {
 }
 
 func (c *cpu) run(code []Operation) (int, error) {
+	//fmt.Printf("%#v\n", c)
 	defer func() {
 		if err := recover(); err != nil {
 			panic(fmt.Errorf("%v\n%s", err, c.stackTrace(code)))
@@ -145,8 +146,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		}
 
-		//println(c.trace(code)) //TODO-
-		op := code[c.ip]       //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
+		//fmt.Println(c.trace(code)) //TODO-
+		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
 		case AP: // -> ptr
@@ -234,6 +235,15 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.writeI8(c.sp, int8(c.readI32(c.sp)))
 		case ConvI8I32:
 			c.writeI32(c.sp, int32(c.readI8(c.sp)))
+		case Copy: // &dst, &src -> &dst
+			src := c.readPtr(c.sp)
+			c.sp += ptrStackSz
+			dst := c.readPtr(c.sp)
+			for i := 0; i < op.N; i++ {
+				c.writeI8(dst, c.readI8(src))
+				src++
+				dst++
+			}
 		case DivF64: // a, b -> a / b
 			b := c.readF64(c.sp)
 			c.sp += f64StackSz
@@ -417,7 +427,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp += ptrStackSz - i32StackSz
 			v := c.readI32(p)
 			c.writeI32(c.sp, v)
-			c.writeI32(p, v+1)
+			c.writeI32(p, v+int32(op.N))
 		case PostIncPtr: // adr -> (*adr)++
 			p := c.readPtr(c.sp)
 			v := c.readPtr(p)
@@ -553,6 +563,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.memcpy)
 		case memcmp:
 			c.builtin(c.memcmp)
+		case sprintf:
+			c.builtin(c.sprintf)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace(code))

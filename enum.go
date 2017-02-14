@@ -28,6 +28,7 @@ const (
 	ConvF32F64
 	ConvF64F32
 	ConvF64I32
+	Copy // N
 	ConvF64I8
 	ConvI32F32
 	ConvI32F64
@@ -68,7 +69,7 @@ const (
 	NeqI64
 	Or32
 	Panic
-	PostIncI32
+	PostIncI32 // N
 	PostIncPtr // N
 	RemU64
 	Return
@@ -100,23 +101,24 @@ const (
 	floor
 	log
 	log10
+	memcmp
+	memcpy
+	memset
 	pow
 	printf
 	round
 	sin
 	sinh
+	sprintf
 	sqrt
+	strcat
+	strchr
+	strcmp
+	strcpy
+	strlen
+	strncmp
+	strncpy
+	strrchr
 	tan
 	tanh
-	strcpy
-	strncpy
-	strcmp
-	strlen
-	strcat
-	strncmp
-	strchr
-	strrchr
-	memset
-	memcpy
-	memcmp
 )
