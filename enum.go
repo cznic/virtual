@@ -98,7 +98,13 @@ const (
 	exit
 	exp
 	fabs
+	fclose
+	fgetc
+	fgets
 	floor
+	fopen
+	fread
+	fwrite
 	log
 	log10
 	memcmp

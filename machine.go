@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"sort"
 	"sync"
@@ -34,6 +35,41 @@ const (
 	ptrStackSz  = (ptrSize + stackAlign - 1) &^ (stackAlign - 1)
 	stackAlign  = ptrSize
 )
+
+type memWriter uintptr
+
+func (m *memWriter) WriteByte(b byte) error {
+	p := *m
+	writeU8(uintptr(p), b)
+	*m = p + 1
+	return nil
+}
+
+func (m *memWriter) Write(b []byte) (int, error) {
+	if len(b) == 0 {
+		return 0, nil
+	}
+
+	*m += memWriter(memcopy(uintptr(*m), uintptr((unsafe.Pointer)(&b[0])), len(b)))
+	return len(b), nil
+}
+
+func memcopy(dst, src uintptr, n int) int {
+	return copy((*[math.MaxInt32]byte)(unsafe.Pointer(dst))[:n], (*[math.MaxInt32]byte)(unsafe.Pointer(src))[:n])
+}
+
+func GoString(s uintptr) string {
+	var b buffer.Bytes
+	for {
+		ch := readU8(s)
+		if ch == 0 {
+			return string(b.Bytes())
+		}
+
+		b.WriteByte(ch)
+		s++
+	}
+}
 
 type machine struct {
 	brk       uintptr
@@ -116,20 +152,6 @@ func (m *machine) CString(s string) uintptr {
 	return p
 }
 
-func (m *machine) GoString(s uintptr) string {
-	var c cpu
-	var b buffer.Bytes
-	for {
-		ch := c.readU8(s)
-		if ch == 0 {
-			return string(b.Bytes())
-		}
-
-		b.WriteByte(ch)
-		s++
-	}
-}
-
 func (m *machine) close() (err error) {
 	m.Kill()
 	if m.dsMem != nil {
@@ -186,6 +208,9 @@ func (m *machine) Kill() {
 		m.stopped = true
 	}
 	m.stopMu.Unlock()
+}
+
+func (m *machine) free(p uintptr) { //TODO
 }
 
 func (m *machine) malloc(n int) uintptr { //TODO real malloc

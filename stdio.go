@@ -7,22 +7,229 @@ package virtual
 import (
 	"fmt"
 	"io"
+	"math"
+	"os"
+	"sync"
+	"syscall"
+	"unsafe"
 
 	"github.com/cznic/internal/buffer"
+	"github.com/cznic/mathutil"
 )
 
 func init() {
 	registerBuiltins(map[int]Opcode{
+		dict.SID("__builtin_fclose"):  fclose,
+		dict.SID("__builtin_fgetc"):   fgetc,
+		dict.SID("__builtin_fgets"):   fgets,
+		dict.SID("__builtin_fopen"):   fopen,
+		dict.SID("__builtin_fread"):   fread,
+		dict.SID("__builtin_fwrite"):  fwrite,
 		dict.SID("__builtin_printf"):  printf,
 		dict.SID("__builtin_sprintf"): sprintf,
 	})
 }
 
-func (c *cpu) fprintf0(w io.Writer, format, argp uintptr) int32 {
+const eof = -1
+
+var files = &fmap{m: map[uintptr]*os.File{}}
+
+type fmap struct {
+	m  map[uintptr]*os.File
+	mu sync.Mutex
+}
+
+func (m *fmap) add(f *os.File, u uintptr) {
+	m.mu.Lock()
+	m.m[u] = f
+	m.mu.Unlock()
+}
+
+func (m *fmap) get(u uintptr) *os.File {
+	m.mu.Lock()
+	r := m.m[u]
+	m.mu.Unlock()
+	return r
+}
+
+func (m *fmap) extract(u uintptr) *os.File {
+	m.mu.Lock()
+	f := m.m[u]
+	delete(m.m, u)
+	m.mu.Unlock()
+	return f
+}
+
+type file struct{ dummy int32 }
+
+// int fclose(FILE *stream);
+func (c *cpu) fclose() {
+	u := readPtr(c.rp - ptrStackSz)
+	f := files.extract(readPtr(u))
+	if f == nil {
+		c.thread.errno = int32(syscall.EBADF)
+		writeI32(c.rp, eof)
+		return
+	}
+
+	c.m.free(u)
+	if err := f.Close(); err != nil {
+		c.thread.errno = int32(syscall.EIO)
+		writeI32(c.rp, eof)
+		return
+	}
+
+	writeI32(c.rp, 0)
+}
+
+// int fgetc(FILE *stream);
+func (c *cpu) fgetc() {
+	f := files.get(readPtr(c.rp - ptrStackSz))
+	p := buffer.Get(1)
+	if _, err := f.Read(*p); err != nil {
+		writeI32(c.rp, eof)
+		buffer.Put(p)
+		return
+	}
+
+	writeI32(c.rp, int32((*p)[0]))
+	buffer.Put(p)
+}
+
+// char *fgets(char *s, int size, FILE *stream);
+func (c *cpu) fgets() {
+	ap := c.rp - ptrStackSz
+	s := readPtr(ap)
+	ap -= i32StackSz
+	size := int(readI32(ap))
+	f := files.get(readPtr(ap - ptrStackSz))
+	p := buffer.Get(1)
+	b := *p
+	w := memWriter(s)
+	ok := false
+	for i := size - 1; i > 0; i-- {
+		_, err := f.Read(b)
+		if err != nil {
+			if !ok {
+				writePtr(c.rp, 0)
+				buffer.Put(p)
+				return
+			}
+
+			break
+		}
+
+		ok = true
+		w.WriteByte(b[0])
+		if b[0] == '\n' {
+			break
+		}
+	}
+	w.WriteByte(0)
+	writePtr(c.rp, s)
+	buffer.Put(p)
+
+}
+
+// FILE *fopen(const char *path, const char *mode);
+func (c *cpu) fopen() {
+	path := GoString(readPtr(c.rp - ptrStackSz))
+	mode := GoString(readPtr(c.rp - 2*ptrStackSz))
+	switch mode {
+	case "r":
+		f, err := os.OpenFile(path, os.O_RDONLY, 0666)
+		if err != nil {
+			switch {
+			case os.IsNotExist(err):
+				c.thread.errno = int32(syscall.ENOENT)
+			case os.IsPermission(err):
+				c.thread.errno = int32(syscall.EPERM)
+			default:
+				c.thread.errno = int32(syscall.EACCES)
+			}
+			writePtr(c.rp, 0)
+			return
+		}
+
+		u := c.m.malloc(int(unsafe.Sizeof(file{})))
+		files.add(f, u)
+		writePtr(c.rp, u)
+		return
+	case "w":
+		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+		if err != nil {
+			switch {
+			case os.IsPermission(err):
+				c.thread.errno = int32(syscall.EPERM)
+			default:
+				c.thread.errno = int32(syscall.EACCES)
+			}
+			writePtr(c.rp, 0)
+			return
+		}
+
+		u := c.m.malloc(int(unsafe.Sizeof(file{})))
+		files.add(f, u)
+		writePtr(c.rp, u)
+		return
+	default:
+		panic(mode)
+	}
+}
+
+// size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+func (c *cpu) fread() {
+	ap := c.rp - ptrStackSz
+	ptr := readPtr(ap)
+	ap -= stackAlign
+	size := readSize(ap)
+	ap -= stackAlign
+	nmemb := readSize(ap)
+	ap -= ptrStackSz
+	f := files.get(readPtr(ap))
+	hi, lo := mathutil.MulUint128_64(size, nmemb)
+	if hi != 0 || lo > math.MaxInt32 {
+		c.thread.errno = int32(syscall.E2BIG)
+		writeSize(c.rp, 0)
+		return
+	}
+
+	n, err := f.Read((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
+	if err != nil {
+		c.thread.errno = int32(syscall.EIO)
+	}
+	writeSize(c.rp, uint64(n)/size)
+}
+
+// size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+func (c *cpu) fwrite() {
+	ap := c.rp - ptrStackSz
+	ptr := readPtr(ap)
+	ap -= stackAlign
+	size := readSize(ap)
+	ap -= stackAlign
+	nmemb := readSize(ap)
+	ap -= ptrStackSz
+	f := files.get(readPtr(ap))
+	hi, lo := mathutil.MulUint128_64(size, nmemb)
+	if hi != 0 || lo > math.MaxInt32 {
+		c.thread.errno = int32(syscall.E2BIG)
+		writeSize(c.rp, 0)
+		return
+	}
+
+	n, err := f.Write((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
+	if err != nil {
+		c.thread.errno = int32(syscall.EIO)
+	}
+	writeSize(c.rp, uint64(n)/size)
+}
+
+func fprintf(w io.Writer, format, argp uintptr) int32 {
 	var b buffer.Bytes
 	written := 0
 	for {
-		ch := c.readI8(format)
+		ch := readI8(format)
 		format++
 		switch ch {
 		case 0:
@@ -36,7 +243,7 @@ func (c *cpu) fprintf0(w io.Writer, format, argp uintptr) int32 {
 		case '%':
 			modifiers := ""
 		more:
-			ch := c.readI8(format)
+			ch := readI8(format)
 			format++
 			switch ch {
 			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.':
@@ -44,29 +251,29 @@ func (c *cpu) fprintf0(w io.Writer, format, argp uintptr) int32 {
 				goto more
 			case 'c':
 				argp -= i32StackSz
-				arg := c.readI32(argp)
+				arg := readI32(argp)
 				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sc", modifiers), arg)
 				written += n
 			case 'd', 'i':
 				argp -= i32StackSz
-				arg := c.readI32(argp)
+				arg := readI32(argp)
 				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sd", modifiers), arg)
 				written += n
 			case 'f':
 				argp -= f64StackSz
-				arg := c.readF64(argp)
+				arg := readF64(argp)
 				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sf", modifiers), arg)
 				written += n
 			case 's':
 				argp -= ptrStackSz
-				arg := c.readPtr(argp)
+				arg := readPtr(argp)
 				if arg == 0 {
 					break
 				}
 
 				var b2 buffer.Bytes
 				for {
-					c := c.readI8(arg)
+					c := readI8(arg)
 					arg++
 					if c == 0 {
 						n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%ss", modifiers), b2.Bytes())
@@ -96,27 +303,14 @@ func (c *cpu) fprintf0(w io.Writer, format, argp uintptr) int32 {
 
 // int printf(const char *format, ...);
 func (c *cpu) printf() {
-	c.writeI32(c.rp, c.fprintf0(c.m.stdout, c.readPtr(c.rp-ptrStackSz), c.rp-ptrStackSz))
-}
-
-type memWriter struct {
-	p uintptr
-	c *cpu
-}
-
-func (m *memWriter) Write(p []byte) (int, error) {
-	for _, v := range p {
-		m.c.writeU8(m.p, v)
-		m.p++
-	}
-	return len(p), nil
+	writeI32(c.rp, fprintf(c.m.stdout, readPtr(c.rp-ptrStackSz), c.rp-ptrStackSz))
 }
 
 // int sprintf(char *str, const char *format, ...);
 func (c *cpu) sprintf() {
 	ap := c.rp - ptrStackSz
-	w := memWriter{c.readPtr(ap), c}
+	w := memWriter(readPtr(ap))
 	ap -= ptrStackSz
-	c.writeI32(c.rp, c.fprintf0(&w, c.readPtr(ap), ap))
-	c.writeI8(w.p, 0)
+	writeI32(c.rp, fprintf(&w, readPtr(ap), ap))
+	writeI8(uintptr(w), 0)
 }

@@ -31,31 +31,31 @@ func init() {
 	})
 }
 
-func (c *cpu) acos()  { c.writeF64(c.rp, math.Acos(c.readF64(c.sp))) }
-func (c *cpu) asin()  { c.writeF64(c.rp, math.Asin(c.readF64(c.sp))) }
-func (c *cpu) atan()  { c.writeF64(c.rp, math.Atan(c.readF64(c.sp))) }
-func (c *cpu) ceil()  { c.writeF64(c.rp, math.Ceil(c.readF64(c.sp))) }
-func (c *cpu) cos()   { c.writeF64(c.rp, math.Cos(c.readF64(c.sp))) }
-func (c *cpu) cosh()  { c.writeF64(c.rp, math.Cosh(c.readF64(c.sp))) }
-func (c *cpu) exp()   { c.writeF64(c.rp, math.Exp(c.readF64(c.sp))) }
-func (c *cpu) fabs()  { c.writeF64(c.rp, math.Abs(c.readF64(c.sp))) }
-func (c *cpu) floor() { c.writeF64(c.rp, math.Floor(c.readF64(c.sp))) }
-func (c *cpu) log()   { c.writeF64(c.rp, math.Log(c.readF64(c.sp))) }
-func (c *cpu) log10() { c.writeF64(c.rp, math.Log10(c.readF64(c.sp))) }
-func (c *cpu) pow()   { c.writeF64(c.rp, math.Pow(c.readF64(c.sp+f64StackSz), c.readF64(c.sp))) }
-func (c *cpu) sin()   { c.writeF64(c.rp, math.Sin(c.readF64(c.sp))) }
-func (c *cpu) sinh()  { c.writeF64(c.rp, math.Sinh(c.readF64(c.sp))) }
-func (c *cpu) sqrt()  { c.writeF64(c.rp, math.Sqrt(c.readF64(c.sp))) }
-func (c *cpu) tan()   { c.writeF64(c.rp, math.Tan(c.readF64(c.sp))) }
-func (c *cpu) tanh()  { c.writeF64(c.rp, math.Tanh(c.readF64(c.sp))) }
+func (c *cpu) acos()  { writeF64(c.rp, math.Acos(readF64(c.sp))) }
+func (c *cpu) asin()  { writeF64(c.rp, math.Asin(readF64(c.sp))) }
+func (c *cpu) atan()  { writeF64(c.rp, math.Atan(readF64(c.sp))) }
+func (c *cpu) ceil()  { writeF64(c.rp, math.Ceil(readF64(c.sp))) }
+func (c *cpu) cos()   { writeF64(c.rp, math.Cos(readF64(c.sp))) }
+func (c *cpu) cosh()  { writeF64(c.rp, math.Cosh(readF64(c.sp))) }
+func (c *cpu) exp()   { writeF64(c.rp, math.Exp(readF64(c.sp))) }
+func (c *cpu) fabs()  { writeF64(c.rp, math.Abs(readF64(c.sp))) }
+func (c *cpu) floor() { writeF64(c.rp, math.Floor(readF64(c.sp))) }
+func (c *cpu) log()   { writeF64(c.rp, math.Log(readF64(c.sp))) }
+func (c *cpu) log10() { writeF64(c.rp, math.Log10(readF64(c.sp))) }
+func (c *cpu) pow()   { writeF64(c.rp, math.Pow(readF64(c.sp+f64StackSz), readF64(c.sp))) }
+func (c *cpu) sin()   { writeF64(c.rp, math.Sin(readF64(c.sp))) }
+func (c *cpu) sinh()  { writeF64(c.rp, math.Sinh(readF64(c.sp))) }
+func (c *cpu) sqrt()  { writeF64(c.rp, math.Sqrt(readF64(c.sp))) }
+func (c *cpu) tan()   { writeF64(c.rp, math.Tan(readF64(c.sp))) }
+func (c *cpu) tanh()  { writeF64(c.rp, math.Tanh(readF64(c.sp))) }
 
 func (c *cpu) round() {
-	v := c.readF64(c.sp)
+	v := readF64(c.sp)
 	switch {
 	case v < 0:
 		v = math.Ceil(v - 0.5)
 	case v > 0:
 		v = math.Floor(v + 0.5)
 	}
-	c.writeF64(c.rp, v)
+	writeF64(c.rp, v)
 }

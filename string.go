@@ -20,21 +20,72 @@ func init() {
 	})
 }
 
+// int memcmp(const void *s1, const void *s2, size_t n)
+func (c *cpu) memcmp() {
+	ap := c.rp - ptrStackSz
+	s1 := readPtr(ap)
+	ap -= ptrStackSz
+	s2 := readPtr(ap)
+	ap -= stackAlign
+	n := readSize(ap)
+	var ch1, ch2 byte
+	for n != 0 {
+		ch1 = readU8(s1)
+		ch2 = readU8(s2)
+		if ch1 != ch2 {
+			break
+		}
+
+		n--
+	}
+	if n != 0 {
+		writeI32(c.rp, int32(ch1)-int32(ch2))
+		return
+	}
+
+	writeI32(c.rp, 0)
+}
+
+// void *memcpy(void *dest, const void *src, size_t n)
+func (c *cpu) memcpy() {
+	ap := c.rp - ptrStackSz
+	dest := readPtr(ap)
+	ap -= ptrStackSz
+	memcopy(dest, readPtr(ap), int(readSize(ap-stackAlign)))
+	writePtr(c.rp, dest)
+}
+
+// void *memset(void *s, int c, size_t n)
+func (c *cpu) memset() {
+	ap := c.rp - ptrStackSz
+	s := readPtr(ap)
+	ap -= i32StackSz
+	ch := readI8(ap)
+	ap -= stackAlign
+	n := readSize(ap)
+	ret := s
+	for d := s; n > 0; n-- {
+		writeI8(d, ch)
+		d++
+	}
+	writePtr(c.rp, ret)
+}
+
 // char *strcat(char *dest, const char *src)
 func (c *cpu) strcat() {
-	dest := c.readPtr(c.sp + ptrStackSz)
-	src := c.readPtr(c.sp)
+	dest := readPtr(c.sp + ptrStackSz)
+	src := readPtr(c.sp)
 	ret := dest
-	for c.readI8(dest) != 0 {
+	for readI8(dest) != 0 {
 		dest++
 	}
 	for {
-		ch := c.readI8(src)
+		ch := readI8(src)
 		src++
-		c.writeI8(dest, ch)
+		writeI8(dest, ch)
 		dest++
 		if ch == 0 {
-			c.writePtr(c.rp, ret)
+			writePtr(c.rp, ret)
 			return
 		}
 	}
@@ -42,17 +93,17 @@ func (c *cpu) strcat() {
 
 // char *strchr(const char *s, int c)
 func (c *cpu) strchr() {
-	s := c.readPtr(c.sp + ptrStackSz)
-	ch := byte(c.readI32(c.sp))
+	s := readPtr(c.sp + ptrStackSz)
+	ch := byte(readI32(c.sp))
 	for {
-		ch2 := c.readU8(s)
+		ch2 := readU8(s)
 		if ch2 == 0 {
-			c.writePtr(c.rp, 0)
+			writePtr(c.rp, 0)
 			return
 		}
 
 		if ch2 == ch {
-			c.writePtr(c.rp, s)
+			writePtr(c.rp, s)
 			return
 		}
 
@@ -62,15 +113,15 @@ func (c *cpu) strchr() {
 
 // int strcmp(const char *s1, const char *s2)
 func (c *cpu) strcmp() {
-	s1 := c.readPtr(c.sp + ptrStackSz)
-	s2 := c.readPtr(c.sp)
+	s1 := readPtr(c.sp + ptrStackSz)
+	s2 := readPtr(c.sp)
 	for {
-		ch1 := c.readU8(s1)
+		ch1 := readU8(s1)
 		s1++
-		ch2 := c.readU8(s2)
+		ch2 := readU8(s2)
 		s2++
 		if ch1 != ch2 || ch1 == 0 || ch2 == 0 {
-			c.writeI32(c.rp, int32(ch1)-int32(ch2))
+			writeI32(c.rp, int32(ch1)-int32(ch2))
 			return
 		}
 	}
@@ -78,30 +129,89 @@ func (c *cpu) strcmp() {
 
 // char *strcpy(char *dest, const char *src)
 func (c *cpu) strcpy() {
-	dest := c.readPtr(c.sp + ptrStackSz)
-	src := c.readPtr(c.sp)
+	dest := readPtr(c.sp + ptrStackSz)
+	src := readPtr(c.sp)
 	ret := dest
 	for {
-		ch := c.readI8(src)
+		ch := readI8(src)
 		src++
-		c.writeI8(dest, ch)
+		writeI8(dest, ch)
 		dest++
 		if ch == 0 {
-			c.writePtr(c.rp, ret)
+			writePtr(c.rp, ret)
 			return
 		}
 	}
 }
 
+// size_t strlen(const char *s)
+func (c *cpu) strlen() {
+	var n uint64
+	for s := readPtr(c.sp); readI8(s) != 0; s++ {
+		n++
+	}
+	writeSize(c.rp, n)
+}
+
+// int strncmp(const char *s1, const char *s2, size_t n)
+func (c *cpu) strncmp() {
+	ap := c.rp - ptrStackSz
+	s1 := readPtr(ap)
+	ap -= ptrStackSz
+	s2 := readPtr(ap)
+	ap -= stackAlign
+	n := readSize(ap)
+	var ch1, ch2 byte
+	for n != 0 {
+		ch1 = readU8(s1)
+		s1++
+		ch2 = readU8(s2)
+		s2++
+		n--
+		if ch1 != ch2 || ch1 == 0 || ch2 == 0 {
+			break
+		}
+	}
+	if n != 0 {
+		writeI32(c.rp, int32(ch1)-int32(ch2))
+		return
+	}
+
+	writeI32(c.rp, 0)
+}
+
+// char *strncpy(char *dest, const char *src, size_t n)
+func (c *cpu) strncpy() {
+	ap := c.rp - ptrStackSz
+	dest := readPtr(ap)
+	ap -= ptrStackSz
+	src := readPtr(ap)
+	ap -= stackAlign
+	n := readSize(ap)
+	ret := dest
+	var ch int8
+	for ch = readI8(src); ch != 0 && n > 0; n-- {
+		writeI8(dest, ch)
+		dest++
+		src++
+		ch = readI8(src)
+	}
+	for ; n > 0; n-- {
+		writeI8(dest, 0)
+		dest++
+	}
+	writePtr(c.rp, ret)
+}
+
 // char *strrchr(const char *s, int c)
 func (c *cpu) strrchr() {
-	s := c.readPtr(c.sp + ptrStackSz)
-	ch := byte(c.readI32(c.sp))
+	s := readPtr(c.sp + ptrStackSz)
+	ch := byte(readI32(c.sp))
 	var ret uintptr
 	for {
-		ch2 := c.readU8(s)
+		ch2 := readU8(s)
 		if ch2 == 0 {
-			c.writePtr(c.rp, ret)
+			writePtr(c.rp, ret)
 			return
 		}
 

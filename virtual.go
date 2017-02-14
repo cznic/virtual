@@ -45,16 +45,16 @@ func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, h
 	}
 	pargv := m.malloc(len(argv) * ptrSize)
 	for i, v := range argv {
-		t.writePtr(pargv+uintptr(i*ptrSize), v)
+		writePtr(pargv+uintptr(i*ptrSize), v)
 	}
 
 	// void _start(int args, char **argv);
 	t.rp = t.sp
 	t.sp -= i32StackSz
-	t.writeI32(t.sp, int32(len(args))) // argc
+	writeI32(t.sp, int32(len(args))) // argc
 	t.sp -= ptrStackSz
-	t.writePtr(t.sp, pargv) // argv
+	writePtr(t.sp, pargv) // argv
 	t.sp -= ptrStackSz
-	t.writePtr(t.sp, 0xcafebabe) // return address, not used
+	writePtr(t.sp, 0xcafebabe) // return address, not used
 	return t.run(b.Code)
 }
