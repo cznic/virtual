@@ -36,7 +36,8 @@ const (
 	ConvI32I8
 	ConvI64I32
 	ConvI8I32
-	DS // N
+	DS    // N
+	DSI64 // N
 	DivF64
 	DivI32
 	DivU64

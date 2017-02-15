@@ -94,6 +94,10 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			}
+		case DSI64:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, lo, op.N); err != nil {
+				return err
+			}
 		case // default format
 			AddPtr,
 			Call,

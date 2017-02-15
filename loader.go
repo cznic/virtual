@@ -105,21 +105,11 @@ func newLoader(modelName string, objects []ir.Object) *loader {
 	}
 }
 
-func (l *loader) loadDataDefinition(d *ir.DataDefinition) int {
-	switch {
-	case d.Value != nil:
-		panic("TODO")
+func (l *loader) loadDataDefinition(d *ir.DataDefinition, b []byte, v ir.Value) {
+	switch x := v.(type) {
+	case *ir.AddressValue:
 	default:
-		r := l.out.BSS
-		sz := l.model.Sizeof(l.tc.MustType(d.TypeID))
-		if sz > mathutil.MaxInt {
-			panic(fmt.Errorf("sizeof(%s) overflows int", d.TypeID))
-		}
-		l.out.BSS += roundup(int(sz), mallocAlign)
-		if l.out.BSS < r {
-			panic(fmt.Errorf("%s: bss overflow on %s", d.Position, d.NameID))
-		}
-		return r
+		panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, v))
 	}
 }
 
@@ -284,10 +274,9 @@ func (l *loader) compositeLiteral(tid ir.TypeID, v ir.Value) int {
 	}
 }
 
-func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
+func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 	var (
 		arguments []nfo
-		calls     []int
 		labels    = map[int]int{}
 		results   []nfo
 		variables []nfo
@@ -383,19 +372,12 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
 		case *ir.Call:
-			fn := calls[len(calls)-1]
-			calls = calls[:len(calls)-1]
-			if fn < 0 { // fn ptr
-				panic("TODO")
-				break
-			}
-
-			if opcode, ok := builtins[l.objects[fn].(*ir.FunctionDefinition).NameID]; ok {
+			if opcode, ok := builtins[l.objects[x.Index].(*ir.FunctionDefinition).NameID]; ok {
 				l.emit(l.pos(x), Operation{Opcode: opcode})
 				break
 			}
 
-			l.emit(l.pos(x), Operation{Opcode: Call, N: fn})
+			l.emit(l.pos(x), Operation{Opcode: Call, N: x.Index})
 		case *ir.Convert:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int8:
@@ -535,21 +517,20 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 			case *ir.DataDefinition:
 				switch {
 				case x.Address:
-					switch {
-					case ex.Value != nil:
-						panic(fmt.Errorf("TODO %#x", ip))
-					default:
-						l.emit(l.pos(x), Operation{Opcode: DS, N: l.m[x.Index] + len(l.out.Data)})
-					}
+					l.emit(l.pos(x), Operation{Opcode: DS, N: l.m[x.Index]})
 				default:
-					panic(fmt.Errorf("TODO %#x", ip))
+					switch t := l.tc.MustType(x.TypeID); t.Kind() {
+					case ir.Pointer:
+						switch l.ptrSize {
+						case 8:
+							l.emit(l.pos(x), Operation{Opcode: DSI64, N: l.m[x.Index]})
+						default:
+							panic(fmt.Errorf("internal error %s, %v", x.TypeID, l.ptrSize))
+						}
+					default:
+						panic(fmt.Errorf("TODO %v", t.Kind()))
+					}
 				}
-			case *ir.FunctionDefinition:
-				if !x.Address {
-					panic(fmt.Errorf("invalid IR"))
-				}
-
-				calls = append(calls, x.Index)
 			default:
 				panic(fmt.Errorf("TODO %T(%v)", ex, ex))
 			}
@@ -868,10 +849,25 @@ func (l *loader) loadFunctionDefinition(f *ir.FunctionDefinition) {
 }
 
 func (l *loader) load() {
-	for i, v := range l.objects {
+	var ds int
+	for i, v := range l.objects { // Allocate global initialized data.
 		switch x := v.(type) {
 		case *ir.DataDefinition:
-			l.m[i] = l.loadDataDefinition(x)
+			if x.Value != nil {
+				l.m[i] = ds
+				ds += roundup(l.sizeof(x.TypeID), mallocAlign)
+			}
+		}
+	}
+	for i, v := range l.objects { // Allocate global zero-initialized data.
+		switch x := v.(type) {
+		case *ir.DataDefinition:
+			if x.Value == nil {
+				l.m[i] = ds
+				sz := roundup(l.sizeof(x.TypeID), mallocAlign)
+				ds += sz
+				l.out.BSS += sz
+			}
 		}
 	}
 	for i, v := range l.objects {
@@ -882,13 +878,22 @@ func (l *loader) load() {
 			}
 
 			l.m[i] = len(l.out.Code)
-			l.loadFunctionDefinition(x)
+			l.loadFunctionDefinition(i, x)
 		}
 	}
 	for i, v := range l.out.Code {
 		switch v.Opcode {
 		case Call:
 			l.out.Code[i].N = l.m[v.N]
+		}
+	}
+	l.out.Data = *buffer.CGet(ds - l.out.BSS)
+	for i, v := range l.objects {
+		switch x := v.(type) {
+		case *ir.DataDefinition:
+			if x.Value != nil {
+				l.loadDataDefinition(x, l.out.Data[l.m[i]:], x.Value)
+			}
 		}
 	}
 }
