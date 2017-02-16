@@ -58,6 +58,7 @@ func memcopy(dst, src uintptr, n int) int {
 	return copy((*[math.MaxInt32]byte)(unsafe.Pointer(dst))[:n], (*[math.MaxInt32]byte)(unsafe.Pointer(src))[:n])
 }
 
+// GoString returns a string from a C char* s.
 func GoString(s uintptr) string {
 	var b buffer.Bytes
 	for {

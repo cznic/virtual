@@ -37,15 +37,15 @@ func registerBuiltins(m map[int]Opcode) {
 
 // PCInfo represents a line/function for a particular program counter location.
 type PCInfo struct {
-	PC   int
-	Line int
-	C    int       // Column or # of arguments.
-	Name ir.NameID // File name or func name.
+	PC     int
+	Line   int
+	Column int
+	Name   ir.NameID // File name or func name.
 }
 
 // Position returns a token.Position from p.
 func (p *PCInfo) Position() token.Position {
-	return token.Position{Line: p.Line, Column: p.C, Filename: string(dict.S(int(p.Name)))}
+	return token.Position{Line: p.Line, Column: p.Column, Filename: string(dict.S(int(p.Name)))}
 }
 
 // Binary represents a loaded program image. It can be run via Exec.
@@ -136,9 +136,9 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, b []byte, v ir.Value) 
 		case *ir.Int32Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Int32:
-				*(*int32)((unsafe.Pointer)(&b[0])) = 0
+				*(*int32)((unsafe.Pointer)(&b[0])) = x.Value
 			case ir.Pointer:
-				*(*uintptr)((unsafe.Pointer)(&b[0])) = 0
+				*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(x.Value)
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
@@ -190,7 +190,7 @@ func (l *loader) emitOne(op Operation) {
 
 func (l *loader) emit(li PCInfo, op ...Operation) {
 	if li.Line != 0 {
-		li.C = 1
+		li.Column = 1
 		if n := len(l.out.Lines); n == 0 || l.out.Lines[n-1].Line != li.Line || l.out.Lines[n-1].Name != li.Name {
 			l.out.Lines = append(l.out.Lines, li)
 		}
@@ -230,7 +230,7 @@ func (l *loader) pos(op ir.Operation) PCInfo {
 		return PCInfo{}
 	}
 
-	return PCInfo{PC: len(l.out.Code), Line: p.Line, C: p.Column, Name: ir.NameID(dict.SID(p.Filename))}
+	return PCInfo{PC: len(l.out.Code), Line: p.Line, Column: p.Column, Name: ir.NameID(dict.SID(p.Filename))}
 }
 
 func (l *loader) ip() int { return len(l.out.Code) }
@@ -356,7 +356,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 		n = variables[m-1].off
 	}
 	fp := f.Position
-	fi := PCInfo{PC: len(l.out.Code), Line: fp.Line, C: len(arguments), Name: f.NameID}
+	fi := PCInfo{PC: len(l.out.Code), Line: fp.Line, Column: len(arguments), Name: f.NameID}
 	l.out.Functions = append(l.out.Functions, fi)
 	l.emit(l.pos(f.Body[0]), Operation{Opcode: Func, N: n})
 	ip0 := l.ip()
@@ -667,19 +667,19 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				panic(fmt.Errorf("TODO %v", t.Kind()))
 			}
 		case *ir.Jmp:
-			n := int(x.NameID)
+			n := -int(x.NameID)
 			if n == 0 {
 				n = x.Number
 			}
 			l.emit(l.pos(x), Operation{Opcode: Jmp, N: n})
 		case *ir.Jnz:
-			n := int(x.NameID)
+			n := -int(x.NameID)
 			if n == 0 {
 				n = x.Number
 			}
 			l.emit(l.pos(x), Operation{Opcode: Jnz, N: n})
 		case *ir.Jz:
-			n := int(x.NameID)
+			n := -int(x.NameID)
 			if n == 0 {
 				n = x.Number
 			}
@@ -947,6 +947,15 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 	for i, v := range l.out.Code[ip0:] {
 		switch v.Opcode {
 		case Jmp, Jnz, Jz:
+			n, ok := labels[v.N]
+			if !ok {
+				switch {
+				case n < 0:
+					panic(fmt.Errorf("%#x: internal error: undefined label %v", ip0+i, ir.NameID(-n)))
+				default:
+					panic(fmt.Errorf("%#x: internal error: undefined label %v", ip0+i, n))
+				}
+			}
 			l.out.Code[ip0+i].N = labels[v.N]
 		}
 	}
