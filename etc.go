@@ -94,9 +94,27 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			}
+		case DSI32:
+			switch {
+			case op.N == 0:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push32"); err != nil {
+					return err
+				}
+			default:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push32", op.N); err != nil {
+					return err
+				}
+			}
 		case DSI64:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, lo, op.N); err != nil {
-				return err
+			switch {
+			case op.N == 0:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push64"); err != nil {
+					return err
+				}
+			default:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push64", op.N); err != nil {
+					return err
+				}
 			}
 		case // default format
 			AddPtr,
@@ -115,7 +133,11 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Load64,
 			Load8,
 			PostIncI32,
-			PostIncPtr:
+			PostIncI8,
+			PostIncPtr,
+			PreIncI32,
+			PreIncI8,
+			PreIncPtr:
 
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, lo, op.N); err != nil {
 				return err
@@ -137,7 +159,11 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			AddI32,
 			And32,
 			Arguments,
+			ArgumentsFP,
+			BoolI32,
 			BoolI64,
+			BoolI8,
+			CallFP,
 			ConvF32F64,
 			ConvF64F32,
 			ConvF64I32,
@@ -156,15 +182,21 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			EqI32,
 			EqI64,
 			GeqI32,
+			GeqU64,
 			GtI32,
+			GtI64,
+			GtU64,
 			LeqI32,
 			LtI32,
+			LtU64,
 			MulF64,
 			MulI32,
 			NeqI32,
 			NeqI64,
+			Not,
 			Or32,
 			Panic,
+			PtrDiff,
 			RemU64,
 			Return,
 			Store32,
@@ -191,6 +223,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			fgets,
 			floor,
 			fopen,
+			fprintf,
 			fread,
 			fwrite,
 			log,
@@ -214,7 +247,8 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			strncpy,
 			strrchr,
 			tan,
-			tanh:
+			tanh,
+			tolower:
 
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
 				return err

@@ -22,13 +22,16 @@ const (
 	Argument64 // N
 	Argument8  // N
 	Arguments
+	ArgumentsFP
 	BP // N
+	BoolI32
 	BoolI64
+	BoolI8
 	Call // N
+	CallFP
 	ConvF32F64
 	ConvF64F32
 	ConvF64I32
-	Copy // N
 	ConvF64I8
 	ConvI32F32
 	ConvI32F64
@@ -36,7 +39,9 @@ const (
 	ConvI32I8
 	ConvI64I32
 	ConvI8I32
+	Copy  // N
 	DS    // N
+	DSI32 // N
 	DSI64 // N
 	DivF64
 	DivI32
@@ -50,7 +55,10 @@ const (
 	Float64 // N
 	Func    // N
 	GeqI32
+	GeqU64
 	GtI32
+	GtI64
+	GtU64
 	Index    // N
 	IndexI32 // N
 	Int32    // N
@@ -64,14 +72,21 @@ const (
 	Load64 // N
 	Load8  // N
 	LtI32
+	LtU64
 	MulF64
 	MulI32
 	NeqI32
 	NeqI64
+	Not
 	Or32
 	Panic
 	PostIncI32 // N
+	PostIncI8  // N
 	PostIncPtr // N
+	PreIncI32  // N
+	PreIncI8   // N
+	PreIncPtr  // N
+	PtrDiff
 	RemU64
 	Return
 	Store32
@@ -104,6 +119,7 @@ const (
 	fgets
 	floor
 	fopen
+	fprintf
 	fread
 	fwrite
 	log
@@ -128,4 +144,5 @@ const (
 	strrchr
 	tan
 	tanh
+	tolower
 )

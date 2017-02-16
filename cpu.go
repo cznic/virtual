@@ -26,6 +26,7 @@ type cpu struct {
 	ap      uintptr // Arguments pointer
 	bp      uintptr // Base pointer
 	ds      uintptr // Data segment
+	fpStack []uintptr
 	ip      uintptr // Instruction pointer
 	m       *machine
 	rp      uintptr // Results pointer
@@ -185,20 +186,34 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Arguments: // -
 			c.rpStack = append(c.rpStack, c.rp)
 			c.rp = c.sp
+		case ArgumentsFP: // -
+			c.rpStack = append(c.rpStack, c.rp)
+			c.fpStack = append(c.fpStack, readPtr(c.sp))
+			c.sp += ptrStackSz
+			c.rp = c.sp
 		case BP: // -> ptr
 			c.sp -= ptrSize
 			writePtr(c.sp, c.bp+uintptr(op.N))
+		case BoolI8:
+			v := readI64(c.sp)
+			c.sp += i8StackSz - i32StackSz
+			c.bool(v != 0)
+		case BoolI32:
+			c.bool(readI32(c.sp) != 0)
 		case BoolI64:
 			v := readI64(c.sp)
 			c.sp += i64StackSz - i32StackSz
 			c.bool(v != 0)
-		case DS: // -> ptr
-			c.sp -= ptrSize
-			writePtr(c.sp, c.ds+uintptr(op.N))
 		case Call: // -> results
 			c.sp -= ptrStackSz
 			writePtr(c.sp, c.ip)
 			c.ip = uintptr(op.N)
+		case CallFP: // -> results
+			c.sp -= ptrStackSz
+			writePtr(c.sp, c.ip)
+			n := len(c.fpStack)
+			c.ip = c.fpStack[n-1]
+			c.fpStack = c.fpStack[:n-1]
 		case ConvF32F64:
 			v := readF32(c.sp)
 			c.sp += f32StackSz - f64StackSz
@@ -239,6 +254,15 @@ func (c *cpu) run(code []Operation) (int, error) {
 			src := readPtr(c.sp)
 			c.sp += ptrStackSz
 			memcopy(readPtr(c.sp), src, op.N)
+		case DS: // -> ptr
+			c.sp -= ptrSize
+			writePtr(c.sp, c.ds+uintptr(op.N))
+		case DSI32: // -> val
+			c.sp -= i32StackSz
+			writeI32(c.sp, readI32(c.ds+uintptr(op.N)))
+		case DSI64: // -> val
+			c.sp -= ptrSize
+			writeI64(c.sp, readI64(c.ds+uintptr(op.N)))
 		case DivF64: // a, b -> a / b
 			b := readF64(c.sp)
 			c.sp += f64StackSz
@@ -341,6 +365,11 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp += i32StackSz
 			a := readI32(c.sp)
 			c.bool(a >= b)
+		case GeqU64: // a, b -> a >= b
+			b := readU64(c.sp)
+			c.sp += i64StackSz
+			a := readU64(c.sp)
+			c.bool(a >= b)
 		case GtI32: // a, b -> a > b
 			b := readI32(c.sp)
 			c.sp += i32StackSz
@@ -411,6 +440,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.bool(a != b)
 		case Nop: // -
 			// nop
+		case Not:
+			c.bool(readI32(c.sp) == 0)
 		case Or32: // a, b -> a | b
 			b := readI32(c.sp)
 			c.sp += i32StackSz
@@ -428,6 +459,17 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readPtr(p)
 			writePtr(c.sp, v)
 			writePtr(p, v+uintptr(op.N))
+		case PreIncI32: // adr -> ++(*adr)
+			p := readPtr(c.sp)
+			c.sp += ptrStackSz - i32StackSz
+			v := readI32(p) + int32(op.N)
+			writeI32(c.sp, v)
+			writeI32(p, v)
+		case PreIncPtr: // adr -> ++(*adr)
+			p := readPtr(c.sp)
+			v := readPtr(p) + uintptr(op.N)
+			writePtr(c.sp, v)
+			writePtr(p, v)
 		case RemU64: // a, b -> a % b
 			b := readU64(c.sp)
 			c.sp += i64StackSz
@@ -572,6 +614,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.fgetc)
 		case fgets:
 			c.builtin(c.fgets)
+		case fprintf:
+			c.builtin(c.fprintf)
+		case tolower:
+			c.builtin(c.tolower)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace(code))

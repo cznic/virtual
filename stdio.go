@@ -7,9 +7,11 @@ package virtual
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"os"
 	"sync"
+
 	"syscall"
 	"unsafe"
 
@@ -23,6 +25,7 @@ func init() {
 		dict.SID("__builtin_fgetc"):   fgetc,
 		dict.SID("__builtin_fgets"):   fgets,
 		dict.SID("__builtin_fopen"):   fopen,
+		dict.SID("__builtin_fprintf"): fprintf,
 		dict.SID("__builtin_fread"):   fread,
 		dict.SID("__builtin_fwrite"):  fwrite,
 		dict.SID("__builtin_printf"):  printf,
@@ -134,47 +137,69 @@ func (c *cpu) fgets() {
 // FILE *fopen(const char *path, const char *mode);
 func (c *cpu) fopen() {
 	path := GoString(readPtr(c.rp - ptrStackSz))
-	mode := GoString(readPtr(c.rp - 2*ptrStackSz))
-	switch mode {
-	case "r":
-		f, err := os.OpenFile(path, os.O_RDONLY, 0666)
-		if err != nil {
-			switch {
-			case os.IsNotExist(err):
-				c.thread.errno = int32(syscall.ENOENT)
-			case os.IsPermission(err):
-				c.thread.errno = int32(syscall.EPERM)
-			default:
-				c.thread.errno = int32(syscall.EACCES)
-			}
-			writePtr(c.rp, 0)
-			return
-		}
-
-		u := c.m.malloc(int(unsafe.Sizeof(file{})))
-		files.add(f, u)
-		writePtr(c.rp, u)
-		return
-	case "w":
-		f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-		if err != nil {
-			switch {
-			case os.IsPermission(err):
-				c.thread.errno = int32(syscall.EPERM)
-			default:
-				c.thread.errno = int32(syscall.EACCES)
-			}
-			writePtr(c.rp, 0)
-			return
-		}
-
-		u := c.m.malloc(int(unsafe.Sizeof(file{})))
-		files.add(f, u)
-		writePtr(c.rp, u)
-		return
+	var f *os.File
+	var err error
+	switch path {
+	case os.Stderr.Name():
+		f = os.Stderr
+	case os.Stdin.Name():
+		f = os.Stdin
+	case os.Stdout.Name():
+		f = os.Stdout
 	default:
-		panic(mode)
+		mode := GoString(readPtr(c.rp - 2*ptrStackSz))
+		switch mode {
+		case "r":
+			if f, err = os.OpenFile(path, os.O_RDONLY, 0666); err != nil {
+				switch {
+				case os.IsNotExist(err):
+					c.thread.errno = int32(syscall.ENOENT)
+				case os.IsPermission(err):
+					c.thread.errno = int32(syscall.EPERM)
+				default:
+					c.thread.errno = int32(syscall.EACCES)
+				}
+				writePtr(c.rp, 0)
+				return
+			}
+		case "w":
+			if f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
+				switch {
+				case os.IsPermission(err):
+					c.thread.errno = int32(syscall.EPERM)
+				default:
+					c.thread.errno = int32(syscall.EACCES)
+				}
+				writePtr(c.rp, 0)
+				return
+			}
+		default:
+			panic(mode)
+		}
 	}
+
+	u := c.m.malloc(int(unsafe.Sizeof(file{})))
+	files.add(f, u)
+	writePtr(c.rp, u)
+}
+
+// int __builtin_fprintf(FILE * stream, const char *format, ...);
+func (c *cpu) fprintf() {
+	ap := c.rp - ptrStackSz
+	stream := readPtr(ap)
+	ap -= ptrStackSz
+	var w io.Writer
+	switch f := files.get(stream); {
+	case f == os.Stdin:
+		w = ioutil.Discard
+	case f == os.Stdout:
+		w = c.m.stdout
+	case f == os.Stderr:
+		w = c.m.stderr
+	default:
+		w = f
+	}
+	writeI32(c.rp, goFprintf(w, readPtr(ap), ap))
 }
 
 // size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
@@ -225,7 +250,7 @@ func (c *cpu) fwrite() {
 	writeSize(c.rp, uint64(n)/size)
 }
 
-func fprintf(w io.Writer, format, argp uintptr) int32 {
+func goFprintf(w io.Writer, format, argp uintptr) int32 {
 	var b buffer.Bytes
 	written := 0
 	for {
@@ -303,7 +328,7 @@ func fprintf(w io.Writer, format, argp uintptr) int32 {
 
 // int printf(const char *format, ...);
 func (c *cpu) printf() {
-	writeI32(c.rp, fprintf(c.m.stdout, readPtr(c.rp-ptrStackSz), c.rp-ptrStackSz))
+	writeI32(c.rp, goFprintf(c.m.stdout, readPtr(c.rp-ptrStackSz), c.rp-ptrStackSz))
 }
 
 // int sprintf(char *str, const char *format, ...);
@@ -311,6 +336,6 @@ func (c *cpu) sprintf() {
 	ap := c.rp - ptrStackSz
 	w := memWriter(readPtr(ap))
 	ap -= ptrStackSz
-	writeI32(c.rp, fprintf(&w, readPtr(ap), ap))
+	writeI32(c.rp, goFprintf(&w, readPtr(ap), ap))
 	writeI8(uintptr(w), 0)
 }

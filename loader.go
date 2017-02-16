@@ -106,11 +106,49 @@ func newLoader(modelName string, objects []ir.Object) *loader {
 }
 
 func (l *loader) loadDataDefinition(d *ir.DataDefinition, b []byte, v ir.Value) {
-	switch x := v.(type) {
-	case *ir.AddressValue:
-	default:
-		panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, v))
+	var f func([]byte, ir.TypeID, ir.Value)
+	f = func(b []byte, t ir.TypeID, v ir.Value) {
+		switch x := v.(type) {
+		case *ir.AddressValue:
+			*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.m[x.Index])
+		case *ir.CompositeValue:
+			switch typ := l.tc.MustType(t); typ.Kind() {
+			case ir.Array:
+				i := 0
+				at := typ.(*ir.ArrayType)
+				itemT := at.Item
+				itemSz := l.model.Sizeof(itemT)
+				for _, v := range x.Values {
+					switch y := v.(type) {
+					case
+						*ir.Int32Value,
+						*ir.StringValue:
+
+						f(b[int64(i)*itemSz:], itemT.ID(), y)
+					default:
+						panic(fmt.Errorf("%s: TODO %T: %v", d.Position, y, y))
+					}
+					i++
+				}
+			default:
+				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, typ.Kind(), v))
+			}
+		case *ir.Int32Value:
+			switch typ := l.tc.MustType(t); typ.Kind() {
+			case ir.Int32:
+				*(*int32)((unsafe.Pointer)(&b[0])) = 0
+			case ir.Pointer:
+				*(*uintptr)((unsafe.Pointer)(&b[0])) = 0
+			default:
+				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
+			}
+		case *ir.StringValue:
+			*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.text(x.StringID))
+		default:
+			panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, x))
+		}
 	}
+	f(b, d.TypeID, v)
 }
 
 func (l *loader) emitOne(op Operation) {
@@ -361,13 +399,29 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			}
 		case *ir.Arguments:
-			l.emit(l.pos(x), Operation{Opcode: Arguments})
+			switch {
+			case x.FunctionPointer:
+				l.emit(l.pos(x), Operation{Opcode: ArgumentsFP})
+			default:
+				l.emit(l.pos(x), Operation{Opcode: Arguments})
+			}
 		case *ir.BeginScope:
 			// nop
 		case *ir.Bool:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
+			case ir.Int8:
+				l.emit(l.pos(x), Operation{Opcode: BoolI8})
+			case ir.Int32:
+				l.emit(l.pos(x), Operation{Opcode: BoolI32})
 			case ir.Uint64:
 				l.emit(l.pos(x), Operation{Opcode: BoolI64})
+			case ir.Pointer:
+				switch l.ptrSize {
+				case 8:
+					l.emit(l.pos(x), Operation{Opcode: BoolI64})
+				default:
+					panic(fmt.Errorf("%s: TODO %v", x.Position, l.ptrSize))
+				}
 			default:
 				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
@@ -378,6 +432,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 
 			l.emit(l.pos(x), Operation{Opcode: Call, N: x.Index})
+		case *ir.CallFP:
+			l.emit(l.pos(x), Operation{Opcode: CallFP})
 		case *ir.Convert:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int8:
@@ -393,21 +449,30 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvI32I8})
 				case ir.Int32:
 					// ok
-				case ir.Uint64, ir.Pointer:
+				case ir.Int64, ir.Uint64:
 					l.emit(l.pos(x), Operation{Opcode: ConvI32I64})
 				case ir.Float32:
 					l.emit(l.pos(x), Operation{Opcode: ConvI32F32})
 				case ir.Float64:
 					l.emit(l.pos(x), Operation{Opcode: ConvI32F64})
+				case ir.Pointer:
+					switch l.ptrSize {
+					case 8:
+						l.emit(l.pos(x), Operation{Opcode: ConvI32I64})
+					default:
+						panic(fmt.Errorf("%s: TODO %v", x.Position, l.ptrSize))
+					}
 				default:
-					panic(fmt.Errorf("TODO %v", u.Kind()))
+					panic(fmt.Errorf("%s: TODO %v", x.Position, u.Kind()))
 				}
 			case ir.Int64:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
+				case ir.Int32:
+					l.emit(l.pos(x), Operation{Opcode: ConvI64I32})
 				case ir.Uint64:
 					// ok
 				default:
-					panic(fmt.Errorf("TODO %v", u.Kind()))
+					panic(fmt.Errorf("%s: TODO %v", x.Position, u.Kind()))
 				}
 			case ir.Uint64:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
@@ -484,12 +549,14 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 			if !x.Address {
 				switch sz {
+				case 1:
+					l.emit(l.pos(x), Operation{Opcode: Load8})
 				case 4:
 					l.emit(l.pos(x), Operation{Opcode: Load32})
 				case 8:
 					l.emit(l.pos(x), Operation{Opcode: Load64})
 				default:
-					panic(fmt.Errorf("TODO %v", sz))
+					panic(fmt.Errorf("%s: TODO %v", x.Position, sz))
 				}
 			}
 		case *ir.EndScope:
@@ -520,6 +587,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: DS, N: l.m[x.Index]})
 				default:
 					switch t := l.tc.MustType(x.TypeID); t.Kind() {
+					case ir.Int32:
+						l.emit(l.pos(x), Operation{Opcode: DSI32, N: l.m[x.Index]})
 					case ir.Pointer:
 						switch l.ptrSize {
 						case 8:
@@ -528,7 +597,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 							panic(fmt.Errorf("internal error %s, %v", x.TypeID, l.ptrSize))
 						}
 					default:
-						panic(fmt.Errorf("TODO %v", t.Kind()))
+						panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 					}
 				}
 			default:
@@ -545,6 +614,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch fields[x.Index].Size {
 				case 4:
 					l.emit(l.pos(x), Operation{Opcode: Load32, N: int(fields[x.Index].Offset)})
+				case 8:
+					l.emit(l.pos(x), Operation{Opcode: Load64, N: int(fields[x.Index].Offset)})
 				default:
 					panic(fmt.Errorf("TODO %v", fields[x.Index].Size))
 				}
@@ -553,15 +624,31 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
 				l.emit(l.pos(x), Operation{Opcode: GeqI32})
+			case ir.Pointer:
+				switch l.ptrSize {
+				case 8:
+					l.emit(l.pos(x), Operation{Opcode: GeqU64})
+				default:
+					panic(fmt.Errorf("%s: internal error %v", x.Position, l.ptrSize))
+				}
 			default:
-				panic(fmt.Errorf("TODO %v", t.Kind()))
+				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
 		case *ir.Gt:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
 				l.emit(l.pos(x), Operation{Opcode: GtI32})
+			case ir.Int64:
+				l.emit(l.pos(x), Operation{Opcode: GtI64})
+			case ir.Pointer:
+				switch l.ptrSize {
+				case 8:
+					l.emit(l.pos(x), Operation{Opcode: GtU64})
+				default:
+					panic(fmt.Errorf("%s: internal error %v", x.Position, l.ptrSize))
+				}
 			default:
-				panic(fmt.Errorf("TODO %v", t.Kind()))
+				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
 		case *ir.Const32:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
@@ -626,8 +713,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
 				l.emit(l.pos(x), Operation{Opcode: LtI32})
+			case ir.Pointer:
+				l.emit(l.pos(x), Operation{Opcode: LtU64})
 			default:
-				panic(fmt.Errorf("TODO %v", t.Kind()))
+				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
 		case *ir.Mul:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
@@ -665,6 +754,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			default:
 				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
+		case *ir.Not:
+			l.emit(l.pos(x), Operation{Opcode: Not})
 		case *ir.Or:
 			switch l.sizeof(x.TypeID) {
 			case 4:
@@ -676,6 +767,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			l.emit(l.pos(x), Operation{Opcode: Panic})
 		case *ir.PostIncrement:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
+			case ir.Int8:
+				l.emit(l.pos(x), Operation{Opcode: PostIncI8, N: x.Delta})
 			case ir.Int32:
 				l.emit(l.pos(x), Operation{Opcode: PostIncI32, N: x.Delta})
 			case ir.Pointer:
@@ -683,6 +776,17 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			default:
 				panic(fmt.Errorf("TODO %v", t.Kind()))
 			}
+		case *ir.PreIncrement:
+			switch t := l.tc.MustType(x.TypeID); t.Kind() {
+			case ir.Int32:
+				l.emit(l.pos(x), Operation{Opcode: PreIncI32, N: x.Delta})
+			case ir.Pointer:
+				l.emit(l.pos(x), Operation{Opcode: PreIncPtr, N: x.Delta})
+			default:
+				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
+			}
+		case *ir.PtrDiff:
+			l.emit(l.pos(x), Operation{Opcode: PtrDiff})
 		case *ir.Rem:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Uint64:
