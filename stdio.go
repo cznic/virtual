@@ -5,6 +5,7 @@
 package virtual
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -35,7 +36,10 @@ func init() {
 
 const eof = -1
 
-var files = &fmap{m: map[uintptr]*os.File{}}
+var (
+	files      = &fmap{m: map[uintptr]*os.File{}}
+	nullReader = bytes.NewBuffer(nil)
+)
 
 type fmap struct {
 	m  map[uintptr]*os.File
@@ -48,11 +52,34 @@ func (m *fmap) add(f *os.File, u uintptr) {
 	m.mu.Unlock()
 }
 
-func (m *fmap) get(u uintptr) *os.File {
+func (m *fmap) reader(u uintptr, c *cpu) io.Reader {
 	m.mu.Lock()
-	r := m.m[u]
+	f := m.m[u]
 	m.mu.Unlock()
-	return r
+	switch {
+	case f == os.Stdin:
+		return c.m.stdin
+	case f == os.Stdout:
+		return nullReader
+	case f == os.Stderr:
+		return nullReader
+	}
+	return f
+}
+
+func (m *fmap) writer(u uintptr, c *cpu) io.Writer {
+	m.mu.Lock()
+	f := m.m[u]
+	m.mu.Unlock()
+	switch {
+	case f == os.Stdin:
+		return ioutil.Discard
+	case f == os.Stdout:
+		return c.m.stdout
+	case f == os.Stderr:
+		return c.m.stderr
+	}
+	return f
 }
 
 func (m *fmap) extract(u uintptr) *os.File {
@@ -63,7 +90,7 @@ func (m *fmap) extract(u uintptr) *os.File {
 	return f
 }
 
-type file struct{ dummy int32 }
+type file struct{ _ int32 }
 
 // int fclose(FILE *stream);
 func (c *cpu) fclose() {
@@ -87,9 +114,8 @@ func (c *cpu) fclose() {
 
 // int fgetc(FILE *stream);
 func (c *cpu) fgetc() {
-	f := files.get(readPtr(c.rp - ptrStackSz))
 	p := buffer.Get(1)
-	if _, err := f.Read(*p); err != nil {
+	if _, err := files.reader(readPtr(c.rp-ptrStackSz), c).Read(*p); err != nil {
 		writeI32(c.rp, eof)
 		buffer.Put(p)
 		return
@@ -105,7 +131,7 @@ func (c *cpu) fgets() {
 	s := readPtr(ap)
 	ap -= i32StackSz
 	size := int(readI32(ap))
-	f := files.get(readPtr(ap - ptrStackSz))
+	f := files.reader(readPtr(ap-ptrStackSz), c)
 	p := buffer.Get(1)
 	b := *p
 	w := memWriter(s)
@@ -188,18 +214,7 @@ func (c *cpu) fprintf() {
 	ap := c.rp - ptrStackSz
 	stream := readPtr(ap)
 	ap -= ptrStackSz
-	var w io.Writer
-	switch f := files.get(stream); {
-	case f == os.Stdin:
-		w = ioutil.Discard
-	case f == os.Stdout:
-		w = c.m.stdout
-	case f == os.Stderr:
-		w = c.m.stderr
-	default:
-		w = f
-	}
-	writeI32(c.rp, goFprintf(w, readPtr(ap), ap))
+	writeI32(c.rp, goFprintf(files.writer(stream, c), readPtr(ap), ap))
 }
 
 // size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
@@ -211,7 +226,6 @@ func (c *cpu) fread() {
 	ap -= stackAlign
 	nmemb := readSize(ap)
 	ap -= ptrStackSz
-	f := files.get(readPtr(ap))
 	hi, lo := mathutil.MulUint128_64(size, nmemb)
 	if hi != 0 || lo > math.MaxInt32 {
 		c.thread.errno = int32(syscall.E2BIG)
@@ -219,7 +233,7 @@ func (c *cpu) fread() {
 		return
 	}
 
-	n, err := f.Read((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
+	n, err := files.reader(readPtr(ap), c).Read((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
 	if err != nil {
 		c.thread.errno = int32(syscall.EIO)
 	}
@@ -235,7 +249,6 @@ func (c *cpu) fwrite() {
 	ap -= stackAlign
 	nmemb := readSize(ap)
 	ap -= ptrStackSz
-	f := files.get(readPtr(ap))
 	hi, lo := mathutil.MulUint128_64(size, nmemb)
 	if hi != 0 || lo > math.MaxInt32 {
 		c.thread.errno = int32(syscall.E2BIG)
@@ -243,7 +256,7 @@ func (c *cpu) fwrite() {
 		return
 	}
 
-	n, err := f.Write((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
+	n, err := files.writer(readPtr(ap), c).Write((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
 	if err != nil {
 		c.thread.errno = int32(syscall.EIO)
 	}

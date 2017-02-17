@@ -604,6 +604,9 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				panic(fmt.Errorf("TODO %T(%v)", ex, ex))
 			}
 		case *ir.Field:
+			if x.Bits != 0 {
+				panic(fmt.Errorf("%s: TODO %v@%v:%v", x.Bits, x.BitOffset, x.BitFieldType))
+			}
 			fields := l.model.Layout(l.tc.MustType(x.TypeID).(*ir.PointerType).Element.(*ir.StructOrUnionType))
 			switch {
 			case x.Address:
@@ -699,6 +702,9 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				panic(fmt.Errorf("TODO %v", t.Kind()))
 			}
 		case *ir.Load:
+			if x.Bits != 0 {
+				panic(fmt.Errorf("%s: TODO %v@%v:%v", x.Bits, x.BitOffset, x.BitFieldType))
+			}
 			switch l.sizeof(l.tc.MustType(x.TypeID).(*ir.PointerType).Element.ID()) {
 			case 1:
 				l.emit(l.pos(x), Operation{Opcode: Load8})
@@ -811,6 +817,9 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 		case *ir.Return:
 			l.emit(l.pos(x), Operation{Opcode: Return})
 		case *ir.Store:
+			if x.Bits != 0 {
+				panic(fmt.Errorf("%s: TODO %v@%v:%v", x.Bits, x.BitOffset, x.BitFieldType))
+			}
 			switch l.sizeof(x.TypeID) {
 			case 1:
 				l.emit(l.pos(x), Operation{Opcode: Store8})
