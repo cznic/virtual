@@ -147,8 +147,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		}
 
-		//fmt.Println(c.trace(code)) //TODO-
-		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
+		fmt.Println(c.trace(code)) //TODO-
+		op := code[c.ip]           //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
 		case AP: // -> ptr
@@ -170,6 +170,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			addPtr(c.sp, v)
 		case AddSP: // -
 			c.sp += uintptr(op.N)
+		case And8: // a, b -> a & b
+			b := readI8(c.sp)
+			c.sp += i8StackSz
+			writeI8(c.sp, readI8(c.sp)&b)
 		case And32: // a, b -> a & b
 			b := readI32(c.sp)
 			c.sp += i32StackSz
@@ -420,6 +424,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			p := readPtr(c.sp)
 			c.sp += ptrStackSz - i64StackSz
 			writeI64(c.sp, readI64(p+uintptr(op.N)))
+		case LshI32: // val, cnt -> val << cnt
+			n := readI32(c.sp)
+			c.sp += i32StackSz
+			writeI32(c.sp, readI32(c.sp)<<uint(n))
 		case MulF64: // a, b -> a * b
 			b := readF64(c.sp)
 			c.sp += f64StackSz
@@ -487,6 +495,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.rpStack = c.rpStack[:n-1]
 			c.sp = c.ap
 			c.ap = ap
+		case RshI8: // val, cnt -> val >> cnt
+			n := readI32(c.sp)
+			c.sp += i32StackSz
+			writeI8(c.sp, readI8(c.sp)>>uint(n))
 		case Store8: // adr, val -> val
 			v := readI8(c.sp)
 			c.sp += i8StackSz
@@ -505,6 +517,14 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI64(readPtr(c.sp), v)
 			c.sp += ptrStackSz - i64StackSz
 			writeI64(c.sp, v)
+		case StoreBits8: // adr, val -> val
+			v := readI8(c.sp)
+			c.sp += i8StackSz
+			p := readPtr(c.sp)
+			v = readI8(p)&^int8(op.N) | v&int8(op.N)
+			writeI8(p, v)
+			c.sp += ptrStackSz - i8StackSz
+			writeI8(c.sp, v)
 		case SubF64: // a, b -> a - b
 			b := readF64(c.sp)
 			c.sp += f64StackSz

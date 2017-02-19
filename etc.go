@@ -137,7 +137,8 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			PostIncPtr,
 			PreIncI32,
 			PreIncI8,
-			PreIncPtr:
+			PreIncPtr,
+			StoreBits8:
 
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, lo, op.N); err != nil {
 				return err
@@ -158,6 +159,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			AddF64,
 			AddI32,
 			And32,
+			And8,
 			Arguments,
 			ArgumentsFP,
 			BoolI32,
@@ -187,6 +189,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			GtI64,
 			GtU64,
 			LeqI32,
+			LshI32,
 			LtI32,
 			LtU64,
 			MulF64,
@@ -199,6 +202,8 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			PtrDiff,
 			RemU64,
 			Return,
+			RshI32,
+			RshI8,
 			Store32,
 			Store64,
 			Store8,

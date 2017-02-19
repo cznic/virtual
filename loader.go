@@ -377,6 +377,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			l.emit(l.pos(x), Operation{Opcode: AddSP, N: -l.stackSize(x.TypeID)})
 		case *ir.And:
 			switch l.sizeof(x.TypeID) {
+			case 1:
+				l.emit(l.pos(x), Operation{Opcode: And8})
 			case 4:
 				l.emit(l.pos(x), Operation{Opcode: And32})
 			default:
@@ -605,8 +607,9 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 		case *ir.Field:
 			if x.Bits != 0 {
-				panic(fmt.Errorf("%s: TODO %v@%v:%v", x.Bits, x.BitOffset, x.BitFieldType))
+				panic(fmt.Errorf("%#05x\t%s:%s: internal error", ip, f.NameID, x.Position))
 			}
+
 			fields := l.model.Layout(l.tc.MustType(x.TypeID).(*ir.PointerType).Element.(*ir.StructOrUnionType))
 			switch {
 			case x.Address:
@@ -615,6 +618,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			default:
 				switch fields[x.Index].Size {
+				case 1:
+					l.emit(l.pos(x), Operation{Opcode: Load8, N: int(fields[x.Index].Offset)})
 				case 4:
 					l.emit(l.pos(x), Operation{Opcode: Load32, N: int(fields[x.Index].Offset)})
 				case 8:
@@ -655,7 +660,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 		case *ir.Const32:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
-			case ir.Int32:
+			case ir.Int8, ir.Int32:
 				l.int32(x, x.Value)
 			default:
 				panic(fmt.Errorf("TODO %v", t.Kind()))
@@ -703,8 +708,9 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 		case *ir.Load:
 			if x.Bits != 0 {
-				panic(fmt.Errorf("%s: TODO %v@%v:%v", x.Bits, x.BitOffset, x.BitFieldType))
+				panic(fmt.Errorf("%#05x\t%s:%s: internal error", ip, f.NameID, x.Position))
 			}
+
 			switch l.sizeof(l.tc.MustType(x.TypeID).(*ir.PointerType).Element.ID()) {
 			case 1:
 				l.emit(l.pos(x), Operation{Opcode: Load8})
@@ -816,10 +822,34 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 		case *ir.Return:
 			l.emit(l.pos(x), Operation{Opcode: Return})
+		case *ir.Rsh:
+			switch l.sizeof(x.TypeID) {
+			case 1:
+				l.emit(l.pos(x), Operation{Opcode: RshI8})
+			default:
+				panic(fmt.Errorf("%s: internal error %s", x.Position, x.TypeID))
+			}
 		case *ir.Store:
 			if x.Bits != 0 {
-				panic(fmt.Errorf("%s: TODO %v@%v:%v", x.Bits, x.BitOffset, x.BitFieldType))
+				if x.BitOffset != 0 {
+					l.emit(l.pos(x), Operation{Opcode: Int32, N: x.BitOffset})
+					switch t := l.tc.MustType(x.TypeID); t.Kind() {
+					case ir.Int32:
+						l.emit(l.pos(x), Operation{Opcode: LshI32})
+					default:
+						panic(fmt.Errorf("%s: internal error %s", x.Position, x.TypeID))
+					}
+				}
+				mask := (uint64(1)<<uint(x.Bits) - 1) << uint(x.BitOffset)
+				switch l.sizeof(x.BitFieldType) {
+				case 1:
+					l.emit(l.pos(x), Operation{Opcode: StoreBits8, N: int(mask)})
+				default:
+					panic(fmt.Errorf("%s: internal error %s", x.Position, x.BitFieldType))
+				}
+				break
 			}
+
 			switch l.sizeof(x.TypeID) {
 			case 1:
 				l.emit(l.pos(x), Operation{Opcode: Store8})

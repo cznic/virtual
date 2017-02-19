@@ -14,7 +14,7 @@ func init() {
 func (c *cpu) tolower() {
 	ch := readI32(c.rp - i32StackSz)
 	if ch >= 'A' && ch <= 'Z' {
-		ch ^= ' '
+		ch |= ' '
 	}
 	writeI32(c.rp, ch)
 }

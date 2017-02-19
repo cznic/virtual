@@ -18,6 +18,7 @@ const (
 	AddPtrs
 	AddSP // N
 	And32
+	And8
 	Argument32 // N
 	Argument64 // N
 	Argument8  // N
@@ -71,6 +72,7 @@ const (
 	Load32 // N
 	Load64 // N
 	Load8  // N
+	LshI32
 	LtI32
 	LtU64
 	MulF64
@@ -89,9 +91,12 @@ const (
 	PtrDiff
 	RemU64
 	Return
+	RshI32 // N
+	RshI8  // N
 	Store32
 	Store64
 	Store8
+	StoreBits8 // N
 	SubF64
 	SubI32
 	Text       // N
