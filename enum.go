@@ -14,11 +14,13 @@ const (
 	AP // N
 	AddF64
 	AddI32
+	AddI64
 	AddPtr // N
 	AddPtrs
 	AddSP // N
 	And32
 	And8
+	Argument16 // N
 	Argument32 // N
 	Argument64 // N
 	Argument8  // N
@@ -43,6 +45,7 @@ const (
 	ConvI8I32
 	ConvI8I64
 	ConvU16I32
+	ConvU16I64
 	ConvU32I64
 	ConvU8I32
 	Copy  // N
@@ -108,6 +111,7 @@ const (
 	StoreBits8 // N
 	SubF64
 	SubI32
+	SubI64
 	Text       // N
 	Variable32 // N
 	Variable64 // N

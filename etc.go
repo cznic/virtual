@@ -159,6 +159,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			AddPtrs,
 			AddF64,
 			AddI32,
+			AddI64,
 			And32,
 			And8,
 			Arguments,
@@ -180,6 +181,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ConvI8I32,
 			ConvI8I64,
 			ConvU16I32,
+			ConvU16I64,
 			ConvU32I64,
 			ConvU8I32,
 			DivF64,
@@ -218,6 +220,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Store8,
 			SubF64,
 			SubI32,
+			SubI64,
 			Xor32,
 			Zero32,
 			Zero64,
@@ -269,6 +272,10 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			}
 		case Argument8:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push8", op.N); err != nil {
+				return err
+			}
+		case Argument16:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push16", op.N); err != nil {
 				return err
 			}
 		case Argument32:

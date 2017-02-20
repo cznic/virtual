@@ -122,6 +122,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, b []byte, v ir.Value) 
 					switch y := v.(type) {
 					case
 						*ir.Int32Value,
+						*ir.Int64Value,
 						*ir.StringValue:
 
 						f(b[int64(i)*itemSz:], itemT.ID(), y)
@@ -139,6 +140,13 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, b []byte, v ir.Value) 
 				*(*int32)((unsafe.Pointer)(&b[0])) = x.Value
 			case ir.Pointer:
 				*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(x.Value)
+			default:
+				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
+			}
+		case *ir.Int64Value:
+			switch typ := l.tc.MustType(t); typ.Kind() {
+			case ir.Int64, ir.Uint64:
+				*(*int64)((unsafe.Pointer)(&b[0])) = int64(x.Value)
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
@@ -390,6 +398,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32, ir.Uint32:
 				l.emit(l.pos(x), Operation{Opcode: AddI32})
+			case ir.Int64, ir.Uint64:
+				l.emit(l.pos(x), Operation{Opcode: AddI64})
 			case ir.Float64:
 				l.emit(l.pos(x), Operation{Opcode: AddF64})
 			case ir.Pointer:
@@ -416,12 +426,14 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch val := arguments[x.Index]; val.sz {
 				case 1:
 					l.emit(l.pos(x), Operation{Opcode: Argument8, N: val.off})
+				case 2:
+					l.emit(l.pos(x), Operation{Opcode: Argument16, N: val.off})
 				case 4:
 					l.emit(l.pos(x), Operation{Opcode: Argument32, N: val.off})
 				case 8:
 					l.emit(l.pos(x), Operation{Opcode: Argument64, N: val.off})
 				default:
-					panic(fmt.Errorf("internal error %v %v", t.Arguments[x.Index].ID(), val))
+					panic(fmt.Errorf("%s: internal error %v %v", x.Position, t.Arguments[x.Index].ID(), val))
 				}
 			}
 		case *ir.Arguments:
@@ -506,6 +518,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch u := l.tc.MustType(x.Result); u.Kind() {
 				case ir.Int32:
 					l.emit(l.pos(x), Operation{Opcode: ConvU16I32})
+				case ir.Uint64:
+					l.emit(l.pos(x), Operation{Opcode: ConvU16I64})
 				default:
 					panic(fmt.Errorf("%s: TODO %v", x.Position, u.Kind()))
 				}
@@ -536,7 +550,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch u := l.tc.MustType(x.Result); u.Kind() {
 				case ir.Int32:
 					l.emit(l.pos(x), Operation{Opcode: ConvI64I32})
-				case ir.Uint64:
+				case ir.Int64, ir.Uint64:
 					// ok
 				default:
 					panic(fmt.Errorf("TODO %v", u.Kind()))
@@ -647,6 +661,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					switch t := l.tc.MustType(x.TypeID); t.Kind() {
 					case ir.Int32:
 						l.emit(l.pos(x), Operation{Opcode: DSI32, N: l.m[x.Index]})
+					case ir.Uint64:
+						l.emit(l.pos(x), Operation{Opcode: DSI64, N: l.m[x.Index]})
 					case ir.Pointer:
 						switch l.ptrSize {
 						case 8:
@@ -933,8 +949,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value)})
 		case *ir.Sub:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
-			case ir.Int32:
+			case ir.Int32, ir.Uint32:
 				l.emit(l.pos(x), Operation{Opcode: SubI32})
+			case ir.Int64, ir.Uint64:
+				l.emit(l.pos(x), Operation{Opcode: SubI64})
 			case ir.Float64:
 				l.emit(l.pos(x), Operation{Opcode: SubF64})
 			default:
@@ -1007,6 +1025,16 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				case ir.Float32:
 					l.float32(x, float32(v.Value))
 					l.emit(l.pos(x), Operation{Opcode: Store32})
+				default:
+					panic(fmt.Errorf("%s: %v", x.Position, x.TypeID))
+				}
+				l.emit(l.pos(x), Operation{Opcode: AddSP, N: l.stackSize(x.TypeID)})
+			case *ir.Int64Value:
+				l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
+				switch t := l.tc.MustType(x.TypeID); t.Kind() {
+				case ir.Int64, ir.Uint64:
+					l.int64(x, v.Value)
+					l.emit(l.pos(x), Operation{Opcode: Store64})
 				default:
 					panic(fmt.Errorf("%s: %v", x.Position, x.TypeID))
 				}
