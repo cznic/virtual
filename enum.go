@@ -36,10 +36,15 @@ const (
 	ConvF64I8
 	ConvI32F32
 	ConvI32F64
+	ConvI32I16
 	ConvI32I64
 	ConvI32I8
 	ConvI64I32
 	ConvI8I32
+	ConvI8I64
+	ConvU16I32
+	ConvU32I64
+	ConvU8I32
 	Copy  // N
 	DS    // N
 	DSI32 // N
@@ -59,6 +64,7 @@ const (
 	GeqU64
 	GtI32
 	GtI64
+	GtU32
 	GtU64
 	Index    // N
 	IndexI32 // N
@@ -69,6 +75,7 @@ const (
 	Jz       // N
 	Label    // N
 	LeqI32
+	Load16 // N
 	Load32 // N
 	Load64 // N
 	Load8  // N
@@ -77,6 +84,7 @@ const (
 	LtU64
 	MulF64
 	MulI32
+	NegI32
 	NeqI32
 	NeqI64
 	Not
@@ -93,6 +101,7 @@ const (
 	Return
 	RshI32 // N
 	RshI8  // N
+	Store16
 	Store32
 	Store64
 	Store8
