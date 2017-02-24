@@ -6,17 +6,17 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_memcmp"):  memcmp,
-		dict.SID("__builtin_memcpy"):  memcpy,
-		dict.SID("__builtin_memset"):  memset,
-		dict.SID("__builtin_strcat"):  strcat,
-		dict.SID("__builtin_strchr"):  strchr,
-		dict.SID("__builtin_strcmp"):  strcmp,
-		dict.SID("__builtin_strcpy"):  strcpy,
-		dict.SID("__builtin_strlen"):  strlen,
-		dict.SID("__builtin_strncmp"): strncmp,
-		dict.SID("__builtin_strncpy"): strncpy,
-		dict.SID("__builtin_strrchr"): strrchr,
+		dict.SID("memcmp"):  memcmp,
+		dict.SID("memcpy"):  memcpy,
+		dict.SID("memset"):  memset,
+		dict.SID("strcat"):  strcat,
+		dict.SID("strchr"):  strchr,
+		dict.SID("strcmp"):  strcmp,
+		dict.SID("strcpy"):  strcpy,
+		dict.SID("strlen"):  strlen,
+		dict.SID("strncmp"): strncmp,
+		dict.SID("strncpy"): strncpy,
+		dict.SID("strrchr"): strrchr,
 	})
 }
 

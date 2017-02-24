@@ -6,7 +6,7 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_abort"): abort,
-		dict.SID("__builtin_exit"):  exit,
+		dict.SID("abort"): abort,
+		dict.SID("exit"):  exit,
 	})
 }

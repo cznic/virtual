@@ -35,6 +35,12 @@ func registerBuiltins(m map[int]Opcode) {
 	}
 }
 
+// IsBuiltin reports whether an external function is one of the builtins.
+func IsBuiltin(nm ir.NameID) bool {
+	_, ok := builtins[nm]
+	return ok
+}
+
 // PCInfo represents a line/function for a particular program counter location.
 type PCInfo struct {
 	PC     int
