@@ -94,6 +94,17 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			}
+		case DSI16:
+			switch {
+			case op.N == 0:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push16"); err != nil {
+					return err
+				}
+			default:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push16", op.N); err != nil {
+					return err
+				}
+			}
 		case DSI32:
 			switch {
 			case op.N == 0:
@@ -124,6 +135,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Float32,
 			Float64,
 			IndexI32,
+			IndexU32,
 			Int32,
 			Int64,
 			Jmp,
@@ -172,6 +184,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ConvF64F32,
 			ConvF64I32,
 			ConvF64I8,
+			ConvI16U32,
 			ConvI32F32,
 			ConvI32F64,
 			ConvI32I16,
@@ -314,6 +327,10 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			}
 		case Variable64:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push64", op.N); err != nil {
+				return err
+			}
+		case Variable:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push", op.N); err != nil {
 				return err
 			}
 		default:

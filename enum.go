@@ -36,6 +36,7 @@ const (
 	ConvF64F32
 	ConvF64I32
 	ConvF64I8
+	ConvI16U32
 	ConvI32F32
 	ConvI32F64
 	ConvI32I16
@@ -50,6 +51,7 @@ const (
 	ConvU8I32
 	Copy  // N
 	DS    // N
+	DSI16 // N
 	DSI32 // N
 	DSI64 // N
 	DivF64
@@ -71,6 +73,7 @@ const (
 	GtU64
 	Index    // N
 	IndexI32 // N
+	IndexU32 // N
 	Int32    // N
 	Int64    // N
 	Jmp      // N
@@ -113,6 +116,7 @@ const (
 	SubI32
 	SubI64
 	Text       // N
+	Variable   // N + ext: size
 	Variable32 // N
 	Variable64 // N
 	Variable8  // N

@@ -142,6 +142,8 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, b []byte, v ir.Value) 
 			}
 		case *ir.Int32Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
+			case ir.Int16:
+				*(*int16)((unsafe.Pointer)(&b[0])) = int16(x.Value)
 			case ir.Int32:
 				*(*int32)((unsafe.Pointer)(&b[0])) = x.Value
 			case ir.Pointer:
@@ -496,6 +498,13 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				default:
 					panic(fmt.Errorf("TODO %v", u.Kind()))
 				}
+			case ir.Int16:
+				switch u := l.tc.MustType(x.Result); u.Kind() {
+				case ir.Uint32:
+					l.emit(l.pos(x), Operation{Opcode: ConvI16U32})
+				default:
+					panic(fmt.Errorf("TODO %v", u.Kind()))
+				}
 			case ir.Int32:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
 				case ir.Int8:
@@ -622,6 +631,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			switch xt.Kind() {
 			case ir.Int32:
 				l.emit(l.pos(x), Operation{Opcode: IndexI32, N: sz})
+			case ir.Uint32:
+				l.emit(l.pos(x), Operation{Opcode: IndexU32, N: sz})
 			default:
 				panic(fmt.Errorf("TODO %v", xt.Kind()))
 			}
@@ -665,6 +676,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: DS, N: l.m[x.Index]})
 				default:
 					switch t := l.tc.MustType(x.TypeID); t.Kind() {
+					case ir.Int16:
+						l.emit(l.pos(x), Operation{Opcode: DSI16, N: l.m[x.Index]})
 					case ir.Int32:
 						l.emit(l.pos(x), Operation{Opcode: DSI32, N: l.m[x.Index]})
 					case ir.Uint64:
@@ -740,7 +753,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 		case *ir.Const32:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
-			case ir.Int8, ir.Int32:
+			case ir.Int8, ir.Int32, ir.Uint32:
 				l.int32(x, x.Value)
 			default:
 				panic(fmt.Errorf("TODO %v", t.Kind()))
@@ -972,12 +985,21 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch val := variables[x.Index]; val.sz {
 				case 1:
 					l.emit(l.pos(x), Operation{Opcode: Variable8, N: val.off})
+				case 2:
+					panic(fmt.Errorf("%s: internal error %v", x.Position, val))
 				case 4:
 					l.emit(l.pos(x), Operation{Opcode: Variable32, N: val.off})
 				case 8:
 					l.emit(l.pos(x), Operation{Opcode: Variable64, N: val.off})
+				case 16:
+					panic(fmt.Errorf("%s: internal error %v", x.Position, val))
+				case 32:
+					panic(fmt.Errorf("%s: internal error %v", x.Position, val))
 				default:
-					panic(fmt.Errorf("internal error %v", val))
+					l.emit(l.pos(x),
+						Operation{Opcode: Variable, N: val.off},
+						Operation{Opcode: Ext, N: val.sz},
+					)
 				}
 			}
 		case *ir.VariableDeclaration:
