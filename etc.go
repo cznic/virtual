@@ -145,6 +145,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Load32,
 			Load64,
 			Load8,
+			NegIndexU64,
 			PostIncI32,
 			PostIncI8,
 			PostIncPtr,
@@ -168,10 +169,11 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 				}
 			}
 		case // no N
-			AddPtrs,
+			AddF32,
 			AddF64,
 			AddI32,
 			AddI64,
+			AddPtrs,
 			And32,
 			And8,
 			Arguments,
@@ -181,6 +183,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			BoolI8,
 			CallFP,
 			ConvF32F64,
+			ConvF32I32,
 			ConvF64F32,
 			ConvF64I32,
 			ConvF64I8,
@@ -191,19 +194,25 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ConvI32I64,
 			ConvI32I8,
 			ConvI64I32,
+			ConvI64U16,
 			ConvI8I32,
 			ConvI8I64,
 			ConvU16I32,
 			ConvU16I64,
+			ConvU16U32,
 			ConvU32I64,
+			ConvU32U8,
 			ConvU8I32,
+			ConvU8U32,
 			DivF64,
 			DivI32,
+			DivI64,
 			DivU64,
 			Dup32,
 			Dup64,
 			EqI32,
 			EqI64,
+			GeqF64,
 			GeqI32,
 			GeqU64,
 			GtI32,
@@ -212,17 +221,23 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			GtU64,
 			LeqI32,
 			LshI32,
+			LshI64,
 			LtI32,
+			LtI64,
 			LtU64,
+			MulF32,
 			MulF64,
 			MulI32,
+			MulI64,
 			NegI32,
 			NeqI32,
 			NeqI64,
+			NeqF64,
 			Not,
 			Or32,
 			Panic,
 			PtrDiff,
+			RemI32,
 			RemU64,
 			Return,
 			RshI32,
@@ -231,6 +246,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Store32,
 			Store64,
 			Store8,
+			SubF32,
 			SubF64,
 			SubI32,
 			SubI64,
@@ -281,6 +297,10 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			tolower:
 
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
+				return err
+			}
+		case Argument:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push", op.N); err != nil {
 				return err
 			}
 		case Argument8:

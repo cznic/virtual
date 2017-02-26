@@ -12,6 +12,7 @@ const (
 	Nop Opcode = iota
 
 	AP // N
+	AddF32
 	AddF64
 	AddI32
 	AddI64
@@ -20,6 +21,7 @@ const (
 	AddSP // N
 	And32
 	And8
+	Argument   // N + ext: size
 	Argument16 // N
 	Argument32 // N
 	Argument64 // N
@@ -33,6 +35,7 @@ const (
 	Call // N
 	CallFP
 	ConvF32F64
+	ConvF32I32
 	ConvF64F32
 	ConvF64I32
 	ConvF64I8
@@ -43,12 +46,16 @@ const (
 	ConvI32I64
 	ConvI32I8
 	ConvI64I32
+	ConvI64U16
 	ConvI8I32
 	ConvI8I64
 	ConvU16I32
 	ConvU16I64
+	ConvU16U32
 	ConvU32I64
+	ConvU32U8
 	ConvU8I32
+	ConvU8U32
 	Copy  // N
 	DS    // N
 	DSI16 // N
@@ -56,6 +63,7 @@ const (
 	DSI64 // N
 	DivF64
 	DivI32
+	DivI64
 	DivU64
 	Dup32
 	Dup64
@@ -65,6 +73,7 @@ const (
 	Float32 // N
 	Float64 // N
 	Func    // N
+	GeqF64
 	GeqI32
 	GeqU64
 	GtI32
@@ -86,13 +95,19 @@ const (
 	Load64 // N
 	Load8  // N
 	LshI32
+	LshI64 // N
 	LtI32
+	LtI64
 	LtU64
+	MulF32
 	MulF64
 	MulI32
+	MulI64
 	NegI32
+	NegIndexU64 // N
 	NeqI32
 	NeqI64
+	NeqF64
 	Not
 	Or32
 	Panic
@@ -103,6 +118,7 @@ const (
 	PreIncI8   // N
 	PreIncPtr  // N
 	PtrDiff
+	RemI32
 	RemU64
 	Return
 	RshI32 // N
@@ -112,6 +128,7 @@ const (
 	Store64
 	Store8
 	StoreBits8 // N
+	SubF32
 	SubF64
 	SubI32
 	SubI64
