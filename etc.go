@@ -146,6 +146,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Load64,
 			Load8,
 			NegIndexU64,
+			PostIncF64,
 			PostIncI32,
 			PostIncI8,
 			PostIncPtr,
@@ -187,6 +188,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ConvF64F32,
 			ConvF64I32,
 			ConvF64I8,
+			ConvI16I32,
 			ConvI16U32,
 			ConvI32F32,
 			ConvI32F64,
@@ -224,6 +226,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			LshI64,
 			LtI32,
 			LtI64,
+			LtF64,
 			LtU64,
 			MulF32,
 			MulF64,
@@ -339,6 +342,10 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			}
 		case Variable8:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push8", op.N); err != nil {
+				return err
+			}
+		case Variable16:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push16", op.N); err != nil {
 				return err
 			}
 		case Variable32:

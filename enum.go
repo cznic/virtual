@@ -39,6 +39,7 @@ const (
 	ConvF64F32
 	ConvF64I32
 	ConvF64I8
+	ConvI16I32
 	ConvI16U32
 	ConvI32F32
 	ConvI32F64
@@ -97,6 +98,7 @@ const (
 	LshI32
 	LshI64 // N
 	LtI32
+	LtF64
 	LtI64
 	LtU64
 	MulF32
@@ -111,6 +113,7 @@ const (
 	Not
 	Or32
 	Panic
+	PostIncF64 // N
 	PostIncI32 // N
 	PostIncI8  // N
 	PostIncPtr // N
@@ -134,6 +137,7 @@ const (
 	SubI64
 	Text       // N
 	Variable   // N + ext: size
+	Variable16 // N
 	Variable32 // N
 	Variable64 // N
 	Variable8  // N

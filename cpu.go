@@ -276,6 +276,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readI64(c.sp)
 			c.sp += i64StackSz - i16StackSz
 			writeU16(c.sp, uint16(v))
+		case ConvI16I32:
+			writeI32(c.sp, int32(readI16(c.sp)))
 		case ConvI16U32:
 			writeU32(c.sp, uint32(readI16(c.sp)))
 		case ConvI32I8:
@@ -501,6 +503,11 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp += i64StackSz
 			a := readI64(c.sp)
 			c.bool(a < b)
+		case LtF64: // a, b -> a < b
+			b := readF64(c.sp)
+			c.sp += f64StackSz
+			a := readF64(c.sp)
+			c.bool(a < b)
 		case LtU64: // a, b -> a < b
 			b := readU64(c.sp)
 			c.sp += i64StackSz
@@ -579,6 +586,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readI32(p)
 			writeI32(c.sp, v)
 			writeI32(p, v+int32(op.N))
+		case PostIncF64: // adr -> (*adr)++
+			p := readPtr(c.sp)
+			c.sp += ptrStackSz - f64StackSz
+			v := readF64(p)
+			writeF64(c.sp, v)
+			writeF64(p, v+float64(op.N))
 		case PostIncPtr: // adr -> (*adr)++
 			p := readPtr(c.sp)
 			v := readPtr(p)
@@ -671,9 +684,6 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Text:
 			c.sp -= ptrStackSz
 			writePtr(c.sp, c.ts+uintptr(op.N))
-		case Variable8: // -> val
-			c.sp -= i8StackSz
-			writeI8(c.sp, readI8(c.bp+uintptr(op.N)))
 		case Variable: // -> val
 			off := op.N
 			op = code[c.ip]
@@ -681,6 +691,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			sz := op.N
 			c.sp -= uintptr(roundup(sz, stackAlign))
 			memcopy(c.sp, c.bp+uintptr(off), sz)
+		case Variable8: // -> val
+			c.sp -= i8StackSz
+			writeI8(c.sp, readI8(c.bp+uintptr(op.N)))
+		case Variable16: // -> val
+			c.sp -= i16StackSz
+			writeI16(c.sp, readI16(c.bp+uintptr(op.N)))
 		case Variable32: // -> val
 			c.sp -= i32StackSz
 			writeI32(c.sp, readI32(c.bp+uintptr(op.N)))
