@@ -4,9 +4,24 @@
 
 package virtual
 
+import (
+	"github.com/cznic/mathutil"
+)
+
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("abort"): abort,
-		dict.SID("exit"):  exit,
+		dict.SID("abort"):  abort,
+		dict.SID("exit"):   exit,
+		dict.SID("malloc"): malloc,
 	})
+}
+
+// void *malloc(size_t size);
+func (c *cpu) malloc() {
+	size := readSize(c.rp - stackAlign)
+	var p uintptr
+	if size <= mathutil.MaxInt {
+		p = c.m.malloc(int(size))
+	}
+	writePtr(c.rp, p)
 }

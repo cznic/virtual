@@ -20,7 +20,7 @@ var (
 
 // Exec runs the program in b and returns its exit status or an error, if any.
 func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int) (exitStatus int, err error) {
-	m, err := newMachine(b.Data, b.Text, b.BSS, heapSize, stdin, stdout, stderr)
+	m, err := newMachine(b, heapSize, stdin, stdout, stderr)
 	if err != nil {
 		return 0, err
 	}

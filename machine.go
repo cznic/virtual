@@ -93,13 +93,20 @@ type machine struct {
 	tsMem     mmap.MMap
 }
 
-func newMachine(data, text []byte, bssSize, heapSize int, stdin io.Reader, stdout, stderr io.Writer) (*machine, error) {
+func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writer) (*machine, error) {
 	var (
+		bssSize      int
+		data, text   []byte
 		ds, ts       uintptr
 		err          error
 		tsFile       *os.File
 		tsMem, dsMem mmap.MMap
 	)
+	if b != nil {
+		data = b.Data
+		text = b.Text
+		bssSize = b.BSS
+	}
 	if len(text) != 0 {
 		if tsFile, err = ioutil.TempFile("", "virtual-machine-text-"); err != nil {
 			return nil, err
@@ -128,6 +135,21 @@ func newMachine(data, text []byte, bssSize, heapSize int, stdin io.Reader, stdou
 
 		copy(dsMem, data)
 		ds = uintptr(unsafe.Pointer(&dsMem[0]))
+		if b != nil {
+			for i, v := range b.TSRelative {
+				if v == 0 {
+					continue
+				}
+
+				mask := byte(1)
+				for bit := 0; bit < 8; bit++ {
+					if v&mask != 0 {
+						addPtr(ds+uintptr(8*i+bit), ts)
+					}
+					mask <<= 1
+				}
+			}
+		}
 	}
 
 	return &machine{
@@ -215,12 +237,14 @@ func (m *machine) free(p uintptr) { //TODO
 }
 
 func (m *machine) malloc(n int) uintptr { //TODO real malloc
-	p := m.brk
-	if m.sbrk(n)-m.ds < uintptr(len(m.dsMem)) {
-		return p
+	if n != 0 {
+		p := m.brk
+		if m.sbrk(n)-m.ds < uintptr(len(m.dsMem)) {
+			return p
+		}
 	}
 
-	panic("vm: out of memory")
+	return 0
 }
 
 func (m *machine) newThread(stackSize int) (*thread, error) {

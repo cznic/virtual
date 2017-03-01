@@ -76,6 +76,7 @@ const (
 	Func    // N
 	GeqF64
 	GeqI32
+	GeqU32
 	GeqU64
 	GtI32
 	GtI64
@@ -84,6 +85,7 @@ const (
 	Index    // N
 	IndexI32 // N
 	IndexU32 // N
+	IndexU64 // N
 	Int32    // N
 	Int64    // N
 	Jmp      // N
@@ -91,14 +93,17 @@ const (
 	Jz       // N
 	Label    // N
 	LeqI32
+	LeqU32
+	LeqU64
+	Load   // N + ext: size
 	Load16 // N
 	Load32 // N
 	Load64 // N
 	Load8  // N
 	LshI32
-	LshI64 // N
-	LtI32
+	LshI64
 	LtF64
+	LtI32
 	LtI64
 	LtU64
 	MulF32
@@ -106,10 +111,11 @@ const (
 	MulI32
 	MulI64
 	NegI32
+	NegIndexI32 // N
 	NegIndexU64 // N
+	NeqF64
 	NeqI32
 	NeqI64
-	NeqF64
 	Not
 	Or32
 	Panic
@@ -126,11 +132,14 @@ const (
 	Return
 	RshI32 // N
 	RshI8  // N
+	Store  // N
 	Store16
 	Store32
 	Store64
 	Store8
-	StoreBits8 // N
+	StoreBits8  // N
+	StoreBits32 // N
+	StrNCopy    // N
 	SubF32
 	SubF64
 	SubI32
@@ -167,6 +176,7 @@ const (
 	fwrite
 	log
 	log10
+	malloc
 	memcmp
 	memcpy
 	memset

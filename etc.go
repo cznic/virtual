@@ -136,15 +136,18 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Float64,
 			IndexI32,
 			IndexU32,
+			IndexU64,
 			Int32,
 			Int64,
 			Jmp,
 			Jnz,
 			Jz,
+			Load,
 			Load16,
 			Load32,
 			Load64,
 			Load8,
+			NegIndexI32,
 			NegIndexU64,
 			PostIncF64,
 			PostIncI32,
@@ -153,7 +156,10 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			PreIncI32,
 			PreIncI8,
 			PreIncPtr,
-			StoreBits8:
+			Store,
+			StoreBits32,
+			StoreBits8,
+			StrNCopy:
 
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, lo, op.N); err != nil {
 				return err
@@ -222,11 +228,13 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			GtU32,
 			GtU64,
 			LeqI32,
+			LeqU32,
+			LeqU64,
 			LshI32,
 			LshI64,
+			LtF64,
 			LtI32,
 			LtI64,
-			LtF64,
 			LtU64,
 			MulF32,
 			MulF64,
@@ -277,6 +285,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			fwrite,
 			log,
 			log10,
+			malloc,
 			memcmp,
 			memcpy,
 			memset,
@@ -361,7 +370,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 				return err
 			}
 		default:
-			panic(fmt.Errorf("%#05x\t\t%-*s%#x\n", start+i, width, lo, op.N))
+			panic(fmt.Errorf("%#05x\t\t%-*s%#x", start+i, width, lo, op.N))
 		}
 	}
 	return nil
