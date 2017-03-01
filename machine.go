@@ -149,6 +149,19 @@ func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writ
 					mask <<= 1
 				}
 			}
+			for i, v := range b.DSRelative {
+				if v == 0 {
+					continue
+				}
+
+				mask := byte(1)
+				for bit := 0; bit < 8; bit++ {
+					if v&mask != 0 {
+						addPtr(ds+uintptr(8*i+bit), ds)
+					}
+					mask <<= 1
+				}
+			}
 		}
 	}
 

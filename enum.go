@@ -20,6 +20,7 @@ const (
 	AddPtrs
 	AddSP // N
 	And32
+	And64
 	And8
 	Argument   // N + ext: size
 	Argument16 // N
@@ -76,6 +77,7 @@ const (
 	Func    // N
 	GeqF64
 	GeqI32
+	GeqI64
 	GeqU32
 	GeqU64
 	GtI32
@@ -83,6 +85,7 @@ const (
 	GtU32
 	GtU64
 	Index    // N
+	IndexI16 // N
 	IndexI32 // N
 	IndexU32 // N
 	IndexU64 // N
@@ -100,10 +103,11 @@ const (
 	Load32 // N
 	Load64 // N
 	Load8  // N
-	LshI32
-	LshI64
+	LshI32 // N
+	LshI64 // N
 	LtF64
 	LtI32
+	LtU32
 	LtI64
 	LtU64
 	MulF32
@@ -121,17 +125,19 @@ const (
 	Panic
 	PostIncF64 // N
 	PostIncI32 // N
+	PostIncI64 // N
 	PostIncI8  // N
 	PostIncPtr // N
 	PreIncI32  // N
 	PreIncI8   // N
 	PreIncPtr  // N
-	PtrDiff
+	PtrDiff    // N
 	RemI32
 	RemU64
 	Return
 	RshI32 // N
 	RshI8  // N
+	RshI64 // N
 	Store  // N
 	Store16
 	Store32
