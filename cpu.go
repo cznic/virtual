@@ -636,6 +636,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI32(c.sp, readI32(c.sp)|b)
 		case Panic: // -
 			return -1, c.stackTrace(code)
+		case PostIncI8: // adr -> (*adr)++
+			p := readPtr(c.sp)
+			c.sp += ptrStackSz - i8StackSz
+			v := readI8(p)
+			writeI8(c.sp, v)
+			writeI8(p, v+int8(op.N))
 		case PostIncI32: // adr -> (*adr)++
 			p := readPtr(c.sp)
 			c.sp += ptrStackSz - i32StackSz
@@ -703,6 +709,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			n := readI32(c.sp)
 			c.sp += i32StackSz
 			writeI64(c.sp, readI64(c.sp)>>uint(n))
+		case RshU64: // val, cnt -> val >> cnt
+			n := readI32(c.sp)
+			c.sp += i32StackSz
+			writeU64(c.sp, readU64(c.sp)>>uint(n))
 		case Store8: // adr, val -> val
 			v := readI8(c.sp)
 			c.sp += i8StackSz

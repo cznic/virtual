@@ -10,7 +10,7 @@ func init() {
 	})
 }
 
-// int __builtin_tolower(int c);
+// int tolower(int c);
 func (c *cpu) tolower() {
 	ch := readI32(c.rp - i32StackSz)
 	if ch >= 'A' && ch <= 'Z' {

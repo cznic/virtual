@@ -138,6 +138,7 @@ const (
 	RshI32 // N
 	RshI8  // N
 	RshI64 // N
+	RshU64 // N
 	Store  // N
 	Store16
 	Store32

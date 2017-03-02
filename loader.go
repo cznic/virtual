@@ -87,6 +87,7 @@ type loader struct {
 	stackAlign int
 	strings    map[ir.StringID]int
 	tc         ir.TypeCache
+	wstrings   map[ir.StringID]int
 }
 
 func newLoader(modelName string, objects []ir.Object) *loader {
@@ -110,6 +111,7 @@ func newLoader(modelName string, objects []ir.Object) *loader {
 		stackAlign: int(ptrItem.Align),
 		strings:    map[ir.StringID]int{},
 		tc:         ir.TypeCache{},
+		wstrings:   map[ir.StringID]int{},
 	}
 }
 
@@ -129,6 +131,8 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 	f = func(off int, t ir.TypeID, v ir.Value) {
 		b := l.out.Data[off:]
 		switch x := v.(type) {
+		case nil:
+			// nop
 		case *ir.AddressValue:
 			*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.m[x.Index])
 			if _, ok := l.objects[x.Index].(*ir.DataDefinition); ok {
@@ -142,16 +146,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 				itemT := at.Item
 				itemSz := l.model.Sizeof(itemT)
 				for _, v := range x.Values {
-					switch y := v.(type) {
-					case
-						*ir.Int32Value,
-						*ir.Int64Value,
-						*ir.StringValue:
-
-						f(off+i*int(itemSz), itemT.ID(), y)
-					default:
-						panic(fmt.Errorf("%s: TODO %T: %v", d.Position, y, y))
-					}
+					f(off+i*int(itemSz), itemT.ID(), v)
 					i++
 				}
 			case ir.Struct:
@@ -160,14 +155,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 				fields := st.Fields
 				layout := l.model.Layout(st)
 				for _, v := range x.Values {
-					switch y := v.(type) {
-					case nil:
-						// nop
-					case *ir.Int32Value:
-						f(off+int(layout[i].Offset), fields[i].ID(), y)
-					default:
-						panic(fmt.Errorf("%s: TODO %T: %v", d.Position, y, y))
-					}
+					f(off+int(layout[i].Offset), fields[i].ID(), v)
 					i++
 				}
 			default:
@@ -175,9 +163,11 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 			}
 		case *ir.Int32Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
+			case ir.Int8, ir.Uint8:
+				*(*int8)((unsafe.Pointer)(&b[0])) = int8(x.Value)
 			case ir.Int16, ir.Uint16:
 				*(*int16)((unsafe.Pointer)(&b[0])) = int16(x.Value)
-			case ir.Int32:
+			case ir.Int32, ir.Uint32:
 				*(*int32)((unsafe.Pointer)(&b[0])) = x.Value
 			case ir.Int64:
 				*(*int64)((unsafe.Pointer)(&b[0])) = int64(x.Value)
@@ -273,6 +263,22 @@ func (l *loader) text(s ir.StringID) int {
 	l.out.Text = append(l.out.Text, dict.S(int(s))...)
 	sz := roundup(len(l.out.Text)+1, mallocAlign)
 	l.out.Text = append(l.out.Text, make([]byte, sz-len(l.out.Text))...)
+	return p
+}
+
+func (l *loader) wtext(s ir.StringID) int {
+	if p, ok := l.wstrings[s]; ok {
+		return p
+	}
+
+	p := len(l.out.Text)
+	l.wstrings[s] = p
+	ws := []rune(string(dict.S(int(s))))
+	sz := roundup(4*(len(ws)+1), mallocAlign)
+	l.out.Text = append(l.out.Text, make([]byte, sz)...)
+	for i, v := range ws {
+		*(*rune)(unsafe.Pointer(&l.out.Text[p+4*i])) = v
+	}
 	return p
 }
 
@@ -830,7 +836,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					switch t := l.tc.MustType(x.TypeID); t.Kind() {
 					case ir.Int16, ir.Uint16:
 						l.emit(l.pos(x), Operation{Opcode: DSI16, N: l.m[x.Index]})
-					case ir.Int32:
+					case ir.Int32, ir.Uint32:
 						l.emit(l.pos(x), Operation{Opcode: DSI32, N: l.m[x.Index]})
 					case ir.Int64, ir.Uint64, ir.Float64:
 						l.emit(l.pos(x), Operation{Opcode: DSI64, N: l.m[x.Index]})
@@ -1149,6 +1155,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: RshI8})
 			case ir.Int64:
 				l.emit(l.pos(x), Operation{Opcode: RshI64})
+			case ir.Uint64:
+				l.emit(l.pos(x), Operation{Opcode: RshU64})
 			default:
 				panic(fmt.Errorf("%s: internal error %s", x.Position, x.TypeID))
 			}
@@ -1188,7 +1196,12 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: Store, N: sz})
 			}
 		case *ir.StringConst:
-			l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value)})
+			switch {
+			case x.Wide:
+				l.emit(l.pos(x), Operation{Opcode: Text, N: l.wtext(x.Value)})
+			default:
+				l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value)})
+			}
 		case *ir.Sub:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32, ir.Uint32:
@@ -1297,7 +1310,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			case *ir.Int64Value:
 				l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
 				switch t := l.tc.MustType(x.TypeID); t.Kind() {
-				case ir.Int64, ir.Uint64:
+				case ir.Int64, ir.Uint64, ir.Pointer:
 					l.int64(x, v.Value)
 					l.emit(l.pos(x), Operation{Opcode: Store64})
 				default:

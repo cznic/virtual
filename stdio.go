@@ -209,7 +209,7 @@ func (c *cpu) fopen() {
 	writePtr(c.rp, u)
 }
 
-// int __builtin_fprintf(FILE * stream, const char *format, ...);
+// int fprintf(FILE * stream, const char *format, ...);
 func (c *cpu) fprintf() {
 	ap := c.rp - ptrStackSz
 	stream := readPtr(ap)

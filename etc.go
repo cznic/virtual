@@ -260,6 +260,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			RshI32,
 			RshI8,
 			RshI64,
+			RshU64,
 			Store16,
 			Store32,
 			Store64,
