@@ -116,17 +116,6 @@ func newLoader(modelName string, objects []ir.Object) *loader {
 }
 
 func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
-	typ := l.tc.MustType(d.TypeID)
-	if typ.Kind() == ir.Array && typ.(*ir.ArrayType).Item.Kind() == ir.Int8 {
-		switch x := v.(type) {
-		case *ir.StringValue:
-			copy(l.out.Data[off:], dict.S(int(x.StringID)))
-			return
-		default:
-			panic(fmt.Errorf("%s: TODO %T", d.Position, x))
-		}
-	}
-
 	var f func(int, ir.TypeID, ir.Value)
 	f = func(off int, t ir.TypeID, v ir.Value) {
 		b := l.out.Data[off:]
@@ -158,8 +147,25 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 					f(off+int(layout[i].Offset), fields[i].ID(), v)
 					i++
 				}
+			case ir.Pointer:
+				switch elem := typ.(*ir.PointerType).Element; elem.Kind() {
+				case ir.Int8:
+					var buf buffer.Bytes
+					for _, v := range x.Values {
+						switch x := v.(type) {
+						case *ir.Int32Value:
+							buf.WriteByte(byte(x.Value))
+						default:
+							panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, v))
+						}
+					}
+					id := ir.StringID(dict.ID(buf.Bytes()))
+					f(off, t, &ir.StringValue{StringID: id})
+				default:
+					panic(fmt.Errorf("%s: TODO %v %v: %v", d.Position, elem, elem.Kind(), v))
+				}
 			default:
-				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, typ.Kind(), v))
+				panic(fmt.Errorf("%s: TODO %v %v: %v", d.Position, t, typ.Kind(), v))
 			}
 		case *ir.Int32Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
@@ -184,8 +190,25 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
 		case *ir.StringValue:
-			*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.text(x.StringID))
-			l.out.TSRelative[off>>3] |= 1 << uint(off&7)
+			switch typ := l.tc.MustType(t); typ.Kind() {
+			case ir.Pointer:
+				switch typ := typ.(*ir.PointerType).Element; typ.Kind() {
+				case ir.Int8:
+					*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.text(x.StringID))
+					l.out.TSRelative[off>>3] |= 1 << uint(off&7)
+				default:
+					panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, x.StringID))
+				}
+			case ir.Array:
+				switch typ := typ.(*ir.ArrayType).Item; typ.Kind() {
+				case ir.Int8, ir.Uint8:
+					copy(l.out.Data[off:], dict.S(int(x.StringID)))
+				default:
+					panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, x.StringID))
+				}
+			default:
+				panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, x.StringID))
+			}
 		default:
 			panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, x))
 		}
@@ -657,7 +680,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvU32U8})
 				case ir.Int32:
 					// ok
-				case ir.Int64:
+				case ir.Int64, ir.Uint64:
 					l.emit(l.pos(x), Operation{Opcode: ConvU32I64})
 				case ir.Pointer:
 					switch l.ptrSize {
@@ -810,7 +833,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			// nop
 		case *ir.Eq:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
-			case ir.Int32:
+			case ir.Int32, ir.Uint32:
 				l.emit(l.pos(x), Operation{Opcode: EqI32})
 			case ir.Int64, ir.Uint64:
 				l.emit(l.pos(x), Operation{Opcode: EqI64})
