@@ -94,6 +94,17 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			}
+		case DSI8:
+			switch {
+			case op.N == 0:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push8"); err != nil {
+					return err
+				}
+			default:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push8", op.N); err != nil {
+					return err
+				}
+			}
 		case DSI16:
 			switch {
 			case op.N == 0:
@@ -201,12 +212,14 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ConvI16I32,
 			ConvI16U32,
 			ConvI32F32,
+			ConvI32C64,
 			ConvI32F64,
 			ConvI32I16,
 			ConvI32I64,
 			ConvI32I8,
 			ConvI64I32,
 			ConvI64U16,
+			ConvI8I16,
 			ConvI8I32,
 			ConvI8I64,
 			ConvU16I32,
@@ -216,19 +229,24 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ConvU32U8,
 			ConvU8I32,
 			ConvU8U32,
+			Cpl64,
 			DivF64,
 			DivI32,
+			DivU32,
 			DivI64,
 			DivU64,
 			Dup32,
 			Dup64,
+			Dup8,
 			EqI32,
 			EqI64,
+			EqI8,
 			GeqF64,
 			GeqI32,
-			GeqU32,
 			GeqI64,
+			GeqU32,
 			GeqU64,
+			GtF64,
 			GtI32,
 			GtI64,
 			GtU32,
@@ -236,12 +254,14 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			LeqI32,
 			LeqU32,
 			LeqU64,
+			LshI8,
+			LshI16,
 			LshI32,
 			LshI64,
 			LtF64,
 			LtI32,
-			LtU32,
 			LtI64,
+			LtU32,
 			LtU64,
 			MulF32,
 			MulF64,
@@ -250,15 +270,21 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			NegI32,
 			NeqI32,
 			NeqI64,
+			NeqC64,
 			NeqF64,
 			Not,
 			Or32,
+			Or64,
 			Panic,
 			RemI32,
+			RemU32,
 			RemU64,
 			Return,
-			RshI32,
 			RshI8,
+			RshU8,
+			RshU16,
+			RshI32,
+			RshU32,
 			RshI64,
 			RshU64,
 			Store16,
@@ -270,6 +296,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			SubI32,
 			SubI64,
 			Xor32,
+			Xor64,
 			Zero32,
 			Zero64,
 

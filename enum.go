@@ -43,12 +43,14 @@ const (
 	ConvI16I32
 	ConvI16U32
 	ConvI32F32
+	ConvI32C64
 	ConvI32F64
 	ConvI32I16
 	ConvI32I64
 	ConvI32I8
 	ConvI64I32
 	ConvI64U16
+	ConvI8I16
 	ConvI8I32
 	ConvI8I64
 	ConvU16I32
@@ -58,19 +60,24 @@ const (
 	ConvU32U8
 	ConvU8I32
 	ConvU8U32
-	Copy  // N
+	Copy // N
+	Cpl64
 	DS    // N
+	DSI8  // N
 	DSI16 // N
 	DSI32 // N
 	DSI64 // N
 	DivF64
 	DivI32
+	DivU32
 	DivI64
 	DivU64
 	Dup32
 	Dup64
+	Dup8
 	EqI32
 	EqI64
+	EqI8
 	Ext     // N
 	Float32 // N
 	Float64 // N
@@ -80,6 +87,7 @@ const (
 	GeqI64
 	GeqU32
 	GeqU64
+	GtF64
 	GtI32
 	GtI64
 	GtU32
@@ -103,12 +111,14 @@ const (
 	Load32 // N
 	Load64 // N
 	Load8  // N
+	LshI8  // N
+	LshI16 // N
 	LshI32 // N
 	LshI64 // N
 	LtF64
 	LtI32
-	LtU32
 	LtI64
+	LtU32
 	LtU64
 	MulF32
 	MulF64
@@ -117,11 +127,13 @@ const (
 	NegI32
 	NegIndexI32 // N
 	NegIndexU64 // N
+	NeqC64
 	NeqF64
 	NeqI32
 	NeqI64
 	Not
 	Or32
+	Or64
 	Panic
 	PostIncF64 // N
 	PostIncI32 // N
@@ -133,10 +145,14 @@ const (
 	PreIncPtr  // N
 	PtrDiff    // N
 	RemI32
+	RemU32
 	RemU64
 	Return
-	RshI32 // N
 	RshI8  // N
+	RshU8  // N
+	RshU16 // N
+	RshI32 // N
+	RshU32 // N
 	RshI64 // N
 	RshU64 // N
 	Store  // N
@@ -158,6 +174,7 @@ const (
 	Variable64 // N
 	Variable8  // N
 	Xor32
+	Xor64
 	Zero32
 	Zero64
 

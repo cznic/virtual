@@ -284,10 +284,16 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI32(c.sp, int32(readI16(c.sp)))
 		case ConvI16U32:
 			writeU32(c.sp, uint32(readI16(c.sp)))
+		case ConvI32C64:
+			v := readI32(c.sp)
+			c.sp += i32StackSz - c64StackSz
+			writeC64(c.sp, complex(float32(v), 0))
 		case ConvI32I8:
 			writeI8(c.sp, int8(readI32(c.sp)))
 		case ConvI32I16:
 			writeI16(c.sp, int16(readI32(c.sp)))
+		case ConvI8I16:
+			writeI16(c.sp, int16(readI8(c.sp)))
 		case ConvI8I32:
 			writeI32(c.sp, int32(readI8(c.sp)))
 		case ConvI8I64:
@@ -318,9 +324,14 @@ func (c *cpu) run(code []Operation) (int, error) {
 			src := readPtr(c.sp)
 			c.sp += ptrStackSz
 			memcopy(readPtr(c.sp), src, op.N)
+		case Cpl64: // a -> -a
+			writeI64(c.sp, ^readI64(c.sp))
 		case DS: // -> ptr
 			c.sp -= ptrSize
 			writePtr(c.sp, c.ds+uintptr(op.N))
+		case DSI8: // -> val
+			c.sp -= i8StackSz
+			writeI8(c.sp, readI8(c.ds+uintptr(op.N)))
 		case DSI16: // -> val
 			c.sp -= i16StackSz
 			writeI16(c.sp, readI16(c.ds+uintptr(op.N)))
@@ -338,6 +349,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readI32(c.sp)
 			c.sp += i32StackSz
 			writeI32(c.sp, readI32(c.sp)/b)
+		case DivU32: // a, b -> a / b
+			b := readU32(c.sp)
+			c.sp += i32StackSz
+			writeU32(c.sp, readU32(c.sp)/b)
 		case DivI64: // a, b -> a / b
 			b := readI64(c.sp)
 			c.sp += i64StackSz
@@ -346,6 +361,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readU64(c.sp)
 			c.sp += i64StackSz
 			writeU64(c.sp, readU64(c.sp)/b)
+		case Dup8:
+			v := readI8(c.sp)
+			c.sp -= i8StackSz
+			writeI8(c.sp, v)
 		case Dup32:
 			v := readI32(c.sp)
 			c.sp -= i32StackSz
@@ -354,6 +373,11 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readI64(c.sp)
 			c.sp -= i64StackSz
 			writeI64(c.sp, v)
+		case EqI8: // a, b -> a == b
+			b := readI8(c.sp)
+			c.sp += i8StackSz
+			a := readI8(c.sp)
+			c.bool(a == b)
 		case EqI32: // a, b -> a == b
 			b := readI32(c.sp)
 			c.sp += i32StackSz
@@ -455,6 +479,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			a := readU64(c.sp)
 			c.sp += i64StackSz - i32StackSz
 			c.bool(a >= b)
+		case GtF64: // a, b -> a > b
+			b := readF64(c.sp)
+			c.sp += f64StackSz
+			a := readF64(c.sp)
+			c.sp += f64StackSz - i32StackSz
+			c.bool(a > b)
 		case GtI32: // a, b -> a > b
 			b := readI32(c.sp)
 			c.sp += i32StackSz
@@ -523,6 +553,14 @@ func (c *cpu) run(code []Operation) (int, error) {
 			a := readU64(c.sp)
 			c.sp += i64StackSz - i32StackSz
 			c.bool(a <= b)
+		case LshI8: // val, cnt -> val << cnt
+			n := readI32(c.sp)
+			c.sp += i32StackSz
+			writeI8(c.sp, readI8(c.sp)<<uint(n))
+		case LshI16: // val, cnt -> val << cnt
+			n := readI32(c.sp)
+			c.sp += i32StackSz
+			writeI16(c.sp, readI16(c.sp)<<uint(n))
 		case LshI64: // val, cnt -> val << cnt
 			n := readI32(c.sp)
 			c.sp += i32StackSz
@@ -609,6 +647,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			x := readU64(c.sp)
 			c.sp += i64StackSz
 			addPtr(c.sp, uintptr(-op.N*int(x)))
+		case NeqC64: // a, b -> a |= b
+			b := readC64(c.sp)
+			c.sp += c64StackSz
+			a := readC64(c.sp)
+			c.sp += c64StackSz - i32StackSz
+			c.bool(a != b)
 		case NeqI32: // a, b -> a |= b
 			b := readI32(c.sp)
 			c.sp += i32StackSz
@@ -634,6 +678,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readI32(c.sp)
 			c.sp += i32StackSz
 			writeI32(c.sp, readI32(c.sp)|b)
+		case Or64: // a, b -> a | b
+			b := readI64(c.sp)
+			c.sp += i64StackSz
+			writeI64(c.sp, readI64(c.sp)|b)
 		case Panic: // -
 			return -1, c.stackTrace(code)
 		case PostIncI8: // adr -> (*adr)++
@@ -684,6 +732,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readI32(c.sp)
 			c.sp += i32StackSz
 			writeI32(c.sp, readI32(c.sp)%b)
+		case RemU32: // a, b -> a % b
+			b := readU32(c.sp)
+			c.sp += i32StackSz
+			writeU32(c.sp, readU32(c.sp)%b)
 		case RemU64: // a, b -> a % b
 			b := readU64(c.sp)
 			c.sp += i64StackSz
@@ -705,6 +757,22 @@ func (c *cpu) run(code []Operation) (int, error) {
 			n := readI32(c.sp)
 			c.sp += i32StackSz
 			writeI8(c.sp, readI8(c.sp)>>uint(n))
+		case RshU8: // val, cnt -> val >> cnt
+			n := readI32(c.sp)
+			c.sp += i32StackSz
+			writeU8(c.sp, readU8(c.sp)>>uint(n))
+		case RshU16: // val, cnt -> val >> cnt
+			n := readI32(c.sp)
+			c.sp += i32StackSz
+			writeU16(c.sp, readU16(c.sp)>>uint(n))
+		case RshI32: // val, cnt -> val >> cnt
+			n := readI32(c.sp)
+			c.sp += i32StackSz
+			writeI32(c.sp, readI32(c.sp)>>uint(n))
+		case RshU32: // val, cnt -> val >> cnt
+			n := readU32(c.sp)
+			c.sp += i32StackSz
+			writeU32(c.sp, readU32(c.sp)>>uint(n))
 		case RshI64: // val, cnt -> val >> cnt
 			n := readI32(c.sp)
 			c.sp += i32StackSz
@@ -818,6 +886,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readI32(c.sp)
 			c.sp += i32StackSz
 			writeI32(c.sp, readI32(c.sp)^b)
+		case Xor64: // a, b -> a ^ b
+			b := readI64(c.sp)
+			c.sp += i64StackSz
+			writeI64(c.sp, readI64(c.sp)^b)
 		case Zero32:
 			c.sp -= i32StackSz
 			writeI32(c.sp, 0)
