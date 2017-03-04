@@ -32,6 +32,7 @@ const (
 	BP // N
 	BoolI32
 	BoolI64
+	BoolI16
 	BoolI8
 	Call // N
 	CallFP
@@ -42,6 +43,7 @@ const (
 	ConvF64I8
 	ConvI16I32
 	ConvI16U32
+	ConvI16I64
 	ConvI32F32
 	ConvI32C64
 	ConvI32F64
@@ -81,6 +83,7 @@ const (
 	EqI64
 	EqI8
 	Ext     // N
+	FP      // N
 	Float32 // N
 	Float64 // N
 	Func    // N

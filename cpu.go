@@ -224,6 +224,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readI8(c.sp)
 			c.sp += i8StackSz - i32StackSz
 			c.bool(v != 0)
+		case BoolI16:
+			v := readI16(c.sp)
+			c.sp += i16StackSz - i32StackSz
+			c.bool(v != 0)
 		case BoolI32:
 			c.bool(readI32(c.sp) != 0)
 		case BoolI64:
@@ -288,6 +292,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI32(c.sp, int32(readI16(c.sp)))
 		case ConvI16U32:
 			writeU32(c.sp, uint32(readI16(c.sp)))
+		case ConvI16I64:
+			v := readI16(c.sp)
+			c.sp += i16StackSz - i64StackSz
+			writeI64(c.sp, int64(v))
 		case ConvI32C64:
 			v := readI32(c.sp)
 			c.sp += i32StackSz - c64StackSz
@@ -301,7 +309,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case ConvI8I32:
 			writeI32(c.sp, int32(readI8(c.sp)))
 		case ConvI8I64:
-			v := int32(readI8(c.sp))
+			v := readI8(c.sp)
 			c.sp += i8StackSz - i64StackSz
 			writeI64(c.sp, int64(v))
 		case ConvU8I32:
@@ -400,6 +408,13 @@ func (c *cpu) run(code []Operation) (int, error) {
 			a := readI64(c.sp)
 			c.sp += i64StackSz - i32StackSz
 			c.bool(a == b)
+		case FP:
+			c.sp -= ptrStackSz
+			if ptrStackSz == 4 {
+				writeI32(c.sp, int32(op.N))
+			} else {
+				writeI64(c.sp, int64(op.N))
+			}
 		case Float32:
 			c.sp -= f32StackSz
 			writeF32(c.sp, math.Float32frombits(uint32(op.N)))
@@ -693,11 +708,17 @@ func (c *cpu) run(code []Operation) (int, error) {
 			a := readI64(c.sp)
 			c.sp += i64StackSz - i32StackSz
 			c.bool(a != b)
+		case NeqF32: // a, b -> a |= b
+			b := readF32(c.sp)
+			c.sp += f32StackSz
+			a := readF32(c.sp)
+			c.sp += f32StackSz - i32StackSz
+			c.bool(a != b)
 		case NeqF64: // a, b -> a |= b
 			b := readF64(c.sp)
 			c.sp += f64StackSz
 			a := readF64(c.sp)
-			c.sp += i64StackSz - i32StackSz
+			c.sp += f64StackSz - i32StackSz
 			c.bool(a != b)
 		case Nop: // -
 			// nop

@@ -161,6 +161,16 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 					}
 					id := ir.StringID(dict.ID(buf.Bytes()))
 					f(off, t, &ir.StringValue{StringID: id})
+				case ir.Int32:
+					var buf buffer.Bytes
+					for _, v := range x.Values {
+						switch x := v.(type) {
+						default:
+							panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, v))
+						}
+					}
+					id := ir.StringID(dict.ID(buf.Bytes()))
+					f(off, t, &ir.StringValue{StringID: id})
 				default:
 					panic(fmt.Errorf("%s: TODO %v %v: %v", d.Position, elem, elem.Kind(), v))
 				}
@@ -195,7 +205,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Pointer:
 				switch typ := typ.(*ir.PointerType).Element; typ.Kind() {
-				case ir.Int8:
+				case ir.Int8, ir.Int32:
 					*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.text(x.StringID))
 					l.out.TSRelative[off>>3] |= 1 << uint(off&7)
 				default:
@@ -583,10 +593,6 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: Argument32, N: val.off})
 				case 8:
 					l.emit(l.pos(x), Operation{Opcode: Argument64, N: val.off})
-				case 16:
-					panic(fmt.Errorf("%s: internal error %v", x.Position, val))
-				case 32:
-					panic(fmt.Errorf("%s: internal error %v", x.Position, val))
 				default:
 					l.emit(l.pos(x),
 						Operation{Opcode: Argument, N: val.off},
@@ -605,8 +611,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			// nop
 		case *ir.Bool:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
-			case ir.Int8:
+			case ir.Int8, ir.Uint8:
 				l.emit(l.pos(x), Operation{Opcode: BoolI8})
+			case ir.Int16, ir.Uint16:
+				l.emit(l.pos(x), Operation{Opcode: BoolI16})
 			case ir.Int32, ir.Uint32:
 				l.emit(l.pos(x), Operation{Opcode: BoolI32})
 			case ir.Int64, ir.Uint64:
@@ -660,6 +668,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvI16I32})
 				case ir.Uint32:
 					l.emit(l.pos(x), Operation{Opcode: ConvI16U32})
+				case ir.Int64:
+					l.emit(l.pos(x), Operation{Opcode: ConvI16I64})
 				default:
 					panic(fmt.Errorf("TODO %v", u.Kind()))
 				}
@@ -929,7 +939,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			case *ir.FunctionDefinition:
 				switch {
 				case x.Address:
-					l.uintptr32(x, int32(l.m[x.Index]))
+					l.emit(l.pos(x), Operation{Opcode: FP, N: x.Index})
 				default:
 					panic(fmt.Errorf("%s: TODO %T(%v)", x.Position, ex, ex))
 				}
@@ -1549,6 +1559,8 @@ func (l *loader) load() {
 	for i, v := range l.out.Code {
 		switch v.Opcode {
 		case Call:
+			l.out.Code[i].N = l.m[v.N]
+		case FP:
 			l.out.Code[i].N = l.m[v.N]
 		}
 	}

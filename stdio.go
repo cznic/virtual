@@ -271,13 +271,13 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 		format++
 		switch ch {
 		case 0:
-			n, err := b.WriteTo(w)
+			_, err := b.WriteTo(w)
 			b.Close()
 			if err != nil {
 				return -1
 			}
 
-			return int32(written) + int32(n)
+			return int32(written)
 		case '%':
 			modifiers := ""
 		more:
