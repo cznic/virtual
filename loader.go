@@ -179,6 +179,8 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 				*(*int64)((unsafe.Pointer)(&b[0])) = int64(x.Value)
 			case ir.Pointer:
 				*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(x.Value)
+			case ir.Struct:
+				f(off, typ.(*ir.StructOrUnionType).Fields[0].ID(), x)
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
@@ -382,13 +384,16 @@ func (l *loader) int32Literal(dest []byte, t ir.Type, lit int32) {
 	case ir.Int64, ir.Uint64:
 		*(*int64)((unsafe.Pointer)(&dest[0])) = int64(lit)
 	case ir.Pointer:
-		switch l.ptrSize {
-		default:
-		case 4:
-			*(*int32)((unsafe.Pointer)(&dest[0])) = lit
-		case 8:
-			*(*int64)((unsafe.Pointer)(&dest[0])) = int64(lit)
-		}
+		*(*uintptr)((unsafe.Pointer)(&dest[0])) = uintptr(lit)
+	default:
+		panic(fmt.Errorf("TODO %s", t.Kind()))
+	}
+}
+
+func (l *loader) float32Literal(dest []byte, t ir.Type, lit float32) {
+	switch t.Kind() {
+	case ir.Float32:
+		*(*float32)((unsafe.Pointer)(&dest[0])) = lit
 	default:
 		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
@@ -406,6 +411,9 @@ func (l *loader) arrayLiteral(t ir.Type, v ir.Value) *[]byte {
 			switch y := v.(type) {
 			case *ir.Int32Value:
 				l.int32Literal(b[i*itemSz:], item, y.Value)
+				i++
+			case *ir.Float32Value:
+				l.float32Literal(b[i*itemSz:], item, y.Value)
 				i++
 			case *ir.CompositeValue:
 				l.compositeValue(b[i*itemSz:], item, y)
@@ -489,7 +497,11 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 
 	t := l.tc.MustType(f.TypeID).(*ir.FunctionType)
 	for _, v := range t.Arguments {
-		arguments = append(arguments, nfo{sz: l.sizeof(v.ID())})
+		sz := l.sizeof(v.ID())
+		if v.Kind() == ir.Array {
+			sz = l.ptrSize
+		}
+		arguments = append(arguments, nfo{sz: sz})
 	}
 	off := 0
 	for i := range arguments {
@@ -728,6 +740,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			case ir.Uint64:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
+				case ir.Int8, ir.Uint8:
+					l.emit(l.pos(x), Operation{Opcode: ConvI64I8})
 				case ir.Int32, ir.Uint32:
 					l.emit(l.pos(x), Operation{Opcode: ConvI64I32})
 				case ir.Int64, ir.Uint64:
@@ -903,12 +917,24 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 						default:
 							panic(fmt.Errorf("internal error %s, %v", x.TypeID, l.ptrSize))
 						}
+					case ir.Struct:
+						l.emit(l.pos(x),
+							Operation{Opcode: DSN, N: l.m[x.Index]},
+							Operation{Opcode: Ext, N: l.sizeof(x.TypeID)},
+						)
 					default:
 						panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 					}
 				}
+			case *ir.FunctionDefinition:
+				switch {
+				case x.Address:
+					l.uintptr32(x, int32(l.m[x.Index]))
+				default:
+					panic(fmt.Errorf("%s: TODO %T(%v)", x.Position, ex, ex))
+				}
 			default:
-				panic(fmt.Errorf("TODO %T(%v)", ex, ex))
+				panic(fmt.Errorf("%s: TODO %T(%v)", x.Position, ex, ex))
 			}
 		case *ir.Field:
 			if x.Bits != 0 {
@@ -1035,6 +1061,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
 				l.emit(l.pos(x), Operation{Opcode: LeqI32})
+			case ir.Uint32:
+				l.emit(l.pos(x), Operation{Opcode: LeqU32})
+			case ir.Int64:
+				l.emit(l.pos(x), Operation{Opcode: LeqI64})
 			case ir.Uint64:
 				l.emit(l.pos(x), Operation{Opcode: LeqU64})
 			case ir.Pointer:
@@ -1131,6 +1161,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32, ir.Uint32:
 				l.emit(l.pos(x), Operation{Opcode: NegI32})
+			case ir.Int64, ir.Uint64:
+				l.emit(l.pos(x), Operation{Opcode: NegI64})
+			case ir.Float64:
+				l.emit(l.pos(x), Operation{Opcode: NegF64})
 			default:
 				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
@@ -1140,6 +1174,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: NeqI32})
 			case ir.Int64, ir.Uint64:
 				l.emit(l.pos(x), Operation{Opcode: NeqI64})
+			case ir.Float32:
+				l.emit(l.pos(x), Operation{Opcode: NeqF32})
 			case ir.Float64:
 				l.emit(l.pos(x), Operation{Opcode: NeqF64})
 			case ir.Complex64:
@@ -1229,6 +1265,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: RshI8})
 			case ir.Uint8:
 				l.emit(l.pos(x), Operation{Opcode: RshU8})
+			case ir.Int16:
+				l.emit(l.pos(x), Operation{Opcode: RshI16})
 			case ir.Uint16:
 				l.emit(l.pos(x), Operation{Opcode: RshU16})
 			case ir.Int32:

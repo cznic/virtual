@@ -11,9 +11,24 @@ import (
 func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("abort"):  abort,
+		dict.SID("calloc"): calloc,
 		dict.SID("exit"):   exit,
 		dict.SID("malloc"): malloc,
 	})
+}
+
+// void *calloc(size_t nmemb, size_t size);
+func (c *cpu) calloc() {
+	ap := c.rp - stackAlign
+	nmemb := readSize(ap)
+	size := readSize(ap - stackAlign)
+	hi, lo := mathutil.MulUint128_64(nmemb, size)
+	var p uintptr
+	if hi == 0 || lo <= mathutil.MaxInt {
+		p = c.m.calloc(int(lo))
+	}
+
+	writePtr(c.rp, p)
 }
 
 // void *malloc(size_t size);

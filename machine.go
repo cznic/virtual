@@ -249,6 +249,17 @@ func (m *machine) Kill() {
 func (m *machine) free(p uintptr) { //TODO
 }
 
+func (m *machine) calloc(n int) uintptr {
+	p := m.malloc(n)
+	if p != 0 {
+		for p := p; n != 0; n-- {
+			writeI8(p, 0)
+			p++
+		}
+	}
+	return p
+}
+
 func (m *machine) malloc(n int) uintptr { //TODO real malloc
 	if n != 0 {
 		p := m.brk

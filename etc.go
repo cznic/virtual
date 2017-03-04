@@ -94,6 +94,17 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			}
+		case DSN:
+			switch {
+			case op.N == 0:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push"); err != nil {
+					return err
+				}
+			default:
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push", op.N); err != nil {
+					return err
+				}
+			}
 		case DSI8:
 			switch {
 			case op.N == 0:
@@ -217,6 +228,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ConvI32I16,
 			ConvI32I64,
 			ConvI32I8,
+			ConvI64I8,
 			ConvI64I32,
 			ConvI64U16,
 			ConvI8I16,
@@ -253,6 +265,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			GtU64,
 			LeqI32,
 			LeqU32,
+			LeqI64,
 			LeqU64,
 			LshI8,
 			LshI16,
@@ -267,10 +280,13 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			MulF64,
 			MulI32,
 			MulI64,
+			NegF64,
 			NegI32,
+			NegI64,
 			NeqI32,
 			NeqI64,
 			NeqC64,
+			NeqF32,
 			NeqF64,
 			Not,
 			Or32,
@@ -282,6 +298,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Return,
 			RshI8,
 			RshU8,
+			RshI16,
 			RshU16,
 			RshI32,
 			RshU32,
@@ -304,6 +321,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			acos,
 			asin,
 			atan,
+			calloc,
 			ceil,
 			cos,
 			cosh,

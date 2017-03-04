@@ -48,6 +48,7 @@ const (
 	ConvI32I16
 	ConvI32I64
 	ConvI32I8
+	ConvI64I8
 	ConvI64I32
 	ConvI64U16
 	ConvI8I16
@@ -63,6 +64,7 @@ const (
 	Copy // N
 	Cpl64
 	DS    // N
+	DSN   // N + ext: size
 	DSI8  // N
 	DSI16 // N
 	DSI32 // N
@@ -105,6 +107,7 @@ const (
 	Label    // N
 	LeqI32
 	LeqU32
+	LeqI64
 	LeqU64
 	Load   // N + ext: size
 	Load16 // N
@@ -124,10 +127,13 @@ const (
 	MulF64
 	MulI32
 	MulI64
+	NegF64
 	NegI32
+	NegI64
 	NegIndexI32 // N
 	NegIndexU64 // N
 	NeqC64
+	NeqF32
 	NeqF64
 	NeqI32
 	NeqI64
@@ -150,6 +156,7 @@ const (
 	Return
 	RshI8  // N
 	RshU8  // N
+	RshI16 // N
 	RshU16 // N
 	RshI32 // N
 	RshU32 // N
@@ -184,6 +191,7 @@ const (
 	acos
 	asin
 	atan
+	calloc
 	ceil
 	cos
 	cosh
