@@ -30,9 +30,9 @@ const (
 	Arguments
 	ArgumentsFP
 	BP // N
+	BoolI16
 	BoolI32
 	BoolI64
-	BoolI16
 	BoolI8
 	Call // N
 	CallFP
@@ -40,42 +40,46 @@ const (
 	ConvF32I32
 	ConvF64F32
 	ConvF64I32
+	ConvF64I64
+	ConvF64U64
 	ConvF64I8
 	ConvI16I32
-	ConvI16U32
 	ConvI16I64
-	ConvI32F32
+	ConvI16U32
 	ConvI32C64
+	ConvI32F32
 	ConvI32F64
 	ConvI32I16
 	ConvI32I64
 	ConvI32I8
-	ConvI64I8
 	ConvI64I32
+	ConvI64I8
 	ConvI64U16
 	ConvI8I16
 	ConvI8I32
-	ConvI8U32
 	ConvI8I64
+	ConvI8U32
 	ConvU16I32
 	ConvU16I64
 	ConvU16U32
 	ConvU32I64
+	ConvU32I16
 	ConvU32U8
 	ConvU8I32
 	ConvU8U32
 	Copy // N
+	Cpl32
 	Cpl64
 	DS    // N
-	DSN   // N + ext: size
-	DSI8  // N
 	DSI16 // N
 	DSI32 // N
 	DSI64 // N
+	DSI8  // N
+	DSN   // N + ext: size
 	DivF64
 	DivI32
-	DivU32
 	DivI64
+	DivU32
 	DivU64
 	Dup32
 	Dup64
@@ -99,11 +103,11 @@ const (
 	GtU32
 	GtU64
 	Index    // N
-	IndexU8  // N
 	IndexI16 // N
 	IndexI32 // N
 	IndexU32 // N
 	IndexU64 // N
+	IndexU8  // N
 	Int32    // N
 	Int64    // N
 	Jmp      // N
@@ -111,18 +115,18 @@ const (
 	Jz       // N
 	Label    // N
 	LeqI32
-	LeqU32
 	LeqI64
+	LeqU32
 	LeqU64
 	Load   // N + ext: size
 	Load16 // N
 	Load32 // N
 	Load64 // N
 	Load8  // N
-	LshI8  // N
 	LshI16 // N
 	LshI32 // N
 	LshI64 // N
+	LshI8  // N
 	LtF64
 	LtI32
 	LtI64
@@ -146,34 +150,36 @@ const (
 	Or32
 	Or64
 	Panic
-	PostIncF64 // N
-	PostIncI32 // N
-	PostIncI64 // N
-	PostIncI8  // N
-	PostIncPtr // N
-	PreIncI32  // N
-	PreIncI8   // N
-	PreIncPtr  // N
-	PtrDiff    // N
+	PostIncF64     // N
+	PostIncI32     // N
+	PostIncI64     // N
+	PostIncI8      // N
+	PostIncPtr     // N
+	PostIncU32Bits // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
+	PreIncI32      // N
+	PreIncI8       // N
+	PreIncPtr      // N
+	PreIncU32Bits  // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
+	PtrDiff        // N
 	RemI32
 	RemU32
 	RemU64
 	Return
-	RshI8  // N
-	RshU8  // N
 	RshI16 // N
-	RshU16 // N
 	RshI32 // N
-	RshU32 // N
 	RshI64 // N
+	RshI8  // N
+	RshU16 // N
+	RshU32 // N
 	RshU64 // N
+	RshU8  // N
 	Store  // N
 	Store16
 	Store32
 	Store64
 	Store8
-	StoreBits8  // N
 	StoreBits32 // N
+	StoreBits8  // N
 	StrNCopy    // N
 	SubF32
 	SubF64
@@ -193,6 +199,7 @@ const (
 	// builtins
 
 	abort
+	abs
 	acos
 	asin
 	atan

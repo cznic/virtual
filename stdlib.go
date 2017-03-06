@@ -11,10 +11,20 @@ import (
 func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("abort"):  abort,
+		dict.SID("abs"):    abs,
 		dict.SID("calloc"): calloc,
 		dict.SID("exit"):   exit,
 		dict.SID("malloc"): malloc,
 	})
+}
+
+// int abs(int j);
+func (c *cpu) abs() {
+	j := readI32(c.rp - i32StackSz)
+	if j < 0 {
+		j = -j
+	}
+	writeI32(c.rp, j)
 }
 
 // void *calloc(size_t nmemb, size_t size);
