@@ -280,6 +280,7 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 			return int32(written)
 		case '%':
 			modifiers := ""
+			long := 0
 		more:
 			ch := readI8(format)
 			format++
@@ -293,10 +294,50 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sc", modifiers), arg)
 				written += n
 			case 'd', 'i':
-				argp -= i32StackSz
-				arg := readI32(argp)
+				var arg interface{}
+				switch long {
+				case 0:
+					argp -= i32StackSz
+					arg = readI32(argp)
+				case 1:
+					panic(fmt.Errorf("TODO %d", long))
+				default:
+					argp -= i64StackSz
+					arg = readI64(argp)
+				}
 				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sd", modifiers), arg)
 				written += n
+			case 'u':
+				var arg interface{}
+				switch long {
+				case 0:
+					argp -= i32StackSz
+					arg = readU32(argp)
+				case 1:
+					panic(fmt.Errorf("TODO %d", long))
+				default:
+					argp -= i64StackSz
+					arg = readU64(argp)
+				}
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sd", modifiers), arg)
+				written += n
+			case 'x':
+				var arg interface{}
+				switch long {
+				case 0:
+					argp -= i32StackSz
+					arg = readU32(argp)
+				case 1:
+					panic(fmt.Errorf("TODO %d", long))
+				default:
+					argp -= i64StackSz
+					arg = readU64(argp)
+				}
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sx", modifiers), arg)
+				written += n
+			case 'l':
+				long++
+				goto more
 			case 'f':
 				argp -= f64StackSz
 				arg := readF64(argp)

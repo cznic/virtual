@@ -581,6 +581,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			switch l.sizeof(x.TypeID) {
 			case 1:
 				l.emit(l.pos(x), Operation{Opcode: And8})
+			case 2:
+				l.emit(l.pos(x), Operation{Opcode: And16})
 			case 4:
 				l.emit(l.pos(x), Operation{Opcode: And32})
 			case 8:
@@ -628,6 +630,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: BoolI32})
 			case ir.Int64, ir.Uint64:
 				l.emit(l.pos(x), Operation{Opcode: BoolI64})
+			case ir.Float32:
+				l.emit(l.pos(x), Operation{Opcode: BoolF32})
 			case ir.Pointer:
 				switch l.ptrSize {
 				case 4:
@@ -675,6 +679,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			case ir.Int16:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
+				case ir.Uint16:
+					// ok
 				case ir.Int32:
 					l.emit(l.pos(x), Operation{Opcode: ConvI16I32})
 				case ir.Uint32:
@@ -765,6 +771,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch u := l.tc.MustType(x.Result); u.Kind() {
 				case ir.Int8, ir.Uint8:
 					l.emit(l.pos(x), Operation{Opcode: ConvI64I8})
+				case ir.Int16, ir.Uint16:
+					l.emit(l.pos(x), Operation{Opcode: ConvI64I16})
 				case ir.Int32, ir.Uint32:
 					l.emit(l.pos(x), Operation{Opcode: ConvI64I32})
 				case ir.Int64, ir.Uint64:
@@ -826,6 +834,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			l.emit(l.pos(x), Operation{Opcode: Copy, N: l.sizeof(x.TypeID)})
 		case *ir.Cpl:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
+			case ir.Int8, ir.Uint8:
+				l.emit(l.pos(x), Operation{Opcode: Cpl8})
 			case ir.Int32, ir.Uint32:
 				l.emit(l.pos(x), Operation{Opcode: Cpl32})
 			case ir.Int64, ir.Uint64:
@@ -843,6 +853,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: DivI64})
 			case ir.Uint64:
 				l.emit(l.pos(x), Operation{Opcode: DivU64})
+			case ir.Float32:
+				l.emit(l.pos(x), Operation{Opcode: DivF32})
 			case ir.Float64:
 				l.emit(l.pos(x), Operation{Opcode: DivF64})
 			default:
@@ -1036,6 +1048,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: GtI64})
 			case ir.Uint64:
 				l.emit(l.pos(x), Operation{Opcode: GtU64})
+			case ir.Float32:
+				l.emit(l.pos(x), Operation{Opcode: GtF32})
 			case ir.Float64:
 				l.emit(l.pos(x), Operation{Opcode: GtF64})
 			case ir.Pointer:
@@ -1052,8 +1066,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 		case *ir.Const32:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
-			case ir.Int8, ir.Uint8, ir.Uint16, ir.Int32, ir.Uint32:
+			case ir.Int8, ir.Uint8, ir.Int16, ir.Uint16, ir.Int32, ir.Uint32:
 				l.int32(x, x.Value)
+			case ir.Int64, ir.Uint64:
+				l.int64(x, int64(x.Value))
 			case ir.Float32:
 				l.float32(x, math.Float32frombits(uint32(x.Value)))
 			case ir.Pointer:
@@ -1247,7 +1263,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			switch {
 			case x.Bits != 0:
 				switch t := l.tc.MustType(x.TypeID); t.Kind() {
-				case ir.Uint32:
+				case ir.Int32, ir.Uint32:
 					l.emit(l.pos(x),
 						Operation{Opcode: PostIncU32Bits, N: x.Delta},
 						Operation{Opcode: Ext, N: x.Bits<<16 | x.BitOffset<<8 | l.sizeof(x.BitFieldType)},
@@ -1259,6 +1275,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch t := l.tc.MustType(x.TypeID); t.Kind() {
 				case ir.Int8, ir.Uint8:
 					l.emit(l.pos(x), Operation{Opcode: PostIncI8, N: x.Delta})
+				case ir.Int16, ir.Uint16:
+					l.emit(l.pos(x), Operation{Opcode: PostIncI16, N: x.Delta})
 				case ir.Int32, ir.Uint32:
 					l.emit(l.pos(x), Operation{Opcode: PostIncI32, N: x.Delta})
 				case ir.Int64, ir.Uint64:
@@ -1275,7 +1293,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			switch {
 			case x.Bits != 0:
 				switch t := l.tc.MustType(x.TypeID); t.Kind() {
-				case ir.Uint32:
+				case ir.Int32, ir.Uint32:
 					l.emit(l.pos(x),
 						Operation{Opcode: PreIncU32Bits, N: x.Delta},
 						Operation{Opcode: Ext, N: x.Bits<<16 | x.BitOffset<<8 | l.sizeof(x.BitFieldType)},
@@ -1285,7 +1303,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			default:
 				switch t := l.tc.MustType(x.TypeID); t.Kind() {
-				case ir.Int32:
+				case ir.Int32, ir.Uint32:
 					l.emit(l.pos(x), Operation{Opcode: PreIncI32, N: x.Delta})
 				case ir.Pointer:
 					l.emit(l.pos(x), Operation{Opcode: PreIncPtr, N: x.Delta})
@@ -1359,6 +1377,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch l.sizeof(x.BitFieldType) {
 				case 1:
 					l.emit(l.pos(x), Operation{Opcode: StoreBits8, N: int(mask)})
+				case 2:
+					l.emit(l.pos(x), Operation{Opcode: StoreBits16, N: int(mask)})
 				case 4:
 					l.emit(l.pos(x), Operation{Opcode: StoreBits32, N: int(mask)})
 				default:
@@ -1396,6 +1416,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: SubF32})
 			case ir.Float64:
 				l.emit(l.pos(x), Operation{Opcode: SubF64})
+			case ir.Pointer:
+				l.emit(l.pos(x), Operation{Opcode: SubPtrs})
 			default:
 				panic(fmt.Errorf("internal error %s", x.TypeID))
 			}
@@ -1466,7 +1488,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.int32(x, v.Value)
 					l.emit(l.pos(x), Operation{Opcode: Store32})
 				case ir.Int64, ir.Uint64:
-					l.int32(x, v.Value)
+					l.int64(x, int64(v.Value))
 					l.emit(l.pos(x), Operation{Opcode: Store64})
 				case ir.Float32:
 					l.float32(x, float32(v.Value))

@@ -11,6 +11,8 @@ import (
 	"unsafe"
 )
 
+const model = 64
+
 func (c *cpu) pushI64(n, m int) {
 	c.sp -= i64StackSz
 	writeI64(c.sp, int64(n))

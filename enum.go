@@ -19,6 +19,7 @@ const (
 	AddPtr // N
 	AddPtrs
 	AddSP // N
+	And16
 	And32
 	And64
 	And8
@@ -30,6 +31,7 @@ const (
 	Arguments
 	ArgumentsFP
 	BP // N
+	BoolF32
 	BoolI16
 	BoolI32
 	BoolI64
@@ -41,8 +43,8 @@ const (
 	ConvF64F32
 	ConvF64I32
 	ConvF64I64
-	ConvF64U64
 	ConvF64I8
+	ConvF64U64
 	ConvI16I32
 	ConvI16I64
 	ConvI16U32
@@ -52,6 +54,7 @@ const (
 	ConvI32I16
 	ConvI32I64
 	ConvI32I8
+	ConvI64I16
 	ConvI64I32
 	ConvI64I8
 	ConvI64U16
@@ -62,12 +65,13 @@ const (
 	ConvU16I32
 	ConvU16I64
 	ConvU16U32
-	ConvU32I64
 	ConvU32I16
+	ConvU32I64
 	ConvU32U8
 	ConvU8I32
 	ConvU8U32
 	Copy // N
+	Cpl8
 	Cpl32
 	Cpl64
 	DS    // N
@@ -76,6 +80,7 @@ const (
 	DSI64 // N
 	DSI8  // N
 	DSN   // N + ext: size
+	DivF32
 	DivF64
 	DivI32
 	DivI64
@@ -97,6 +102,7 @@ const (
 	GeqI64
 	GeqU32
 	GeqU64
+	GtF32
 	GtF64
 	GtI32
 	GtI64
@@ -153,6 +159,7 @@ const (
 	PostIncF64     // N
 	PostIncI32     // N
 	PostIncI64     // N
+	PostIncI16     // N
 	PostIncI8      // N
 	PostIncPtr     // N
 	PostIncU32Bits // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
@@ -178,6 +185,7 @@ const (
 	Store32
 	Store64
 	Store8
+	StoreBits16 // N
 	StoreBits32 // N
 	StoreBits8  // N
 	StrNCopy    // N
@@ -185,6 +193,7 @@ const (
 	SubF64
 	SubI32
 	SubI64
+	SubPtrs
 	Text       // N
 	Variable   // N + ext: size
 	Variable16 // N
