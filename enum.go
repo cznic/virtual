@@ -55,6 +55,7 @@ const (
 	ConvI64U16
 	ConvI8I16
 	ConvI8I32
+	ConvI8U32
 	ConvI8I64
 	ConvU16I32
 	ConvU16I64
@@ -98,6 +99,7 @@ const (
 	GtU32
 	GtU64
 	Index    // N
+	IndexU8  // N
 	IndexI16 // N
 	IndexI32 // N
 	IndexU32 // N

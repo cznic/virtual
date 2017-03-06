@@ -308,6 +308,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI16(c.sp, int16(readI8(c.sp)))
 		case ConvI8I32:
 			writeI32(c.sp, int32(readI8(c.sp)))
+		case ConvI8U32:
+			writeU32(c.sp, uint32(readI8(c.sp)))
 		case ConvI8I64:
 			v := readI8(c.sp)
 			c.sp += i8StackSz - i64StackSz
@@ -538,6 +540,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			a := readU64(c.sp)
 			c.sp += i64StackSz - i32StackSz
 			c.bool(a > b)
+		case IndexU8: // addr, index -> addr + n*index
+			x := readU8(c.sp)
+			c.sp += i8StackSz
+			addPtr(c.sp, uintptr(op.N*int(x)))
 		case IndexI16: // addr, index -> addr + n*index
 			x := readI16(c.sp)
 			c.sp += i16StackSz
