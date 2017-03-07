@@ -175,12 +175,14 @@ const (
 	PostIncI8      // N
 	PostIncPtr     // N
 	PostIncU32Bits // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
+	PostIncU64Bits // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
 	PreIncI16      // N
 	PreIncI32      // N
 	PreIncI64      // N
 	PreIncI8       // N
 	PreIncPtr      // N
 	PreIncU32Bits  // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
+	PreIncU64Bits  // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
 	PtrDiff        // N
 	RemI32
 	RemU32

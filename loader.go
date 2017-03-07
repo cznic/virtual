@@ -435,6 +435,25 @@ func (l *loader) int32Literal(dest []byte, t ir.Type, lit int32) {
 	}
 }
 
+func (l *loader) int64Literal(dest []byte, t ir.Type, lit int64) {
+	switch t.Kind() {
+	case ir.Int8, ir.Uint8:
+		*(*int8)((unsafe.Pointer)(&dest[0])) = int8(lit)
+	case ir.Int16, ir.Uint16:
+		*(*int16)((unsafe.Pointer)(&dest[0])) = int16(lit)
+	case ir.Int32, ir.Uint32:
+		*(*int32)((unsafe.Pointer)(&dest[0])) = int32(lit)
+	case ir.Int64, ir.Uint64:
+		*(*int64)((unsafe.Pointer)(&dest[0])) = lit
+	case ir.Float32:
+		*(*float32)((unsafe.Pointer)(&dest[0])) = float32(lit)
+	case ir.Pointer:
+		*(*uintptr)((unsafe.Pointer)(&dest[0])) = uintptr(lit)
+	default:
+		panic(fmt.Errorf("TODO %s", t.Kind()))
+	}
+}
+
 func (l *loader) float32Literal(dest []byte, t ir.Type, lit float32) {
 	switch t.Kind() {
 	case ir.Float32:
@@ -511,6 +530,9 @@ func (l *loader) structLiteral(t ir.Type, v ir.Value) *[]byte {
 				i++
 			case *ir.Int32Value:
 				l.int32Literal(b[layout[i].Offset:], fields[i], y.Value)
+				i++
+			case *ir.Int64Value:
+				l.int64Literal(b[layout[i].Offset:], fields[i], y.Value)
 				i++
 			case *ir.Float64Value:
 				l.float64Literal(b[layout[i].Offset:], fields[i], y.Value)
@@ -1347,6 +1369,11 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 						Operation{Opcode: PostIncU32Bits, N: x.Delta},
 						Operation{Opcode: Ext, N: x.Bits<<16 | x.BitOffset<<8 | l.sizeof(x.BitFieldType)},
 					)
+				case ir.Int64, ir.Uint64:
+					l.emit(l.pos(x),
+						Operation{Opcode: PostIncU64Bits, N: x.Delta},
+						Operation{Opcode: Ext, N: x.Bits<<16 | x.BitOffset<<8 | l.sizeof(x.BitFieldType)},
+					)
 				default:
 					panic(fmt.Errorf("TODO %v", t.Kind()))
 				}
@@ -1375,6 +1402,11 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				case ir.Int32, ir.Uint32:
 					l.emit(l.pos(x),
 						Operation{Opcode: PreIncU32Bits, N: x.Delta},
+						Operation{Opcode: Ext, N: x.Bits<<16 | x.BitOffset<<8 | l.sizeof(x.BitFieldType)},
+					)
+				case ir.Int64, ir.Uint64:
+					l.emit(l.pos(x),
+						Operation{Opcode: PreIncU64Bits, N: x.Delta},
 						Operation{Opcode: Ext, N: x.Bits<<16 | x.BitOffset<<8 | l.sizeof(x.BitFieldType)},
 					)
 				default:

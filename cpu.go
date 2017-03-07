@@ -876,6 +876,45 @@ func (c *cpu) run(code []Operation) (int, error) {
 			default:
 				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
 			}
+		case PostIncU64Bits: // adr -> (*adr)++
+			d := uint64(op.N)
+			op = code[c.ip]
+			c.ip++
+			bits := uint(op.N >> 16)
+			bitoff := uint(op.N) >> 8 & 0xff
+			w := op.N & 0xff
+			p := readPtr(c.sp)
+			c.sp += ptrStackSz - i32StackSz
+			m := (uint64(1)<<bits - 1) << bitoff
+			var u uint64
+			switch w {
+			case 1:
+				u = uint64(readU8(p))
+			case 2:
+				u = uint64(readU16(p))
+			case 4:
+				u = uint64(readU32(p))
+			case 8:
+				u = readU64(p)
+			default:
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+			}
+			v := uint64(u & m >> bitoff)
+			writeU64(c.sp, v)
+			v += d
+			u = u&^m | uint64(v)<<bitoff&m
+			switch w {
+			case 1:
+				writeU8(p, uint8(u))
+			case 2:
+				writeU16(p, uint16(u))
+			case 4:
+				writeU32(p, uint32(u))
+			case 8:
+				writeU64(p, u)
+			default:
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+			}
 		case PostIncI64: // adr -> (*adr)++
 			p := readPtr(c.sp)
 			c.sp += ptrStackSz - i64StackSz
@@ -942,6 +981,44 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 			v := uint32(u&m>>bitoff) + d
 			writeU32(c.sp, v)
+			u = u&^m | uint64(v)<<bitoff&m
+			switch w {
+			case 1:
+				writeU8(p, uint8(u))
+			case 2:
+				writeU16(p, uint16(u))
+			case 4:
+				writeU32(p, uint32(u))
+			case 8:
+				writeU64(p, u)
+			default:
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+			}
+		case PreIncU64Bits: // adr -> (*adr)++
+			d := uint64(op.N)
+			op = code[c.ip]
+			c.ip++
+			bits := uint(op.N >> 16)
+			bitoff := uint(op.N) >> 8 & 0xff
+			w := op.N & 0xff
+			p := readPtr(c.sp)
+			c.sp += ptrStackSz - i64StackSz
+			m := (uint64(1)<<bits - 1) << bitoff
+			var u uint64
+			switch w {
+			case 1:
+				u = uint64(readU8(p))
+			case 2:
+				u = uint64(readU16(p))
+			case 4:
+				u = uint64(readU32(p))
+			case 8:
+				u = readU64(p)
+			default:
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+			}
+			v := uint64(u&m>>bitoff) + d
+			writeU64(c.sp, v)
 			u = u&^m | uint64(v)<<bitoff&m
 			switch w {
 			case 1:
