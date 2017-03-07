@@ -300,7 +300,13 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					argp -= i32StackSz
 					arg = readI32(argp)
 				case 1:
-					panic(fmt.Errorf("TODO %d", long))
+					if model == 32 {
+						argp -= i32StackSz
+						arg = readI32(argp)
+						break
+					}
+
+					fallthrough
 				default:
 					argp -= i64StackSz
 					arg = readI64(argp)
@@ -314,7 +320,13 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					argp -= i32StackSz
 					arg = readU32(argp)
 				case 1:
-					panic(fmt.Errorf("TODO %d", long))
+					if model == 32 {
+						argp -= i32StackSz
+						arg = readU32(argp)
+						break
+					}
+
+					fallthrough
 				default:
 					argp -= i64StackSz
 					arg = readU64(argp)
@@ -328,7 +340,13 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					argp -= i32StackSz
 					arg = readU32(argp)
 				case 1:
-					panic(fmt.Errorf("TODO %d", long))
+					if model == 32 {
+						argp -= i32StackSz
+						arg = readU32(argp)
+						break
+					}
+
+					fallthrough
 				default:
 					argp -= i64StackSz
 					arg = readU64(argp)

@@ -31,7 +31,9 @@ const (
 	Arguments
 	ArgumentsFP
 	BP // N
+	BoolC128
 	BoolF32
+	BoolF64
 	BoolI16
 	BoolI32
 	BoolI64
@@ -49,12 +51,14 @@ const (
 	ConvI16I64
 	ConvI16U32
 	ConvI32C64
+	ConvI32C128
 	ConvI32F32
 	ConvI32F64
 	ConvI32I16
 	ConvI32I64
 	ConvI32I8
 	ConvI64I16
+	ConvI64F64
 	ConvI64I32
 	ConvI64I8
 	ConvI64U16
@@ -90,6 +94,8 @@ const (
 	Dup64
 	Dup8
 	EqI32
+	EqF32
+	EqF64
 	EqI64
 	EqI8
 	Ext     // N
@@ -112,8 +118,11 @@ const (
 	IndexI16 // N
 	IndexI32 // N
 	IndexU32 // N
+	IndexI64 // N
 	IndexU64 // N
 	IndexU8  // N
+	Int8     // N
+	Int16    // N
 	Int32    // N
 	Int64    // N
 	Jmp      // N
@@ -124,6 +133,7 @@ const (
 	LeqI64
 	LeqU32
 	LeqU64
+	LeqF64
 	Load   // N + ext: size
 	Load16 // N
 	Load32 // N
@@ -143,6 +153,8 @@ const (
 	MulI32
 	MulI64
 	NegF64
+	NegI8
+	NegI16
 	NegI32
 	NegI64
 	NegIndexI32 // N
@@ -163,13 +175,16 @@ const (
 	PostIncI8      // N
 	PostIncPtr     // N
 	PostIncU32Bits // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
+	PreIncI16      // N
 	PreIncI32      // N
+	PreIncI64      // N
 	PreIncI8       // N
 	PreIncPtr      // N
 	PreIncU32Bits  // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
 	PtrDiff        // N
 	RemI32
 	RemU32
+	RemI64
 	RemU64
 	Return
 	RshI16 // N
@@ -187,6 +202,7 @@ const (
 	Store8
 	StoreBits16 // N
 	StoreBits32 // N
+	StoreBits64 // N
 	StoreBits8  // N
 	StrNCopy    // N
 	SubF32
@@ -202,6 +218,8 @@ const (
 	Variable8  // N
 	Xor32
 	Xor64
+	Zero8
+	Zero16
 	Zero32
 	Zero64
 
@@ -227,6 +245,7 @@ const (
 	fprintf
 	fread
 	fwrite
+	isprint
 	log
 	log10
 	malloc

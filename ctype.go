@@ -6,8 +6,19 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
+		dict.SID("isprint"): isprint,
 		dict.SID("tolower"): tolower,
 	})
+}
+
+// int isprint(int c);
+func (c *cpu) isprint() {
+	ch := readI32(c.rp - i32StackSz)
+	var r int32
+	if ch >= ' ' && ch <= '~' {
+		r = 1
+	}
+	writeI32(c.rp, r)
 }
 
 // int tolower(int c);
