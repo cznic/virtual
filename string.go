@@ -4,21 +4,54 @@
 
 package virtual
 
+import (
+	"github.com/cznic/mathutil"
+)
+
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("ffs"):     ffs,
-		dict.SID("memcmp"):  memcmp,
-		dict.SID("memcpy"):  memcpy,
-		dict.SID("memset"):  memset,
-		dict.SID("strcat"):  strcat,
-		dict.SID("strchr"):  strchr,
-		dict.SID("strcmp"):  strcmp,
-		dict.SID("strcpy"):  strcpy,
-		dict.SID("strlen"):  strlen,
-		dict.SID("strncmp"): strncmp,
-		dict.SID("strncpy"): strncpy,
-		dict.SID("strrchr"): strrchr,
+		dict.SID("__builtin_clz"):     clz, //TODO -> builting.go
+		dict.SID("__builtin_ctz"):     ctz, //TODO -> builting.go
+		dict.SID("__builtin_ffs"):     ffs,
+		dict.SID("__builtin_memcmp"):  memcmp,
+		dict.SID("__builtin_memcpy"):  memcpy,
+		dict.SID("__builtin_memset"):  memset,
+		dict.SID("__builtin_strcmp"):  strcmp,
+		dict.SID("__builtin_strcpy"):  strcpy,
+		dict.SID("__builtin_strlen"):  strlen,
+		dict.SID("__builtin_strncmp"): strncmp,
+		dict.SID("ffs"):               ffs,
+		dict.SID("memcmp"):            memcmp,
+		dict.SID("memcpy"):            memcpy,
+		dict.SID("memset"):            memset,
+		dict.SID("strcat"):            strcat,
+		dict.SID("strchr"):            strchr,
+		dict.SID("strcmp"):            strcmp,
+		dict.SID("strcpy"):            strcpy,
+		dict.SID("strlen"):            strlen,
+		dict.SID("strncmp"):           strncmp,
+		dict.SID("strncpy"):           strncpy,
+		dict.SID("strrchr"):           strrchr,
 	})
+}
+
+// int __builtin_clz (unsigned x);
+//
+// Returns the number of leading 0-bits in x, starting at the most significant
+// bit position. If x is 0, the result is undefined.
+func (c *cpu) clz() {
+	writeI32(c.rp, int32(32-mathutil.Log2Uint32(readU32(c.rp-i32StackSz))))
+}
+
+// int __builtin_ctz (unsigned x);
+//
+// Returns the number of trailing 0-bits in x, starting at the least
+// significant bit position. If x is 0, the result is undefined.
+func (c *cpu) ctz() {
+	var r int32
+	for x := readU32(c.rp - i32StackSz); r < 32 && x&1 != 0; r++ {
+	}
+	writeI32(c.rp, r)
 }
 
 // int ffs(int i);

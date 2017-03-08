@@ -12,6 +12,7 @@ func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("__builtin_abort"):  abort,
 		dict.SID("__builtin_malloc"): malloc,
+		dict.SID("__builtin_trap"):   abort,
 		dict.SID("abort"):            abort,
 		dict.SID("abs"):              abs,
 		dict.SID("calloc"):           calloc,

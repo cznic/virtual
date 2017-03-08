@@ -364,6 +364,8 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			atan,
 			calloc,
 			ceil,
+			clz,
+			ctz,
 			cos,
 			cosh,
 			exit,

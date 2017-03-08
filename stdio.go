@@ -22,15 +22,16 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("fclose"):  fclose,
-		dict.SID("fgetc"):   fgetc,
-		dict.SID("fgets"):   fgets,
-		dict.SID("fopen"):   fopen,
-		dict.SID("fprintf"): fprintf,
-		dict.SID("fread"):   fread,
-		dict.SID("fwrite"):  fwrite,
-		dict.SID("printf"):  printf,
-		dict.SID("sprintf"): sprintf,
+		dict.SID("__builtin_printf"): printf,
+		dict.SID("fclose"):           fclose,
+		dict.SID("fgetc"):            fgetc,
+		dict.SID("fgets"):            fgets,
+		dict.SID("fopen"):            fopen,
+		dict.SID("fprintf"):          fprintf,
+		dict.SID("fread"):            fread,
+		dict.SID("fwrite"):           fwrite,
+		dict.SID("printf"):           printf,
+		dict.SID("sprintf"):          sprintf,
 	})
 }
 

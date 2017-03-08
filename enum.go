@@ -234,6 +234,8 @@ const (
 	atan
 	calloc
 	ceil
+	clz
+	ctz
 	cos
 	cosh
 	exit
