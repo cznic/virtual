@@ -10,11 +10,12 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("abort"):  abort,
-		dict.SID("abs"):    abs,
-		dict.SID("calloc"): calloc,
-		dict.SID("exit"):   exit,
-		dict.SID("malloc"): malloc,
+		dict.SID("__builtin_abort"): abort,
+		dict.SID("abort"):           abort,
+		dict.SID("abs"):             abs,
+		dict.SID("calloc"):          calloc,
+		dict.SID("exit"):            exit,
+		dict.SID("malloc"):          malloc,
 	})
 }
 
