@@ -158,6 +158,7 @@ const (
 	NegI32
 	NegI64
 	NegIndexI32 // N
+	NegIndexI64 // N
 	NegIndexU64 // N
 	NeqC64
 	NeqF32
@@ -234,15 +235,24 @@ const (
 	atan
 	calloc
 	ceil
+	clrsb
+	clrsbl
+	clrsbll
 	clz
-	ctz
+	clzl
+	clzll
 	cos
 	cosh
+	ctz
+	ctzl
+	ctzll
 	exit
 	exp
 	fabs
 	fclose
 	ffs
+	ffsl
+	ffsll
 	fgetc
 	fgets
 	floor
@@ -257,6 +267,12 @@ const (
 	memcmp
 	memcpy
 	memset
+	parity
+	parityl
+	parityll
+	popcount
+	popcountl
+	popcountll
 	pow
 	printf
 	round

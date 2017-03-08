@@ -772,10 +772,14 @@ func (c *cpu) run(code []Operation) (int, error) {
 			x := readI32(c.sp)
 			c.sp += i32StackSz
 			addPtr(c.sp, uintptr(-op.N*int(x)))
+		case NegIndexI64: // addr, index -> addr - n*index
+			x := readI64(c.sp)
+			c.sp += i64StackSz
+			addPtr(c.sp, uintptr(int64(-op.N)*x))
 		case NegIndexU64: // addr, index -> addr - n*index
 			x := readU64(c.sp)
 			c.sp += i64StackSz
-			addPtr(c.sp, uintptr(-op.N*int(x)))
+			addPtr(c.sp, uintptr(uint64(-op.N)*x))
 		case NeqC64: // a, b -> a |= b
 			b := readC64(c.sp)
 			c.sp += c64StackSz
@@ -1330,6 +1334,40 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.isprint)
 		case ffs:
 			c.builtin(c.ffs)
+		case ffsl:
+			c.builtin(c.ffsl)
+		case ffsll:
+			c.builtin(c.ffsll)
+		case clz:
+			c.builtin(c.clz)
+		case clzl:
+			c.builtin(c.clzl)
+		case clzll:
+			c.builtin(c.clzll)
+		case ctz:
+			c.builtin(c.ctz)
+		case ctzl:
+			c.builtin(c.ctzl)
+		case ctzll:
+			c.builtin(c.ctzll)
+		case clrsb:
+			c.builtin(c.clrsb)
+		case clrsbl:
+			c.builtin(c.clrsbl)
+		case clrsbll:
+			c.builtin(c.clrsbll)
+		case popcount:
+			c.builtin(c.popcount)
+		case popcountl:
+			c.builtin(c.popcountl)
+		case popcountll:
+			c.builtin(c.popcountll)
+		case parity:
+			c.builtin(c.parity)
+		case parityl:
+			c.builtin(c.parityl)
+		case parityll:
+			c.builtin(c.parityll)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace(code))

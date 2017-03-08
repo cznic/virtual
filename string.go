@@ -4,23 +4,25 @@
 
 package virtual
 
-import (
-	"github.com/cznic/mathutil"
-)
-
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_clz"):     clz, //TODO -> builting.go
-		dict.SID("__builtin_ctz"):     ctz, //TODO -> builting.go
 		dict.SID("__builtin_ffs"):     ffs,
+		dict.SID("__builtin_ffsl"):    ffsl,
+		dict.SID("__builtin_ffsll"):   ffsll,
 		dict.SID("__builtin_memcmp"):  memcmp,
 		dict.SID("__builtin_memcpy"):  memcpy,
 		dict.SID("__builtin_memset"):  memset,
+		dict.SID("__builtin_strcat"):  strcat,
+		dict.SID("__builtin_strchr"):  strchr,
 		dict.SID("__builtin_strcmp"):  strcmp,
 		dict.SID("__builtin_strcpy"):  strcpy,
 		dict.SID("__builtin_strlen"):  strlen,
 		dict.SID("__builtin_strncmp"): strncmp,
+		dict.SID("__builtin_strncpy"): strncpy,
+		dict.SID("__builtin_strrchr"): strrchr,
 		dict.SID("ffs"):               ffs,
+		dict.SID("ffsl"):              ffsl,
+		dict.SID("ffsll"):             ffsll,
 		dict.SID("memcmp"):            memcmp,
 		dict.SID("memcpy"):            memcpy,
 		dict.SID("memset"):            memset,
@@ -35,31 +37,46 @@ func init() {
 	})
 }
 
-// int __builtin_clz (unsigned x);
-//
-// Returns the number of leading 0-bits in x, starting at the most significant
-// bit position. If x is 0, the result is undefined.
-func (c *cpu) clz() {
-	writeI32(c.rp, int32(32-mathutil.Log2Uint32(readU32(c.rp-i32StackSz))))
-}
-
-// int __builtin_ctz (unsigned x);
-//
-// Returns the number of trailing 0-bits in x, starting at the least
-// significant bit position. If x is 0, the result is undefined.
-func (c *cpu) ctz() {
-	var r int32
-	for x := readU32(c.rp - i32StackSz); r < 32 && x&1 != 0; r++ {
-	}
-	writeI32(c.rp, r)
-}
-
 // int ffs(int i);
 func (c *cpu) ffs() {
-	var r int32
-	for i := readI32(c.rp - i32StackSz); i != 0 && i&1 == 0; r++ {
+	i := readI32(c.rp - i32StackSz)
+	if i == 0 {
+		writeI32(c.rp, 0)
+		return
 	}
-	writeI32(c.rp, r)
+
+	var r int32
+	for ; r < 32 && i&(1<<uint(r)) == 0; r++ {
+	}
+	writeI32(c.rp, r+1)
+}
+
+// int ffsl(long i);
+func (c *cpu) ffsl() {
+	i := readLong(c.rp - stackAlign)
+	if i == 0 {
+		writeI32(c.rp, 0)
+		return
+	}
+
+	var r int32
+	for ; r < longBits && i&(1<<uint(r)) == 0; r++ {
+	}
+	writeI32(c.rp, r+1)
+}
+
+// int ffsll(long long i);
+func (c *cpu) ffsll() {
+	i := readI64(c.rp - i64StackSz)
+	if i == 0 {
+		writeI32(c.rp, 0)
+		return
+	}
+
+	var r int32
+	for ; r < 64 && i&(1<<uint(r)) == 0; r++ {
+	}
+	writeI32(c.rp, r+1)
 }
 
 // int memcmp(const void *s1, const void *s2, size_t n)

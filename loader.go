@@ -795,7 +795,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvU16I32})
 				case ir.Uint32:
 					l.emit(l.pos(x), Operation{Opcode: ConvU16U32})
-				case ir.Uint64:
+				case ir.Int64, ir.Uint64:
 					l.emit(l.pos(x), Operation{Opcode: ConvU16I64})
 				default:
 					panic(fmt.Errorf("%s: TODO %v", x.Position, u.Kind()))
@@ -964,10 +964,12 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch xt.Kind() {
 				case ir.Int32:
 					l.emit(l.pos(x), Operation{Opcode: NegIndexI32, N: sz})
+				case ir.Int64:
+					l.emit(l.pos(x), Operation{Opcode: NegIndexI64, N: sz})
 				case ir.Uint64:
 					l.emit(l.pos(x), Operation{Opcode: NegIndexU64, N: sz})
 				default:
-					panic(fmt.Errorf("TODO %v", xt.Kind()))
+					panic(fmt.Errorf("%s: TODO %v", x.Position, xt.Kind()))
 				}
 				if !x.Address {
 					panic(fmt.Errorf("TODO %v", xt.Kind()))

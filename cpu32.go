@@ -11,7 +11,10 @@ import (
 	"unsafe"
 )
 
-const model = 32
+const (
+	model    = 32
+	longBits = 32
+)
 
 func (c *cpu) pushI64(n, m int) {
 	c.sp -= i64StackSz
@@ -25,7 +28,8 @@ func (c *cpu) pushF64(n, m int) {
 	c.ip++
 }
 
-func readSize(p uintptr) { return uint64(*(*uint32)(unsafe.Pointer(p))) }
+func readSize(p uintptr) uint64 { return uint64(*(*uint32)(unsafe.Pointer(p))) }
+func readLong(p uintptr) int64  { return int64(*(*int32)(unsafe.Pointer(p))) }
 
 func writeSize(p uintptr, v uint64) {
 	if v > math.MaxUint32 {
