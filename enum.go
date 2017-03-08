@@ -240,6 +240,7 @@ const (
 	exp
 	fabs
 	fclose
+	ffs
 	fgetc
 	fgets
 	floor

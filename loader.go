@@ -710,8 +710,13 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 		case *ir.Call:
 			if opcode, ok := builtins[l.objects[x.Index].(*ir.FunctionDefinition).NameID]; ok {
-				l.emit(l.pos(x), Operation{Opcode: opcode})
-				break
+				body := l.objects[x.Index].(*ir.FunctionDefinition).Body
+				if len(body) == 1 {
+					if _, ok := body[0].(*ir.Panic); ok {
+						l.emit(l.pos(x), Operation{Opcode: opcode})
+						break
+					}
+				}
 			}
 
 			l.emit(l.pos(x), Operation{Opcode: Call, N: x.Index})
@@ -1727,7 +1732,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 	}
 }
 
-func (l *loader) load() {
+func (l *loader) load() error {
 	var ds int
 	for i, v := range l.objects { // Allocate global initialized data.
 		switch x := v.(type) {
@@ -1752,8 +1757,10 @@ func (l *loader) load() {
 	for i, v := range l.objects {
 		switch x := v.(type) {
 		case *ir.FunctionDefinition:
-			if _, ok := builtins[x.NameID]; ok {
-				break
+			if _, ok := builtins[x.NameID]; ok && len(x.Body) == 1 {
+				if _, ok := x.Body[0].(*ir.Panic); ok {
+					break
+				}
 			}
 
 			l.m[i] = len(l.out.Code)
@@ -1763,9 +1770,19 @@ func (l *loader) load() {
 	for i, v := range l.out.Code {
 		switch v.Opcode {
 		case Call:
-			l.out.Code[i].N = l.m[v.N]
+			n, ok := l.m[v.N]
+			if !ok {
+				return fmt.Errorf("%#05x: undefined object #%v", i, v.N)
+			}
+
+			l.out.Code[i].N = n
 		case FP:
-			l.out.Code[i].N = l.m[v.N]
+			n, ok := l.m[v.N]
+			if !ok {
+				return fmt.Errorf("%#05x: undefined object #%v", i, v.N)
+			}
+
+			l.out.Code[i].N = n
 		}
 	}
 	l.out.Data = *buffer.CGet(ds - l.out.BSS)
@@ -1793,6 +1810,7 @@ func (l *loader) load() {
 		}
 	}
 	l.out.DSRelative = l.out.DSRelative[:h+1]
+	return nil
 }
 
 // LoadMain translates program in objects into a Binary or an error, if any.
@@ -1809,6 +1827,9 @@ func LoadMain(model string, objects []ir.Object) (_ *Binary, err error) {
 	}
 
 	l := newLoader(model, objects)
-	l.load()
+	if err := l.load(); err != nil {
+		return nil, err
+	}
+
 	return l.out, nil
 }

@@ -6,6 +6,7 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
+		dict.SID("ffs"):     ffs,
 		dict.SID("memcmp"):  memcmp,
 		dict.SID("memcpy"):  memcpy,
 		dict.SID("memset"):  memset,
@@ -18,6 +19,14 @@ func init() {
 		dict.SID("strncpy"): strncpy,
 		dict.SID("strrchr"): strrchr,
 	})
+}
+
+// int ffs(int i);
+func (c *cpu) ffs() {
+	var r int32
+	for i := readI32(c.rp - i32StackSz); i != 0 && i&1 == 0; r++ {
+	}
+	writeI32(c.rp, r)
 }
 
 // int memcmp(const void *s1, const void *s2, size_t n)

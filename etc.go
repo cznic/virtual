@@ -370,6 +370,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			exp,
 			fabs,
 			fclose,
+			ffs,
 			fgetc,
 			fgets,
 			floor,

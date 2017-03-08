@@ -1328,6 +1328,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.abs)
 		case isprint:
 			c.builtin(c.isprint)
+		case ffs:
+			c.builtin(c.ffs)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace(code))
