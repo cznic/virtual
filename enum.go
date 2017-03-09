@@ -42,8 +42,10 @@ const (
 	CallFP
 	ConvF32F64
 	ConvF32I32
+	ConvF32U32
 	ConvF64F32
 	ConvF64I32
+	ConvF64U32
 	ConvF64I64
 	ConvF64I8
 	ConvF64U64
@@ -71,9 +73,13 @@ const (
 	ConvU16U32
 	ConvU32I16
 	ConvU32I64
+	ConvU32F32
+	ConvU32F64
 	ConvU32U8
+	ConvU8I16
 	ConvU8I32
 	ConvU8U32
+	ConvU8U64
 	Copy // N
 	Cpl8
 	Cpl32
@@ -103,6 +109,7 @@ const (
 	Float32 // N
 	Float64 // N
 	Func    // N
+	GeqF32
 	GeqF64
 	GeqI32
 	GeqI64
@@ -133,6 +140,7 @@ const (
 	LeqI64
 	LeqU32
 	LeqU64
+	LeqF32
 	LeqF64
 	Load   // N + ext: size
 	Load16 // N
@@ -143,6 +151,7 @@ const (
 	LshI32 // N
 	LshI64 // N
 	LshI8  // N
+	LtF32
 	LtF64
 	LtI32
 	LtI64
@@ -152,6 +161,7 @@ const (
 	MulF64
 	MulI32
 	MulI64
+	NegF32
 	NegF64
 	NegI8
 	NegI16
@@ -259,7 +269,11 @@ const (
 	fopen
 	fprintf
 	fread
+	free
 	fwrite
+	isinf
+	isinff
+	isinfl
 	isprint
 	log
 	log10
@@ -291,4 +305,6 @@ const (
 	tan
 	tanh
 	tolower
+	vfprintf
+	vprintf
 )

@@ -22,24 +22,30 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_fclose"):  fclose,
-		dict.SID("__builtin_fgetc"):   fgetc,
-		dict.SID("__builtin_fgets"):   fgets,
-		dict.SID("__builtin_fopen"):   fopen,
-		dict.SID("__builtin_fprintf"): fprintf,
-		dict.SID("__builtin_fread"):   fread,
-		dict.SID("__builtin_fwrite"):  fwrite,
-		dict.SID("__builtin_printf"):  printf,
-		dict.SID("__builtin_sprintf"): sprintf,
-		dict.SID("fclose"):            fclose,
-		dict.SID("fgetc"):             fgetc,
-		dict.SID("fgets"):             fgets,
-		dict.SID("fopen"):             fopen,
-		dict.SID("fprintf"):           fprintf,
-		dict.SID("fread"):             fread,
-		dict.SID("fwrite"):            fwrite,
-		dict.SID("printf"):            printf,
-		dict.SID("sprintf"):           sprintf,
+		dict.SID("__builtin_fclose"):   fclose,
+		dict.SID("__builtin_fgetc"):    fgetc,
+		dict.SID("__builtin_fgets"):    fgets,
+		dict.SID("__builtin_fopen"):    fopen,
+		dict.SID("__builtin_fprintf"):  fprintf,
+		dict.SID("__builtin_fread"):    fread,
+		dict.SID("__builtin_free"):     free,
+		dict.SID("__builtin_fwrite"):   fwrite,
+		dict.SID("__builtin_printf"):   printf,
+		dict.SID("__builtin_sprintf"):  sprintf,
+		dict.SID("__builtin_vfprintf"): vfprintf,
+		dict.SID("__builtin_vprintf"):  vprintf,
+		dict.SID("fclose"):             fclose,
+		dict.SID("fgetc"):              fgetc,
+		dict.SID("fgets"):              fgets,
+		dict.SID("fopen"):              fopen,
+		dict.SID("fprintf"):            fprintf,
+		dict.SID("fread"):              fread,
+		dict.SID("free"):               free,
+		dict.SID("fwrite"):             fwrite,
+		dict.SID("printf"):             printf,
+		dict.SID("sprintf"):            sprintf,
+		dict.SID("vfprintf"):           vfprintf,
+		dict.SID("vprintf"):            vprintf,
 	})
 }
 
@@ -225,6 +231,9 @@ func (c *cpu) fprintf() {
 	ap -= ptrStackSz
 	writeI32(c.rp, goFprintf(files.writer(stream, c), readPtr(ap), ap))
 }
+
+// void free(void *ptr);
+func (c *cpu) free() { c.m.free(readPtr(c.rp - ptrStackSz)) }
 
 // size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 func (c *cpu) fread() {
@@ -419,4 +428,24 @@ func (c *cpu) sprintf() {
 	ap -= ptrStackSz
 	writeI32(c.rp, goFprintf(&w, readPtr(ap), ap))
 	writeI8(uintptr(w), 0)
+}
+
+// int vfprintf(FILE *stream, const char *format, va_list ap);
+func (c *cpu) vfprintf() {
+	p := c.rp - ptrStackSz
+	stream := readPtr(p)
+	p -= ptrStackSz
+	format := readPtr(p)
+	p -= ptrStackSz
+	ap := readPtr(p)
+	writeI32(c.rp, goFprintf(files.writer(stream, c), format, ap))
+}
+
+// int vprintf(const char *format, va_list ap);
+func (c *cpu) vprintf() {
+	p := c.rp - ptrStackSz
+	format := readPtr(p)
+	p -= ptrStackSz
+	ap := readPtr(p)
+	writeI32(c.rp, goFprintf(c.m.stdout, format, ap))
 }

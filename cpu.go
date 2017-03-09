@@ -266,6 +266,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readF32(c.sp)
 			c.sp += f32StackSz - i32StackSz
 			writeI32(c.sp, int32(v))
+		case ConvF32U32:
+			v := readF32(c.sp)
+			c.sp += f32StackSz - i32StackSz
+			writeU32(c.sp, uint32(v))
 		case ConvF64F32:
 			v := readF64(c.sp)
 			c.sp += f64StackSz - f32StackSz
@@ -274,6 +278,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readF64(c.sp)
 			c.sp += f64StackSz - i32StackSz
 			writeI32(c.sp, int32(v))
+		case ConvF64U32:
+			v := readF64(c.sp)
+			c.sp += f64StackSz - i32StackSz
+			writeU32(c.sp, uint32(v))
 		case ConvF64I64:
 			writeI64(c.sp, int64(readF64(c.sp)))
 		case ConvF64I8:
@@ -342,10 +350,16 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readI8(c.sp)
 			c.sp += i8StackSz - i64StackSz
 			writeI64(c.sp, int64(v))
+		case ConvU8I16:
+			writeI16(c.sp, int16(readU8(c.sp)))
 		case ConvU8I32:
 			writeI32(c.sp, int32(readU8(c.sp)))
 		case ConvU8U32:
 			writeU32(c.sp, uint32(readU8(c.sp)))
+		case ConvU8U64:
+			v := readI8(c.sp)
+			c.sp += i8StackSz - i64StackSz
+			writeU64(c.sp, uint64(v))
 		case ConvU16I32:
 			writeI32(c.sp, int32(readU16(c.sp)))
 		case ConvU16U32:
@@ -366,6 +380,14 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readU32(c.sp)
 			c.sp += i32StackSz - i64StackSz
 			writeI64(c.sp, int64(v))
+		case ConvU32F32:
+			v := readU32(c.sp)
+			c.sp += i32StackSz - f32StackSz
+			writeF32(c.sp, float32(v))
+		case ConvU32F64:
+			v := readU32(c.sp)
+			c.sp += i32StackSz - f64StackSz
+			writeF64(c.sp, float64(v))
 		case Copy: // &dst, &src -> &dst
 			src := readPtr(c.sp)
 			c.sp += ptrStackSz
@@ -535,11 +557,17 @@ func (c *cpu) run(code []Operation) (int, error) {
 			// result[i]	ap + sum(stack size result[0..n-1]) - sum(stack size result[0..i])
 			// argument[i]	ap - sum(stack size argument[0..i])
 			// variable[i]	bp - sum(stack size variable[0..i])
+		case GeqF32: // a, b -> a >= b
+			b := readF32(c.sp)
+			c.sp += f32StackSz
+			a := readF32(c.sp)
+			c.sp += f32StackSz - i32StackSz
+			c.bool(a >= b)
 		case GeqF64: // a, b -> a >= b
 			b := readF64(c.sp)
 			c.sp += f64StackSz
 			a := readF64(c.sp)
-			c.sp += i64StackSz - i32StackSz
+			c.sp += f64StackSz - i32StackSz
 			c.bool(a >= b)
 		case GeqI32: // a, b -> a >= b
 			b := readI32(c.sp)
@@ -668,6 +696,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			a := readU64(c.sp)
 			c.sp += i64StackSz - i32StackSz
 			c.bool(a <= b)
+		case LeqF32: // a, b -> a <= b
+			b := readF32(c.sp)
+			c.sp += f32StackSz
+			a := readF32(c.sp)
+			c.sp += f32StackSz - i32StackSz
+			c.bool(a <= b)
 		case LeqF64: // a, b -> a <= b
 			b := readF64(c.sp)
 			c.sp += f64StackSz
@@ -702,11 +736,17 @@ func (c *cpu) run(code []Operation) (int, error) {
 			a := readI64(c.sp)
 			c.sp += i64StackSz - i32StackSz
 			c.bool(a < b)
+		case LtF32: // a, b -> a < b
+			b := readF32(c.sp)
+			c.sp += f32StackSz
+			a := readF32(c.sp)
+			c.sp += f32StackSz - i32StackSz
+			c.bool(a < b)
 		case LtF64: // a, b -> a < b
 			b := readF64(c.sp)
 			c.sp += f64StackSz
 			a := readF64(c.sp)
-			c.sp += i64StackSz - i32StackSz
+			c.sp += f64StackSz - i32StackSz
 			c.bool(a < b)
 		case LtU64: // a, b -> a < b
 			b := readU64(c.sp)
@@ -766,6 +806,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI32(c.sp, -readI32(c.sp))
 		case NegI64: // a -> -a
 			writeI64(c.sp, -readI64(c.sp))
+		case NegF32: // a -> -a
+			writeF32(c.sp, -readF32(c.sp))
 		case NegF64: // a -> -a
 			writeF64(c.sp, -readF64(c.sp))
 		case NegIndexI32: // addr, index -> addr - n*index
@@ -1368,6 +1410,18 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.parityl)
 		case parityll:
 			c.builtin(c.parityll)
+		case vfprintf:
+			c.builtin(c.vfprintf)
+		case vprintf:
+			c.builtin(c.vprintf)
+		case free:
+			c.builtin(c.free)
+		case isinf:
+			c.builtin(c.isinf)
+		case isinff:
+			c.builtin(c.isinff)
+		case isinfl:
+			c.builtin(c.isinf)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace(code))
