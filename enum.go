@@ -241,6 +241,7 @@ const (
 	abort
 	abs
 	acos
+	alloca
 	asin
 	atan
 	calloc
@@ -289,6 +290,7 @@ const (
 	popcountll
 	pow
 	printf
+	returnAddress
 	round
 	sin
 	sinh

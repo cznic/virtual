@@ -10,21 +10,22 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_clrsb"):      clrsb,
-		dict.SID("__builtin_clrsbl"):     clrsbl,
-		dict.SID("__builtin_clrsbll"):    clrsbll,
-		dict.SID("__builtin_clz"):        clz,
-		dict.SID("__builtin_clzl"):       clzl,
-		dict.SID("__builtin_clzll"):      clzll,
-		dict.SID("__builtin_ctz"):        ctz,
-		dict.SID("__builtin_ctzl"):       ctzl,
-		dict.SID("__builtin_ctzll"):      ctzll,
-		dict.SID("__builtin_parity"):     parity,
-		dict.SID("__builtin_parityl"):    parityl,
-		dict.SID("__builtin_parityll"):   parityll,
-		dict.SID("__builtin_popcount"):   popcount,
-		dict.SID("__builtin_popcountl"):  popcountl,
-		dict.SID("__builtin_popcountll"): popcountll,
+		dict.SID("__builtin_clrsb"):          clrsb,
+		dict.SID("__builtin_clrsbl"):         clrsbl,
+		dict.SID("__builtin_clrsbll"):        clrsbll,
+		dict.SID("__builtin_clz"):            clz,
+		dict.SID("__builtin_clzl"):           clzl,
+		dict.SID("__builtin_clzll"):          clzll,
+		dict.SID("__builtin_ctz"):            ctz,
+		dict.SID("__builtin_ctzl"):           ctzl,
+		dict.SID("__builtin_ctzll"):          ctzll,
+		dict.SID("__builtin_parity"):         parity,
+		dict.SID("__builtin_parityl"):        parityl,
+		dict.SID("__builtin_parityll"):       parityll,
+		dict.SID("__builtin_popcount"):       popcount,
+		dict.SID("__builtin_popcountl"):      popcountl,
+		dict.SID("__builtin_popcountll"):     popcountll,
+		dict.SID("__builtin_return_address"): returnAddress,
 	})
 }
 
@@ -133,3 +134,27 @@ func (c *cpu) popcountl() {
 
 // int __builtin_popcountll(unsigned long long x);
 func (c *cpu) popcountll() { writeI32(c.rp, int32(mathutil.PopCountUint64(readU64(c.rp-i64StackSz)))) }
+
+// void *__builtin_return_address(unsigned int level);
+func (c *cpu) returnAddress() {
+	level := readU32(c.rp - i32StackSz)
+	bp := c.bp
+	ip := c.ip - 1
+	sp := c.sp
+	for ip < uintptr(len(c.code)) {
+		sp = bp
+		bp = readPtr(sp)
+		sp += 2 * ptrStackSz
+		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem) {
+			break
+		}
+
+		ip = readPtr(sp) - 1
+		if level == 0 {
+			break
+		}
+
+		level--
+	}
+	writePtr(c.rp, ip)
+}

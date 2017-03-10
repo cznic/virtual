@@ -25,6 +25,7 @@ type Operation struct {
 type cpu struct {
 	ap      uintptr // Arguments pointer
 	bp      uintptr // Base pointer
+	code    []Operation
 	ds      uintptr // Data segment
 	fpStack []uintptr
 	ip      uintptr // Instruction pointer
@@ -82,13 +83,13 @@ func (c *cpu) builtin(f func()) {
 	c.rpStack = c.rpStack[:n-1]
 }
 
-func (c *cpu) stackTrace(code []Operation) error {
+func (c *cpu) stackTrace() error {
 	var buf buffer.Bytes
 	bp := c.bp
 	ip := c.ip - 1
 	sp := c.sp
 	ap := c.ap
-	for ip < uintptr(len(code)) {
+	for ip < uintptr(len(c.code)) {
 		fi := c.m.pcInfo(int(ip), c.m.functions)
 		li := c.m.pcInfo(int(ip), c.m.lines)
 		switch p := li.Position(); {
@@ -103,9 +104,9 @@ func (c *cpu) stackTrace(code []Operation) error {
 			}
 			fmt.Fprintf(&buf, ")\n")
 			fmt.Fprintf(&buf, "\t%s\t", li.Position())
-			dumpCode(&buf, code[ip:ip+1], int(ip))
+			dumpCode(&buf, c.code[ip:ip+1], int(ip))
 		default:
-			dumpCode(&buf, code[ip:ip+1], int(ip))
+			dumpCode(&buf, c.code[ip:ip+1], int(ip))
 		}
 		sp = bp
 		bp = readPtr(sp)
@@ -121,8 +122,8 @@ func (c *cpu) stackTrace(code []Operation) error {
 	return errors.New(string(buf.Bytes()))
 }
 
-func (c *cpu) trace(code []Operation) string {
-	s := dumpCodeStr(code[c.ip:c.ip+1], int(c.ip))
+func (c *cpu) trace() string {
+	s := dumpCodeStr(c.code[c.ip:c.ip+1], int(c.ip))
 	a := make([]uintptr, 5)
 	for i := range a {
 		a[i] = readPtr(c.sp + uintptr(i*ptrStackSz))
@@ -134,10 +135,11 @@ func (c *cpu) run(code []Operation) (int, error) {
 	//fmt.Printf("%#v\n", c)
 	defer func() {
 		if err := recover(); err != nil {
-			panic(fmt.Errorf("%v\n%s", err, c.stackTrace(code)))
+			panic(fmt.Errorf("%v\n%s", err, c.stackTrace()))
 		}
 	}()
 
+	c.code = code
 	for i := 0; ; i++ {
 		if i&1024 == 0 {
 			select {
@@ -864,7 +866,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp += i64StackSz
 			writeI64(c.sp, readI64(c.sp)|b)
 		case Panic: // -
-			return -1, c.stackTrace(code)
+			return -1, c.stackTrace()
 		case PostIncI8: // adr -> (*adr)++
 			p := readPtr(c.sp)
 			c.sp += ptrStackSz - i8StackSz
@@ -904,7 +906,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			case 8:
 				u = readU64(p)
 			default:
-				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
 			v := uint32(u & m >> bitoff)
 			writeU32(c.sp, v)
@@ -920,7 +922,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			case 8:
 				writeU64(p, u)
 			default:
-				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
 		case PostIncU64Bits: // adr -> (*adr)++
 			d := uint64(op.N)
@@ -943,7 +945,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			case 8:
 				u = readU64(p)
 			default:
-				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
 			v := uint64(u & m >> bitoff)
 			writeU64(c.sp, v)
@@ -959,7 +961,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			case 8:
 				writeU64(p, u)
 			default:
-				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
 		case PostIncI64: // adr -> (*adr)++
 			p := readPtr(c.sp)
@@ -1023,7 +1025,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			case 8:
 				u = readU64(p)
 			default:
-				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
 			v := uint32(u&m>>bitoff) + d
 			writeU32(c.sp, v)
@@ -1038,7 +1040,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			case 8:
 				writeU64(p, u)
 			default:
-				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
 		case PreIncU64Bits: // adr -> (*adr)++
 			d := uint64(op.N)
@@ -1061,7 +1063,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			case 8:
 				u = readU64(p)
 			default:
-				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
 			v := uint64(u&m>>bitoff) + d
 			writeU64(c.sp, v)
@@ -1076,7 +1078,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			case 8:
 				writeU64(p, u)
 			default:
-				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace(code))
+				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
 		case PreIncPtr: // adr -> ++(*adr)
 			p := readPtr(c.sp)
@@ -1422,9 +1424,13 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.isinff)
 		case isinfl:
 			c.builtin(c.isinf)
+		case returnAddress:
+			c.builtin(c.returnAddress)
+		case alloca:
+			c.builtin(c.alloca)
 
 		default:
-			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace(code))
+			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())
 		}
 	}
 }
