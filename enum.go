@@ -30,7 +30,12 @@ const (
 	Argument8  // N
 	Arguments
 	ArgumentsFP
-	BP // N
+	BP          // N
+	BitfieldI8  // N  lshift<<8|rshift
+	BitfieldU8  // N: lshift<<8|rshift
+	BitfieldU16 // N: lshift<<8|rshift
+	BitfieldU32 // N: lshift<<8|rshift
+	BitfieldU64 // N: lshift<<8|rshift
 	BoolC128
 	BoolF32
 	BoolF64

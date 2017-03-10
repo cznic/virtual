@@ -41,7 +41,7 @@ func (c *cpu) clrsb() {
 
 // int __builtin_clrsbl (long x);
 func (c *cpu) clrsbl() {
-	x := readLong(c.rp - stackAlign)
+	x := readLong(c.rp - longStackSz)
 	i := int32(1)
 	n := x >> 63 & 1
 	for ; i < 64 && x>>(63-uint(i))&1 == n; i++ {
@@ -70,7 +70,7 @@ func (c *cpu) clz() {
 
 // int __builtin_clzl (unsigned long x);
 func (c *cpu) clzl() {
-	x := uint64(readLong(c.rp - stackAlign))
+	x := readULong(c.rp - longStackSz)
 	var i int32
 	for ; i < 64 && x&(1<<uint(63-i)) == 0; i++ {
 	}
@@ -97,7 +97,7 @@ func (c *cpu) ctz() {
 
 // int __builtin_ctzl (unsigned long x);
 func (c *cpu) ctzl() {
-	x := uint64(readLong(c.rp - stackAlign))
+	x := readULong(c.rp - longStackSz)
 	var i int32
 	for ; i < 64 && x&(1<<uint(i)) == 0; i++ {
 	}
@@ -118,7 +118,7 @@ func (c *cpu) parity() { writeI32(c.rp, int32(mathutil.PopCountUint32(readU32(c.
 
 // int __builtin_parityl(unsigned long x);
 func (c *cpu) parityl() {
-	writeI32(c.rp, int32(mathutil.PopCountUint64(uint64(readLong(c.rp-stackAlign))))&1)
+	writeI32(c.rp, int32(mathutil.PopCountUint64(readULong(c.rp-longStackSz)))&1)
 }
 
 // int __builtin_parityll(unsigned long long x);
@@ -129,7 +129,7 @@ func (c *cpu) popcount() { writeI32(c.rp, int32(mathutil.PopCountUint32(readU32(
 
 // int __builtin_popcountl(unsigned long x);
 func (c *cpu) popcountl() {
-	writeI32(c.rp, int32(mathutil.PopCountUint64(uint64(readLong(c.rp-stackAlign)))))
+	writeI32(c.rp, int32(mathutil.PopCountUint64(readULong(c.rp-longStackSz))))
 }
 
 // int __builtin_popcountll(unsigned long long x);

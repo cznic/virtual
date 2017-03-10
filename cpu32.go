@@ -28,8 +28,8 @@ func (c *cpu) pushF64(n, m int) {
 	c.ip++
 }
 
-func readSize(p uintptr) uint64 { return uint64(*(*uint32)(unsafe.Pointer(p))) }
-func readLong(p uintptr) int64  { return int64(*(*int32)(unsafe.Pointer(p))) }
+func readLong(p uintptr) int64   { return int64(*(*int32)(unsafe.Pointer(p))) }
+func readULong(p uintptr) uint64 { return uint64(*(*uint32)(unsafe.Pointer(p))) }
 
 func writeSize(p uintptr, v uint64) {
 	if v > math.MaxUint32 {

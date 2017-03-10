@@ -26,6 +26,6 @@ func (c *cpu) pushF64(n, m int) {
 	writeF64(c.sp, math.Float64frombits(uint64(n)))
 }
 
-func readSize(p uintptr) uint64     { return *(*uint64)(unsafe.Pointer(p)) }
 func readLong(p uintptr) int64      { return *(*int64)(unsafe.Pointer(p)) }
+func readULong(p uintptr) uint64    { return *(*uint64)(unsafe.Pointer(p)) }
 func writeSize(p uintptr, v uint64) { *(*uint64)(unsafe.Pointer(p)) = v }

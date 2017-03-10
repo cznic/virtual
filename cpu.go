@@ -100,7 +100,7 @@ func (c *cpu) stackTrace() error {
 					fmt.Fprintf(&buf, ", ")
 				}
 				ap -= stackAlign
-				fmt.Fprintf(&buf, "%#x", readI64(ap))
+				fmt.Fprintf(&buf, "%#x", readULong(ap))
 			}
 			fmt.Fprintf(&buf, ")\n")
 			fmt.Fprintf(&buf, "\t%s\t", li.Position())
@@ -226,6 +226,16 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case BP: // -> ptr
 			c.sp -= ptrSize
 			writePtr(c.sp, c.bp+uintptr(op.N))
+		case BitfieldI8: //  val -> val
+			writeI8(c.sp, readI8(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
+		case BitfieldU8: //  val -> val
+			writeU8(c.sp, readU8(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
+		case BitfieldU16: //  val -> val
+			writeU16(c.sp, readU16(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
+		case BitfieldU32: //  val -> val
+			writeU32(c.sp, readU32(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
+		case BitfieldU64: //  val -> val
+			writeU64(c.sp, readU64(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
 		case BoolC128:
 			v := readC128(c.sp)
 			c.sp += c128StackSz - i32StackSz
@@ -947,10 +957,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			default:
 				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
-			v := uint64(u & m >> bitoff)
+			v := u & m >> bitoff
 			writeU64(c.sp, v)
 			v += d
-			u = u&^m | uint64(v)<<bitoff&m
+			u = u&^m | v<<bitoff&m
 			switch w {
 			case 1:
 				writeU8(p, uint8(u))
@@ -1065,9 +1075,9 @@ func (c *cpu) run(code []Operation) (int, error) {
 			default:
 				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
-			v := uint64(u&m>>bitoff) + d
+			v := u&m>>bitoff + d
 			writeU64(c.sp, v)
-			u = u&^m | uint64(v)<<bitoff&m
+			u = u&^m | v<<bitoff&m
 			switch w {
 			case 1:
 				writeU8(p, uint8(u))

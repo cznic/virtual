@@ -53,7 +53,7 @@ func (c *cpu) ffs() {
 
 // int ffsl(long i);
 func (c *cpu) ffsl() {
-	i := readLong(c.rp - stackAlign)
+	i := readLong(c.rp - longStackSz)
 	if i == 0 {
 		writeI32(c.rp, 0)
 		return
@@ -85,8 +85,8 @@ func (c *cpu) memcmp() {
 	s1 := readPtr(ap)
 	ap -= ptrStackSz
 	s2 := readPtr(ap)
-	ap -= stackAlign
-	n := readSize(ap)
+	ap -= longStackSz
+	n := readULong(ap)
 	var ch1, ch2 byte
 	for n != 0 {
 		ch1 = readU8(s1)
@@ -110,7 +110,7 @@ func (c *cpu) memcpy() {
 	ap := c.rp - ptrStackSz
 	dest := readPtr(ap)
 	ap -= ptrStackSz
-	memcopy(dest, readPtr(ap), int(readSize(ap-stackAlign)))
+	memcopy(dest, readPtr(ap), int(readULong(ap-longStackSz)))
 	writePtr(c.rp, dest)
 }
 
@@ -120,8 +120,8 @@ func (c *cpu) memset() {
 	s := readPtr(ap)
 	ap -= i32StackSz
 	ch := readI8(ap)
-	ap -= stackAlign
-	n := readSize(ap)
+	ap -= longStackSz
+	n := readULong(ap)
 	ret := s
 	for d := s; n > 0; n-- {
 		writeI8(d, ch)
@@ -218,8 +218,8 @@ func (c *cpu) strncmp() {
 	s1 := readPtr(ap)
 	ap -= ptrStackSz
 	s2 := readPtr(ap)
-	ap -= stackAlign
-	n := readSize(ap)
+	ap -= longStackSz
+	n := readULong(ap)
 	var ch1, ch2 byte
 	for n != 0 {
 		ch1 = readU8(s1)
@@ -245,8 +245,8 @@ func (c *cpu) strncpy() {
 	dest := readPtr(ap)
 	ap -= ptrStackSz
 	src := readPtr(ap)
-	ap -= stackAlign
-	n := readSize(ap)
+	ap -= longStackSz
+	n := readULong(ap)
 	ret := dest
 	var ch int8
 	for ch = readI8(src); ch != 0 && n > 0; n-- {

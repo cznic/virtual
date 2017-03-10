@@ -607,7 +607,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 	off = 0
 	for i := len(results) - 1; i >= 0; i-- {
 		results[i].off = off
-		off += roundup(results[i].sz, stackAlign)
+		off += roundup(results[i].sz, l.stackAlign)
 	}
 
 	for _, v := range f.Body {
@@ -736,6 +736,30 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 		case *ir.CallFP:
 			l.emit(l.pos(x), Operation{Opcode: CallFP})
 		case *ir.Convert:
+			if x.Bits != 0 {
+				switch {
+				case x.Result.Signed():
+					switch t := l.tc.MustType(x.TypeID); t.Kind() {
+					case ir.Int8, ir.Uint8:
+						l.emit(l.pos(x), Operation{Opcode: BitfieldI8, N: (8-x.BitOffset-x.Bits)<<8 | 8 - x.Bits})
+					default:
+						panic(fmt.Errorf("%s: TODO %v:%v@%v, %v", x.Position, x.TypeID, x.Bits, x.BitOffset, x.Result))
+					}
+				default:
+					switch t := l.tc.MustType(x.TypeID); t.Kind() {
+					case ir.Int8, ir.Uint8:
+						l.emit(l.pos(x), Operation{Opcode: BitfieldU8, N: (8-x.BitOffset-x.Bits)<<8 | 8 - x.Bits})
+					case ir.Int16, ir.Uint16:
+						l.emit(l.pos(x), Operation{Opcode: BitfieldU16, N: (16-x.BitOffset-x.Bits)<<8 | 16 - x.Bits})
+					case ir.Int32, ir.Uint32:
+						l.emit(l.pos(x), Operation{Opcode: BitfieldU32, N: (32-x.BitOffset-x.Bits)<<8 | 32 - x.Bits})
+					case ir.Int64, ir.Uint64:
+						l.emit(l.pos(x), Operation{Opcode: BitfieldU64, N: (64-x.BitOffset-x.Bits)<<8 | 64 - x.Bits})
+					default:
+						panic(fmt.Errorf("%s: TODO %v:%v@%v, %v", x.Position, x.TypeID, x.Bits, x.BitOffset, x.Result))
+					}
+				}
+			}
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int8:
 				switch u := l.tc.MustType(x.Result); u.Kind() {

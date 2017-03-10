@@ -29,6 +29,7 @@ const (
 	i64StackSz  = (8 + stackAlign - 1) &^ (stackAlign - 1)
 	i8StackSz   = (1 + stackAlign - 1) &^ (stackAlign - 1)
 	intSize     = mathutil.IntBits / 8
+	longStackSz = (longBits/8 + stackAlign - 1) &^ (stackAlign - 1)
 	mallocAlign = ptrSize
 	mmapPage    = 1 << 16
 	ptrSize     = mathutil.UintPtrBits / 8

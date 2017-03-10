@@ -151,6 +151,11 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			}
 		case // default format
 			AddPtr,
+			BitfieldI8,
+			BitfieldU8,
+			BitfieldU16,
+			BitfieldU32,
+			BitfieldU64,
 			Call,
 			Copy,
 			Ext,
@@ -159,8 +164,8 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Float64,
 			IndexI16,
 			IndexI32,
-			IndexU32,
 			IndexI64,
+			IndexU32,
 			IndexU64,
 			IndexU8,
 			Int8,

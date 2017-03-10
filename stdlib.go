@@ -35,9 +35,9 @@ func (c *cpu) abs() {
 
 // void *calloc(size_t nmemb, size_t size);
 func (c *cpu) calloc() {
-	ap := c.rp - stackAlign
-	nmemb := readSize(ap)
-	size := readSize(ap - stackAlign)
+	ap := c.rp - longStackSz
+	nmemb := readULong(ap)
+	size := readULong(ap - longStackSz)
 	hi, lo := mathutil.MulUint128_64(nmemb, size)
 	var p uintptr
 	if hi == 0 || lo <= mathutil.MaxInt {
@@ -49,7 +49,7 @@ func (c *cpu) calloc() {
 
 // void *malloc(size_t size);
 func (c *cpu) malloc() {
-	size := readSize(c.rp - stackAlign)
+	size := readULong(c.rp - longStackSz)
 	var p uintptr
 	if size <= mathutil.MaxInt {
 		p = c.m.malloc(int(size))

@@ -14,7 +14,7 @@ func init() {
 // void *alloca(size_t size);
 func (c *cpu) alloca() {
 	dest := readPtr(c.rp + ptrStackSz)
-	size := readSize(c.rp - stackAlign)
+	size := readULong(c.rp - longStackSz)
 	sp := c.sp - uintptr(size)
 	writePtr(sp+ptrStackSz, dest)
 	writePtr(sp, sp)

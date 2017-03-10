@@ -239,10 +239,10 @@ func (c *cpu) free() { c.m.free(readPtr(c.rp - ptrStackSz)) }
 func (c *cpu) fread() {
 	ap := c.rp - ptrStackSz
 	ptr := readPtr(ap)
-	ap -= stackAlign
-	size := readSize(ap)
-	ap -= stackAlign
-	nmemb := readSize(ap)
+	ap -= longStackSz
+	size := readULong(ap)
+	ap -= longStackSz
+	nmemb := readULong(ap)
 	ap -= ptrStackSz
 	hi, lo := mathutil.MulUint128_64(size, nmemb)
 	if hi != 0 || lo > math.MaxInt32 {
@@ -262,10 +262,10 @@ func (c *cpu) fread() {
 func (c *cpu) fwrite() {
 	ap := c.rp - ptrStackSz
 	ptr := readPtr(ap)
-	ap -= stackAlign
-	size := readSize(ap)
-	ap -= stackAlign
-	nmemb := readSize(ap)
+	ap -= longStackSz
+	size := readULong(ap)
+	ap -= longStackSz
+	nmemb := readULong(ap)
 	ap -= ptrStackSz
 	hi, lo := mathutil.MulUint128_64(size, nmemb)
 	if hi != 0 || lo > math.MaxInt32 {
