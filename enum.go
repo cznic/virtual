@@ -32,6 +32,9 @@ const (
 	ArgumentsFP
 	BP          // N
 	BitfieldI8  // N  lshift<<8|rshift
+	BitfieldI16 // N  lshift<<8|rshift
+	BitfieldI32 // N  lshift<<8|rshift
+	BitfieldI64 // N  lshift<<8|rshift
 	BitfieldU8  // N: lshift<<8|rshift
 	BitfieldU16 // N: lshift<<8|rshift
 	BitfieldU32 // N: lshift<<8|rshift
@@ -138,9 +141,10 @@ const (
 	Int32    // N
 	Int64    // N
 	Jmp      // N
-	Jnz      // N
-	Jz       // N
-	Label    // N
+	JmpP
+	Jnz   // N
+	Jz    // N
+	Label // N
 	LeqI32
 	LeqI64
 	LeqU32

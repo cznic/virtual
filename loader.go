@@ -76,18 +76,25 @@ type nfo struct {
 	sz  int
 }
 
+type labelNfo struct {
+	index int // fn
+	nm    ir.NameID
+}
+
 type loader struct {
-	intSize    int
-	m          map[int]int // Object #: {BSS,Code,Data,Text} index.
-	model      ir.MemoryModel
-	objects    []ir.Object
-	out        *Binary
-	prev       Operation
-	ptrSize    int
-	stackAlign int
-	strings    map[ir.StringID]int
-	tc         ir.TypeCache
-	wstrings   map[ir.StringID]int
+	dsLabels    map[int]*ir.AddressValue
+	intSize     int
+	m           map[int]int // Object #: {BSS,Code,Data,Text} index.
+	model       ir.MemoryModel
+	namedLabels map[labelNfo]int // nfo: ip
+	objects     []ir.Object
+	out         *Binary
+	prev        Operation
+	ptrSize     int
+	stackAlign  int
+	strings     map[ir.StringID]int
+	tc          ir.TypeCache
+	wstrings    map[ir.StringID]int
 }
 
 func newLoader(modelName string, objects []ir.Object) *loader {
@@ -102,16 +109,18 @@ func newLoader(modelName string, objects []ir.Object) *loader {
 	}
 
 	return &loader{
-		m:          map[int]int{},
-		model:      model,
-		objects:    objects,
-		out:        newBinary(modelName),
-		prev:       Operation{Opcode: -1},
-		ptrSize:    int(ptrItem.Size),
-		stackAlign: int(ptrItem.Align),
-		strings:    map[ir.StringID]int{},
-		tc:         ir.TypeCache{},
-		wstrings:   map[ir.StringID]int{},
+		dsLabels:    map[int]*ir.AddressValue{},
+		m:           map[int]int{},
+		model:       model,
+		namedLabels: map[labelNfo]int{},
+		objects:     objects,
+		out:         newBinary(modelName),
+		prev:        Operation{Opcode: -1},
+		ptrSize:     int(ptrItem.Size),
+		stackAlign:  int(ptrItem.Align),
+		strings:     map[ir.StringID]int{},
+		tc:          ir.TypeCache{},
+		wstrings:    map[ir.StringID]int{},
 	}
 }
 
@@ -123,6 +132,11 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 		case nil:
 			// nop
 		case *ir.AddressValue:
+			if x.Label != 0 {
+				l.dsLabels[off] = x
+				break
+			}
+
 			*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.m[x.Index])
 			if _, ok := l.objects[x.Index].(*ir.DataDefinition); ok {
 				l.out.DSRelative[off>>3] |= 1 << uint(off&7)
@@ -742,6 +756,12 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					switch t := l.tc.MustType(x.TypeID); t.Kind() {
 					case ir.Int8, ir.Uint8:
 						l.emit(l.pos(x), Operation{Opcode: BitfieldI8, N: (8-x.BitOffset-x.Bits)<<8 | 8 - x.Bits})
+					case ir.Int16, ir.Uint16:
+						l.emit(l.pos(x), Operation{Opcode: BitfieldI16, N: (16-x.BitOffset-x.Bits)<<8 | 16 - x.Bits})
+					case ir.Int32, ir.Uint32:
+						l.emit(l.pos(x), Operation{Opcode: BitfieldI32, N: (32-x.BitOffset-x.Bits)<<8 | 32 - x.Bits})
+					case ir.Int64, ir.Uint64:
+						l.emit(l.pos(x), Operation{Opcode: BitfieldI64, N: (64-x.BitOffset-x.Bits)<<8 | 64 - x.Bits})
 					default:
 						panic(fmt.Errorf("%s: TODO %v:%v@%v, %v", x.Position, x.TypeID, x.Bits, x.BitOffset, x.Result))
 					}
@@ -791,7 +811,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			case ir.Int16:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
-				case ir.Uint16:
+				case ir.Int8, ir.Uint8, ir.Int16, ir.Uint16:
 					// ok
 				case ir.Int32:
 					l.emit(l.pos(x), Operation{Opcode: ConvI16I32})
@@ -1260,7 +1280,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			l.emit(l.pos(x), Operation{Opcode: Jz, N: n})
 		case *ir.Label:
 			n := -int(x.NameID)
-			if n == 0 {
+			switch {
+			case n != 0:
+				l.namedLabels[labelNfo{index: index, nm: x.NameID}] = len(l.out.Code)
+			default:
 				n = x.Number
 			}
 			labels[n] = len(l.out.Code)
@@ -1640,6 +1663,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			case nil:
 				// nop
 			case *ir.AddressValue:
+				if v.Label != 0 {
+					panic("TODO")
+				}
+
 				l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
 				switch v.Linkage {
 				case ir.ExternalLinkage:
@@ -1774,6 +1801,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			default:
 				panic(fmt.Errorf("internal error %s", x.TypeID))
 			}
+		case *ir.JmpP:
+			l.emit(l.pos(x), Operation{Opcode: JmpP})
 		default:
 			panic(fmt.Errorf("TODO %T\n\t%#05x\t%v", x, ip, x))
 		}
@@ -1858,6 +1887,15 @@ func (l *loader) load() error {
 				l.loadDataDefinition(x, l.m[i], x.Value)
 			}
 		}
+	}
+	for off, v := range l.dsLabels {
+		nfo := labelNfo{index: v.Index, nm: v.Label}
+		ip, ok := l.namedLabels[nfo]
+		if !ok {
+			return fmt.Errorf("%s: undefined label %s", l.objects[v.Index].Base().NameID, v.Label)
+		}
+
+		*(*uintptr)(unsafe.Pointer(&l.out.Data[off])) = uintptr(ip)
 	}
 	h := -1
 	for i, v := range l.out.TSRelative {

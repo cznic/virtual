@@ -16,6 +16,11 @@ import (
 	"unsafe"
 )
 
+var (
+	maxConvF32I32 = math.Nextafter32(math.MaxInt32, 0) // https://github.com/golang/go/issues/19405
+	maxConvF32U32 = math.Nextafter32(math.MaxUint32, 0)
+)
+
 // Operation is the machine code.
 type Operation struct {
 	Opcode
@@ -228,6 +233,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writePtr(c.sp, c.bp+uintptr(op.N))
 		case BitfieldI8: //  val -> val
 			writeI8(c.sp, readI8(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
+		case BitfieldI16: //  val -> val
+			writeI16(c.sp, readI16(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
+		case BitfieldI32: //  val -> val
+			writeI32(c.sp, readI32(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
+		case BitfieldI64: //  val -> val
+			writeI64(c.sp, readI64(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
 		case BitfieldU8: //  val -> val
 			writeU8(c.sp, readU8(c.sp)<<uint(op.N>>8)>>uint(op.N&63))
 		case BitfieldU16: //  val -> val
@@ -275,13 +286,23 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp += f32StackSz - f64StackSz
 			writeF64(c.sp, float64(v))
 		case ConvF32I32:
-			v := readF32(c.sp)
-			c.sp += f32StackSz - i32StackSz
-			writeI32(c.sp, int32(v))
+			switch v := readF32(c.sp); {
+			case v > maxConvF32I32:
+				c.sp += f32StackSz - i32StackSz
+				writeI32(c.sp, math.MaxInt32)
+			default:
+				c.sp += f32StackSz - i32StackSz
+				writeI32(c.sp, int32(v))
+			}
 		case ConvF32U32:
-			v := readF32(c.sp)
-			c.sp += f32StackSz - i32StackSz
-			writeU32(c.sp, uint32(v))
+			switch v := readF32(c.sp); {
+			case v > maxConvF32U32:
+				c.sp += f32StackSz - i32StackSz
+				writeU32(c.sp, math.MaxUint32)
+			default:
+				c.sp += f32StackSz - i32StackSz
+				writeU32(c.sp, uint32(v))
+			}
 		case ConvF64F32:
 			v := readF64(c.sp)
 			c.sp += f64StackSz - f32StackSz
@@ -674,6 +695,9 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.pushI64(op.N, code[c.ip].N)
 		case Jmp: // -
 			c.ip = uintptr(op.N)
+		case JmpP: // ip -> -
+			c.ip = readPtr(c.sp)
+			c.sp -= ptrStackSz
 		case Jnz: // val ->
 			v := readI32(c.sp)
 			c.sp += i32StackSz
