@@ -83,7 +83,6 @@ type labelNfo struct {
 
 type loader struct {
 	dsLabels    map[int]*ir.AddressValue
-	intSize     int
 	m           map[int]int // Object #: {BSS,Code,Data,Text} index.
 	model       ir.MemoryModel
 	namedLabels map[labelNfo]int // nfo: ip
@@ -946,6 +945,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch u := l.tc.MustType(x.Result); u.Kind() {
 				case ir.Int8:
 					l.emit(l.pos(x), Operation{Opcode: ConvF64I8})
+				case ir.Uint16:
+					l.emit(l.pos(x), Operation{Opcode: ConvF64U16})
 				case ir.Int32:
 					l.emit(l.pos(x), Operation{Opcode: ConvF64I32})
 				case ir.Uint32:
@@ -1579,6 +1580,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					switch t := l.tc.MustType(x.TypeID); t.Kind() {
 					case ir.Int8, ir.Uint8:
 						l.emit(l.pos(x), Operation{Opcode: LshI8})
+					case ir.Int16, ir.Uint16:
+						l.emit(l.pos(x), Operation{Opcode: LshI16})
 					case ir.Int32, ir.Uint32:
 						l.emit(l.pos(x), Operation{Opcode: LshI32})
 					case ir.Int64, ir.Uint64:

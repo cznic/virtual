@@ -68,7 +68,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*ssp, %#x\t//TODO optimize\n", start+i, width, "add", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*ssp, %#x\t//TODO optimize\n", start+i, width, "add", op.N); err != nil { //TODOOK
 					return err
 				}
 			}
@@ -250,6 +250,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ConvF64I32,
 			ConvF64I64,
 			ConvF64I8,
+			ConvF64U16,
 			ConvF64U32,
 			ConvF64U64,
 			ConvI16I32,

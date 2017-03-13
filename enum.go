@@ -56,6 +56,7 @@ const (
 	ConvF64U32
 	ConvF64I64
 	ConvF64I8
+	ConvF64U16
 	ConvF64U64
 	ConvI16I32
 	ConvI16I64

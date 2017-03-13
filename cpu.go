@@ -127,6 +127,8 @@ func (c *cpu) stackTrace() error {
 	return errors.New(string(buf.Bytes()))
 }
 
+var _, _ = (*cpu).trace, dumpCodeStr
+
 func (c *cpu) trace() string {
 	s := dumpCodeStr(c.code[c.ip:c.ip+1], int(c.ip))
 	a := make([]uintptr, 5)
@@ -137,7 +139,6 @@ func (c *cpu) trace() string {
 }
 
 func (c *cpu) run(code []Operation) (int, error) {
-	//fmt.Printf("%#v\n", c)
 	defer func() {
 		if err := recover(); err != nil {
 			panic(fmt.Errorf("%v\n%s", err, c.stackTrace()))
@@ -154,7 +155,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		}
 
-		//fmt.Println(c.trace(code)) //TODO-
+		//fmt.Println(c.trace(code))
 		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
@@ -321,6 +322,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readF64(c.sp)
 			c.sp += f64StackSz - i8StackSz
 			writeI8(c.sp, int8(v))
+		case ConvF64U16:
+			v := readF64(c.sp)
+			c.sp += f64StackSz - i16StackSz
+			writeU16(c.sp, uint16(v))
 		case ConvI32F32:
 			v := readI32(c.sp)
 			c.sp += i32StackSz - f32StackSz
