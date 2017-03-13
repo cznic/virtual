@@ -7,7 +7,6 @@
 package virtual
 
 import (
-	"math"
 	"unsafe"
 )
 
@@ -16,16 +15,11 @@ const (
 	longBits = 64
 )
 
-func (c *cpu) pushI64(n, m int) {
+func (c *cpu) push64(n, m int) {
 	c.sp -= i64StackSz
 	writeI64(c.sp, int64(n))
 }
 
-func (c *cpu) pushF64(n, m int) {
-	c.sp -= f64StackSz
-	writeF64(c.sp, math.Float64frombits(uint64(n)))
-}
-
-func readLong(p uintptr) int64      { return *(*int64)(unsafe.Pointer(p)) }
-func readULong(p uintptr) uint64    { return *(*uint64)(unsafe.Pointer(p)) }
-func writeSize(p uintptr, v uint64) { *(*uint64)(unsafe.Pointer(p)) = v }
+func readLong(p uintptr) int64       { return *(*int64)(unsafe.Pointer(p)) }
+func readULong(p uintptr) uint64     { return *(*uint64)(unsafe.Pointer(p)) }
+func writeULong(p uintptr, v uint64) { *(*uint64)(unsafe.Pointer(p)) = v }

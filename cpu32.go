@@ -16,22 +16,16 @@ const (
 	longBits = 32
 )
 
-func (c *cpu) pushI64(n, m int) {
+func (c *cpu) push64(n, m int) {
 	c.sp -= i64StackSz
-	writeI64(c.sp, int64(n)|int64(m))
-	c.ip++
-}
-
-func (c *cpu) pushF64(n, m int) {
-	c.sp -= f64StackSz
-	writeF64(c.sp, math.Float64frombits(uint64(n)|uint64(m)))
+	writeI64(c.sp, int64(m)<<32|int64(n))
 	c.ip++
 }
 
 func readLong(p uintptr) int64   { return int64(*(*int32)(unsafe.Pointer(p))) }
 func readULong(p uintptr) uint64 { return uint64(*(*uint32)(unsafe.Pointer(p))) }
 
-func writeSize(p uintptr, v uint64) {
+func writeULong(p uintptr, v uint64) {
 	if v > math.MaxUint32 {
 		panic("size_t overflow")
 	}

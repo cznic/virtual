@@ -247,7 +247,7 @@ func (c *cpu) fread() {
 	hi, lo := mathutil.MulUint128_64(size, nmemb)
 	if hi != 0 || lo > math.MaxInt32 {
 		c.thread.errno = int32(syscall.E2BIG)
-		writeSize(c.rp, 0)
+		writeULong(c.rp, 0)
 		return
 	}
 
@@ -255,7 +255,7 @@ func (c *cpu) fread() {
 	if err != nil {
 		c.thread.errno = int32(syscall.EIO)
 	}
-	writeSize(c.rp, uint64(n)/size)
+	writeULong(c.rp, uint64(n)/size)
 }
 
 // size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
@@ -270,7 +270,7 @@ func (c *cpu) fwrite() {
 	hi, lo := mathutil.MulUint128_64(size, nmemb)
 	if hi != 0 || lo > math.MaxInt32 {
 		c.thread.errno = int32(syscall.E2BIG)
-		writeSize(c.rp, 0)
+		writeULong(c.rp, 0)
 		return
 	}
 
@@ -278,7 +278,7 @@ func (c *cpu) fwrite() {
 	if err != nil {
 		c.thread.errno = int32(syscall.EIO)
 	}
-	writeSize(c.rp, uint64(n)/size)
+	writeULong(c.rp, uint64(n)/size)
 }
 
 func goFprintf(w io.Writer, format, argp uintptr) int32 {

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	c128StackSz = f64StackSz
+	c128StackSz = (16 + stackAlign - 1) &^ (stackAlign - 1)
 	c64StackSz  = f64StackSz
 	f32StackSz  = i32StackSz
 	f64StackSz  = i64StackSz

@@ -94,7 +94,7 @@ func TestExit(t *testing.T) {
 
 	e := 42
 	if g, _ := thread.cpu.run([]Operation{
-		{Int32, e},
+		{Push32, e},
 		{exit, 0},
 	}); g != e {
 		t.Fatal("exit code", g, e)

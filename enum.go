@@ -48,28 +48,29 @@ const (
 	BoolI8
 	Call // N
 	CallFP
+	ConvC64C128
 	ConvF32F64
 	ConvF32I32
 	ConvF32U32
 	ConvF64F32
 	ConvF64I32
-	ConvF64U32
 	ConvF64I64
 	ConvF64I8
 	ConvF64U16
+	ConvF64U32
 	ConvF64U64
 	ConvI16I32
 	ConvI16I64
 	ConvI16U32
-	ConvI32C64
 	ConvI32C128
+	ConvI32C64
 	ConvI32F32
 	ConvI32F64
 	ConvI32I16
 	ConvI32I64
 	ConvI32I8
-	ConvI64I16
 	ConvI64F64
+	ConvI64I16
 	ConvI64I32
 	ConvI64I8
 	ConvI64U16
@@ -80,25 +81,26 @@ const (
 	ConvU16I32
 	ConvU16I64
 	ConvU16U32
-	ConvU32I16
-	ConvU32I64
 	ConvU32F32
 	ConvU32F64
+	ConvU32I16
+	ConvU32I64
 	ConvU32U8
 	ConvU8I16
 	ConvU8I32
 	ConvU8U32
 	ConvU8U64
 	Copy // N
-	Cpl8
 	Cpl32
 	Cpl64
-	DS    // N
-	DSI16 // N
-	DSI32 // N
-	DSI64 // N
-	DSI8  // N
-	DSN   // N + ext: size
+	Cpl8
+	DS     // N
+	DSC128 // N
+	DSI16  // N
+	DSI32  // N
+	DSI64  // N
+	DSI8   // N
+	DSN    // N + ext: size
 	DivF32
 	DivF64
 	DivI32
@@ -108,16 +110,14 @@ const (
 	Dup32
 	Dup64
 	Dup8
-	EqI32
 	EqF32
 	EqF64
+	EqI32
 	EqI64
 	EqI8
-	Ext     // N
-	FP      // N
-	Float32 // N
-	Float64 // N
-	Func    // N
+	Ext  // N
+	FP   // N
+	Func // N
 	GeqF32
 	GeqF64
 	GeqI32
@@ -133,25 +133,21 @@ const (
 	Index    // N
 	IndexI16 // N
 	IndexI32 // N
-	IndexU32 // N
 	IndexI64 // N
+	IndexU32 // N
 	IndexU64 // N
 	IndexU8  // N
-	Int8     // N
-	Int16    // N
-	Int32    // N
-	Int64    // N
 	Jmp      // N
 	JmpP
 	Jnz   // N
 	Jz    // N
 	Label // N
+	LeqF32
+	LeqF64
 	LeqI32
 	LeqI64
 	LeqU32
 	LeqU64
-	LeqF32
-	LeqF64
 	Load   // N + ext: size
 	Load16 // N
 	Load32 // N
@@ -167,19 +163,21 @@ const (
 	LtI64
 	LtU32
 	LtU64
+	MulC64
 	MulF32
 	MulF64
 	MulI32
 	MulI64
 	NegF32
 	NegF64
-	NegI8
 	NegI16
 	NegI32
 	NegI64
+	NegI8
 	NegIndexI32 // N
 	NegIndexI64 // N
 	NegIndexU64 // N
+	NeqC128
 	NeqC64
 	NeqF32
 	NeqF64
@@ -190,9 +188,9 @@ const (
 	Or64
 	Panic
 	PostIncF64     // N
+	PostIncI16     // N
 	PostIncI32     // N
 	PostIncI64     // N
-	PostIncI16     // N
 	PostIncI8      // N
 	PostIncPtr     // N
 	PostIncU32Bits // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
@@ -205,9 +203,13 @@ const (
 	PreIncU32Bits  // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
 	PreIncU64Bits  // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
 	PtrDiff        // N
+	Push8          // N
+	Push16         // N
+	Push32         // N
+	Push64         // N
 	RemI32
-	RemU32
 	RemI64
+	RemU32
 	RemU64
 	Return
 	RshI16 // N

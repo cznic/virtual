@@ -209,7 +209,7 @@ func (c *cpu) strlen() {
 	for s := readPtr(c.sp); readI8(s) != 0; s++ {
 		n++
 	}
-	writeSize(c.rp, n)
+	writeULong(c.rp, n)
 }
 
 // int strncmp(const char *s1, const char *s2, size_t n)

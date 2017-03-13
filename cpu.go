@@ -127,8 +127,6 @@ func (c *cpu) stackTrace() error {
 	return errors.New(string(buf.Bytes()))
 }
 
-var _, _ = (*cpu).trace, dumpCodeStr
-
 func (c *cpu) trace() string {
 	s := dumpCodeStr(c.code[c.ip:c.ip+1], int(c.ip))
 	a := make([]uintptr, 5)
@@ -139,6 +137,7 @@ func (c *cpu) trace() string {
 }
 
 func (c *cpu) run(code []Operation) (int, error) {
+	//fmt.Printf("%#v\n", c)
 	defer func() {
 		if err := recover(); err != nil {
 			panic(fmt.Errorf("%v\n%s", err, c.stackTrace()))
@@ -155,7 +154,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		}
 
-		//fmt.Println(c.trace(code))
+		//fmt.Println(c.trace()) //TODO-
 		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
@@ -282,6 +281,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			n := len(c.fpStack)
 			c.ip = c.fpStack[n-1]
 			c.fpStack = c.fpStack[:n-1]
+		case ConvC64C128:
+			v := readC64(c.sp)
+			c.sp -= c128StackSz - c64StackSz
+			writeC128(c.sp, complex128(v))
 		case ConvF32F64:
 			v := readF32(c.sp)
 			c.sp += f32StackSz - f64StackSz
@@ -322,10 +325,6 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readF64(c.sp)
 			c.sp += f64StackSz - i8StackSz
 			writeI8(c.sp, int8(v))
-		case ConvF64U16:
-			v := readF64(c.sp)
-			c.sp += f64StackSz - i16StackSz
-			writeU16(c.sp, uint16(v))
 		case ConvI32F32:
 			v := readI32(c.sp)
 			c.sp += i32StackSz - f32StackSz
@@ -372,7 +371,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeC64(c.sp, complex(float32(v), 0))
 		case ConvI32C128:
 			v := readI32(c.sp)
-			c.sp += i32StackSz - c128StackSz
+			c.sp -= c128StackSz - i32StackSz
 			writeC128(c.sp, complex(float64(v), 0))
 		case ConvI32I8:
 			writeI8(c.sp, int8(readI32(c.sp)))
@@ -456,8 +455,11 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp -= i32StackSz
 			writeI32(c.sp, readI32(c.ds+uintptr(op.N)))
 		case DSI64: // -> val
-			c.sp -= ptrSize
+			c.sp -= i64StackSz
 			writeI64(c.sp, readI64(c.ds+uintptr(op.N)))
+		case DSC128: // -> val
+			c.sp -= c128StackSz
+			writeC128(c.sp, readC128(c.ds+uintptr(op.N)))
 		case DivF32: // a, b -> a / b
 			b := readF32(c.sp)
 			c.sp += f32StackSz
@@ -528,11 +530,6 @@ func (c *cpu) run(code []Operation) (int, error) {
 			} else {
 				writeI64(c.sp, int64(op.N))
 			}
-		case Float32:
-			c.sp -= f32StackSz
-			writeF32(c.sp, math.Float32frombits(uint32(op.N)))
-		case Float64:
-			c.pushF64(op.N, code[c.ip].N)
 		case Func: // N: bp offset of variable[n-1])
 			// ...higher addresses
 			//
@@ -687,17 +684,6 @@ func (c *cpu) run(code []Operation) (int, error) {
 			x := readU64(c.sp)
 			c.sp += i64StackSz
 			addPtr(c.sp, uintptr(uint64(op.N)*x))
-		case Int8: // -> val
-			c.sp -= i8StackSz
-			writeI8(c.sp, int8(op.N))
-		case Int16: // -> val
-			c.sp -= i16StackSz
-			writeI16(c.sp, int16(op.N))
-		case Int32: // -> val
-			c.sp -= i32StackSz
-			writeI32(c.sp, int32(op.N))
-		case Int64: // -> val
-			c.pushI64(op.N, code[c.ip].N)
 		case Jmp: // -
 			c.ip = uintptr(op.N)
 		case JmpP: // ip -> -
@@ -827,6 +813,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readF32(c.sp)
 			c.sp += f32StackSz
 			writeF32(c.sp, readF32(c.sp)*b)
+		case MulC64: // a, b -> a * b
+			b := readC64(c.sp)
+			c.sp += c64StackSz
+			writeC64(c.sp, readC64(c.sp)*b)
 		case MulF64: // a, b -> a * b
 			b := readF64(c.sp)
 			c.sp += f64StackSz
@@ -868,6 +858,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp += c64StackSz
 			a := readC64(c.sp)
 			c.sp += c64StackSz - i32StackSz
+			c.bool(a != b)
+		case NeqC128: // a, b -> a |= b
+			b := readC128(c.sp)
+			c.sp += c128StackSz
+			a := readC128(c.sp)
+			c.sp += c128StackSz - i32StackSz
 			c.bool(a != b)
 		case NeqI32: // a, b -> a |= b
 			b := readI32(c.sp)
@@ -1124,6 +1120,17 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readPtr(p) + uintptr(op.N)
 			writePtr(c.sp, v)
 			writePtr(p, v)
+		case Push8: // -> val
+			c.sp -= i8StackSz
+			writeI8(c.sp, int8(op.N))
+		case Push16: // -> val
+			c.sp -= i16StackSz
+			writeI16(c.sp, int16(op.N))
+		case Push32:
+			c.sp -= i32StackSz
+			writeI32(c.sp, int32(op.N))
+		case Push64:
+			c.push64(op.N, code[c.ip].N)
 		case PtrDiff: // p q -> p - q
 			q := readPtr(c.sp)
 			c.sp += ptrStackSz
