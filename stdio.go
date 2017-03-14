@@ -379,6 +379,11 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 				arg := readF64(argp)
 				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sf", modifiers), arg)
 				written += n
+			case 'g':
+				argp -= f64StackSz
+				arg := readF64(argp)
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sg", modifiers), arg)
+				written += n
 			case 's':
 				argp -= ptrStackSz
 				arg := readPtr(argp)

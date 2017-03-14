@@ -136,6 +136,7 @@ const (
 	IndexI64 // N
 	IndexU32 // N
 	IndexU64 // N
+	IndexI8  // N
 	IndexU8  // N
 	Jmp      // N
 	JmpP

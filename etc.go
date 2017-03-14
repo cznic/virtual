@@ -179,6 +179,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			IndexI64,
 			IndexU32,
 			IndexU64,
+			IndexI8,
 			IndexU8,
 			Jmp,
 			Jnz,

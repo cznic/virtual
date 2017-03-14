@@ -527,15 +527,16 @@ func (l *loader) arrayLiteral(t ir.Type, v ir.Value) *[]byte {
 	case *ir.CompositeValue:
 		i := 0 // Item index
 		for _, v := range x.Values {
+			off := i * itemSz
 			switch y := v.(type) {
 			case *ir.Int32Value:
-				l.int32Literal(b[i*itemSz:], item, y.Value)
+				l.int32Literal(b[off:], item, y.Value)
 				i++
 			case *ir.Float32Value:
-				l.float32Literal(b[i*itemSz:], item, y.Value)
+				l.float32Literal(b[off:], item, y.Value)
 				i++
 			case *ir.CompositeValue:
-				l.compositeValue(b[i*itemSz:], item, y)
+				l.compositeValue(b[off:], item, y)
 				i++
 			default:
 				panic(fmt.Errorf("TODO %T", y))
@@ -1079,6 +1080,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			default:
 				switch xt.Kind() {
+				case ir.Int8:
+					l.emit(l.pos(x), Operation{Opcode: IndexI8, N: sz})
 				case ir.Uint8:
 					l.emit(l.pos(x), Operation{Opcode: IndexU8, N: sz})
 				case ir.Int16:

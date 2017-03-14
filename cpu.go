@@ -660,6 +660,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			a := readU64(c.sp)
 			c.sp += i64StackSz - i32StackSz
 			c.bool(a > b)
+		case IndexI8: // addr, index -> addr + n*index
+			x := readI8(c.sp)
+			c.sp += i8StackSz
+			addPtr(c.sp, uintptr(op.N*int(x)))
 		case IndexU8: // addr, index -> addr + n*index
 			x := readU8(c.sp)
 			c.sp += i8StackSz
