@@ -1474,6 +1474,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.returnAddress)
 		case alloca:
 			c.builtin(c.alloca)
+		case sign_bit:
+			c.builtin(c.sign_bit)
+		case sign_bitf:
+			c.builtin(c.sign_bitf)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

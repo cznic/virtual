@@ -10,48 +10,50 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_acos"):   acos,
-		dict.SID("__builtin_asin"):   asin,
-		dict.SID("__builtin_atan"):   atan,
-		dict.SID("__builtin_ceil"):   ceil,
-		dict.SID("__builtin_cos"):    cos,
-		dict.SID("__builtin_cosh"):   cosh,
-		dict.SID("__builtin_exp"):    exp,
-		dict.SID("__builtin_fabs"):   fabs,
-		dict.SID("__builtin_floor"):  floor,
-		dict.SID("__builtin_isinf"):  isinf,
-		dict.SID("__builtin_isinff"): isinff,
-		dict.SID("__builtin_isinfl"): isinfl,
-		dict.SID("__builtin_log"):    log,
-		dict.SID("__builtin_log10"):  log10,
-		dict.SID("__builtin_pow"):    pow,
-		dict.SID("__builtin_round"):  round,
-		dict.SID("__builtin_sin"):    sin,
-		dict.SID("__builtin_sinh"):   sinh,
-		dict.SID("__builtin_sqrt"):   sqrt,
-		dict.SID("__builtin_tan"):    tan,
-		dict.SID("__builtin_tanh"):   tanh,
-		dict.SID("acos"):             acos,
-		dict.SID("asin"):             asin,
-		dict.SID("atan"):             atan,
-		dict.SID("ceil"):             ceil,
-		dict.SID("cos"):              cos,
-		dict.SID("cosh"):             cosh,
-		dict.SID("exp"):              exp,
-		dict.SID("fabs"):             fabs,
-		dict.SID("floor"):            floor,
-		dict.SID("isinf"):            isinf,
-		dict.SID("isinff"):           isinff,
-		dict.SID("isinfl"):           isinfl,
-		dict.SID("log"):              log,
-		dict.SID("log10"):            log10,
-		dict.SID("pow"):              pow,
-		dict.SID("round"):            round,
-		dict.SID("sin"):              sin,
-		dict.SID("sinh"):             sinh,
-		dict.SID("sqrt"):             sqrt,
-		dict.SID("tan"):              tan,
-		dict.SID("tanh"):             tanh,
+		dict.SID("__builtin_acos"):      acos,
+		dict.SID("__builtin_asin"):      asin,
+		dict.SID("__builtin_atan"):      atan,
+		dict.SID("__builtin_ceil"):      ceil,
+		dict.SID("__builtin_cos"):       cos,
+		dict.SID("__builtin_cosh"):      cosh,
+		dict.SID("__builtin_exp"):       exp,
+		dict.SID("__builtin_fabs"):      fabs,
+		dict.SID("__builtin_floor"):     floor,
+		dict.SID("__builtin_isinf"):     isinf,
+		dict.SID("__builtin_isinff"):    isinff,
+		dict.SID("__builtin_isinfl"):    isinfl,
+		dict.SID("__builtin_log"):       log,
+		dict.SID("__builtin_log10"):     log10,
+		dict.SID("__builtin_pow"):       pow,
+		dict.SID("__builtin_round"):     round,
+		dict.SID("__builtin_sign_bit"):  sign_bit,
+		dict.SID("__builtin_sign_bitf"): sign_bitf,
+		dict.SID("__builtin_sin"):       sin,
+		dict.SID("__builtin_sinh"):      sinh,
+		dict.SID("__builtin_sqrt"):      sqrt,
+		dict.SID("__builtin_tan"):       tan,
+		dict.SID("__builtin_tanh"):      tanh,
+		dict.SID("acos"):                acos,
+		dict.SID("asin"):                asin,
+		dict.SID("atan"):                atan,
+		dict.SID("ceil"):                ceil,
+		dict.SID("cos"):                 cos,
+		dict.SID("cosh"):                cosh,
+		dict.SID("exp"):                 exp,
+		dict.SID("fabs"):                fabs,
+		dict.SID("floor"):               floor,
+		dict.SID("isinf"):               isinf,
+		dict.SID("isinff"):              isinff,
+		dict.SID("isinfl"):              isinfl,
+		dict.SID("log"):                 log,
+		dict.SID("log10"):               log10,
+		dict.SID("pow"):                 pow,
+		dict.SID("round"):               round,
+		dict.SID("sin"):                 sin,
+		dict.SID("sinh"):                sinh,
+		dict.SID("sqrt"):                sqrt,
+		dict.SID("tan"):                 tan,
+		dict.SID("tanh"):                tanh,
 	})
 }
 
@@ -88,6 +90,22 @@ func (c *cpu) sinh()  { writeF64(c.rp, math.Sinh(readF64(c.sp))) }
 func (c *cpu) sqrt()  { writeF64(c.rp, math.Sqrt(readF64(c.sp))) }
 func (c *cpu) tan()   { writeF64(c.rp, math.Tan(readF64(c.sp))) }
 func (c *cpu) tanh()  { writeF64(c.rp, math.Tanh(readF64(c.sp))) }
+
+func (c *cpu) sign_bit() {
+	var r int32
+	if math.Signbit(readF64(c.sp)) {
+		r = 1
+	}
+	writeI32(c.rp, r)
+}
+
+func (c *cpu) sign_bitf() {
+	var r int32
+	if math.Signbit(float64(readF32(c.sp))) {
+		r = 1
+	}
+	writeI32(c.rp, r)
+}
 
 func (c *cpu) round() {
 	v := readF64(c.sp)

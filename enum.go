@@ -304,6 +304,8 @@ const (
 	printf
 	returnAddress
 	round
+	sign_bit
+	sign_bitf
 	sin
 	sinh
 	sprintf

@@ -443,6 +443,8 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			printf,
 			returnAddress,
 			round,
+			sign_bit,
+			sign_bitf,
 			sin,
 			sinh,
 			sprintf,
