@@ -28,6 +28,9 @@ func (e KillError) Error() string { return "SIGKILL" }
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
 func roundup(n, m int) int { return (n + m - 1) &^ (m - 1) }
 
+// if n%m != 0 { n += m-n%m }. m must be a power of 2.
+func roundupULong(n, m uint64) uint64 { return (n + m - 1) &^ (m - 1) }
+
 // DumpCode outputs code to w, assuming it is located at start.
 func DumpCode(w io.Writer, code []Operation, start int) error {
 	return dumpCode(w, code, 0)

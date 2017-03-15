@@ -824,7 +824,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvU8I32})
 				case ir.Uint32:
 					l.emit(l.pos(x), Operation{Opcode: ConvU8U32})
-				case ir.Uint64:
+				case ir.Int64, ir.Uint64:
 					l.emit(l.pos(x), Operation{Opcode: ConvU8U64})
 				default:
 					panic(fmt.Errorf("TODO %v", u.Kind()))

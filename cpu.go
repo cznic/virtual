@@ -402,7 +402,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case ConvU8U32:
 			writeU32(c.sp, uint32(readU8(c.sp)))
 		case ConvU8U64:
-			v := readI8(c.sp)
+			v := readU8(c.sp)
 			c.sp += i8StackSz - i64StackSz
 			writeU64(c.sp, uint64(v))
 		case ConvU16I32:

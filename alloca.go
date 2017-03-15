@@ -14,9 +14,10 @@ func init() {
 // void *alloca(size_t size);
 func (c *cpu) alloca() {
 	dest := readPtr(c.rp + ptrStackSz)
-	size := readULong(c.rp - longStackSz)
-	sp := c.sp - uintptr(size)
+	size := roundupULong(readULong(c.rp-longStackSz), stackAlign)
+	r := c.sp - uintptr(size)
+	sp := r - 2*ptrStackSz
 	writePtr(sp+ptrStackSz, dest)
-	writePtr(sp, sp)
+	writePtr(sp, r)
 	c.rp = sp
 }
