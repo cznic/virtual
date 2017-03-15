@@ -27,17 +27,21 @@ type Operation struct {
 	N int
 }
 
+type jmpBuf struct {
+	ap uintptr // Arguments pointer
+	bp uintptr // Base pointer
+	ip uintptr // Instruction pointer
+	rp uintptr // Results pointer
+	sp uintptr // Stack pointer
+}
+
 type cpu struct {
-	ap      uintptr // Arguments pointer
-	bp      uintptr // Base pointer
+	jmpBuf
 	code    []Operation
 	ds      uintptr // Data segment
 	fpStack []uintptr
-	ip      uintptr // Instruction pointer
 	m       *machine
-	rp      uintptr // Results pointer
 	rpStack []uintptr
-	sp      uintptr // Stack pointer
 	stop    chan struct{}
 	thread  *thread
 	ts      uintptr // Text segment
@@ -311,6 +315,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readF64(c.sp)
 			c.sp += f64StackSz - f32StackSz
 			writeF32(c.sp, float32(v))
+		case ConvF64U16:
+			v := readF64(c.sp)
+			c.sp += f64StackSz - i16StackSz
+			writeU16(c.sp, uint16(v))
 		case ConvF64I32:
 			v := readF64(c.sp)
 			c.sp += f64StackSz - i32StackSz

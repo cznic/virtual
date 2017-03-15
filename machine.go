@@ -282,10 +282,12 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 	ss := uintptr(unsafe.Pointer(&stackMem[0]))
 	t := &thread{
 		cpu: cpu{
-			bp:   0xdeadbeef,
+			jmpBuf: jmpBuf{
+				bp: 0xdeadbeef,
+				sp: ss + uintptr(stackSize),
+			},
 			ds:   m.ds,
 			m:    m,
-			sp:   ss + uintptr(stackSize),
 			stop: m.stop,
 			ts:   m.ts,
 		},

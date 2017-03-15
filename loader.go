@@ -1661,11 +1661,13 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: Store, N: sz})
 			}
 		case *ir.StringConst:
-			switch {
-			case x.Wide:
+			switch x.TypeID {
+			case idInt8P:
+				l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value)})
+			case idInt32P:
 				l.emit(l.pos(x), Operation{Opcode: Text, N: l.wtext(x.Value)})
 			default:
-				l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value)})
+				panic(fmt.Errorf("%s: TODO %v", x.Position, x.TypeID))
 			}
 		case *ir.Sub:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {

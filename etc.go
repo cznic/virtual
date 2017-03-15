@@ -13,6 +13,12 @@ import (
 	"github.com/cznic/ir"
 )
 
+var (
+	idInt32P = ir.TypeID(dict.SID("*int32"))
+	idInt8P  = ir.TypeID(dict.SID("*int8"))
+	idUint8P = ir.TypeID(dict.SID("*uint8"))
+)
+
 // KillError is the error returned by the CPU of a killed machine.
 type KillError struct{}
 
