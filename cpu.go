@@ -28,11 +28,13 @@ type Operation struct {
 }
 
 type jmpBuf struct {
-	ap uintptr // Arguments pointer
-	bp uintptr // Base pointer
-	ip uintptr // Instruction pointer
-	rp uintptr // Results pointer
-	sp uintptr // Stack pointer
+	ap       uintptr // Arguments pointer
+	bp       uintptr // Base pointer
+	fpStackP int
+	ip       uintptr // Instruction pointer
+	rp       uintptr // Results pointer
+	rpStackP int
+	sp       uintptr // Stack pointer
 }
 
 type cpu struct {
@@ -539,6 +541,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 				writeI64(c.sp, int64(op.N))
 			}
 		case Func: // N: bp offset of variable[n-1])
+
 			// ...higher addresses
 			//
 			// +--------------------+
@@ -600,6 +603,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			// result[i]	ap + sum(stack size result[0..n-1]) - sum(stack size result[0..i])
 			// argument[i]	ap - sum(stack size argument[0..i])
 			// variable[i]	bp - sum(stack size variable[0..i])
+
 		case GeqF32: // a, b -> a >= b
 			b := readF32(c.sp)
 			c.sp += f32StackSz
