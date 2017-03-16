@@ -175,6 +175,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readF64(c.sp)
 			c.sp += f64StackSz
 			writeF64(c.sp, readF64(c.sp)+b)
+		case AddC128: // a, b -> a + b
+			b := readC128(c.sp)
+			c.sp += c128StackSz
+			writeC128(c.sp, readC128(c.sp)+b)
 		case AddI32: // a, b -> a + b
 			b := readI32(c.sp)
 			c.sp += i32StackSz
@@ -540,6 +544,27 @@ func (c *cpu) run(code []Operation) (int, error) {
 			} else {
 				writeI64(c.sp, int64(op.N))
 			}
+		case Field8:
+			v := readI8(c.sp + uintptr(op.N))
+			op = code[c.ip]
+			c.ip++
+			sz := op.N
+			c.sp += uintptr(sz) - i8StackSz
+			writeI8(c.sp, v)
+		case Field16:
+			v := readI16(c.sp + uintptr(op.N))
+			op = code[c.ip]
+			c.ip++
+			sz := op.N
+			c.sp += uintptr(sz) - i16StackSz
+			writeI16(c.sp, v)
+		case Field64:
+			v := readI64(c.sp + uintptr(op.N))
+			op = code[c.ip]
+			c.ip++
+			sz := op.N
+			c.sp += uintptr(sz) - i64StackSz
+			writeI64(c.sp, v)
 		case Func: // N: bp offset of variable[n-1])
 
 			// ...higher addresses
@@ -1147,6 +1172,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI32(c.sp, int32(op.N))
 		case Push64:
 			c.push64(op.N, code[c.ip].N)
+		case PushC128:
+			c.pushC128(op.N, code[c.ip].N)
 		case PtrDiff: // p q -> p - q
 			q := readPtr(c.sp)
 			c.sp += ptrStackSz
@@ -1494,6 +1521,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.sign_bit)
 		case sign_bitf:
 			c.builtin(c.sign_bitf)
+		case bswap64:
+			c.builtin(c.bswap64)
+		case frameAddress:
+			c.builtin(c.frameAddress)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

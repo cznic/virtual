@@ -247,6 +247,13 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
+		case *ir.Complex128Value:
+			switch typ := l.tc.MustType(t); typ.Kind() {
+			case ir.Complex128:
+				*(*complex128)((unsafe.Pointer)(&b[0])) = x.Value
+			default:
+				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
+			}
 		case *ir.StringValue:
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Pointer:
@@ -459,6 +466,22 @@ func (l *loader) complex64(x ir.Operation, n complex64) {
 		l.emit(l.pos(x), Operation{Opcode: Push64, N: int(bits)})
 	default:
 		panic("internal error")
+	}
+}
+
+func (l *loader) complex128(x ir.Operation, n complex128) {
+	re := real(n)
+	im := imag(n)
+	switch intSize {
+	case 4:
+		panic(fmt.Errorf("%s: TODO", x.Pos()))
+	case 8:
+		l.emit(l.pos(x),
+			Operation{Opcode: PushC128, N: int(math.Float64bits(re))},
+			Operation{Opcode: Ext, N: int(math.Float64bits(im))},
+		)
+	default:
+		panic(fmt.Errorf("%s: internal error", x.Pos()))
 	}
 }
 
@@ -677,6 +700,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: AddF32})
 			case ir.Float64:
 				l.emit(l.pos(x), Operation{Opcode: AddF64})
+			case ir.Complex128:
+				l.emit(l.pos(x), Operation{Opcode: AddC128})
 			case ir.Pointer:
 				l.emit(l.pos(x), Operation{Opcode: AddPtrs})
 			default:
@@ -1215,6 +1240,29 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					)
 				}
 			}
+		case *ir.FieldValue:
+			t := l.tc.MustType(x.TypeID).(*ir.StructOrUnionType)
+			tsz := l.model.Sizeof(t)
+			fields := l.model.Layout(t)
+			switch sz := fields[x.Index].Size; sz {
+			case 1:
+				l.emit(l.pos(x),
+					Operation{Opcode: Field8, N: int(fields[x.Index].Offset)},
+					Operation{Opcode: Ext, N: int(tsz)},
+				)
+			case 2:
+				l.emit(l.pos(x),
+					Operation{Opcode: Field16, N: int(fields[x.Index].Offset)},
+					Operation{Opcode: Ext, N: int(tsz)},
+				)
+			case 8:
+				l.emit(l.pos(x),
+					Operation{Opcode: Field64, N: int(fields[x.Index].Offset)},
+					Operation{Opcode: Ext, N: int(tsz)},
+				)
+			default:
+				panic(fmt.Errorf("%s: TODO %v", x.Position, sz))
+			}
 		case *ir.Geq:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int32:
@@ -1296,6 +1344,13 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				real := math.Float32frombits(uint32(x.Value >> 32))
 				imag := math.Float32frombits(uint32(x.Value))
 				l.complex64(x, complex(real, imag))
+			default:
+				panic(fmt.Errorf("TODO %v", t.Kind()))
+			}
+		case *ir.ConstC128:
+			switch t := l.tc.MustType(x.TypeID); t.Kind() {
+			case ir.Complex128:
+				l.complex128(x, x.Value)
 			default:
 				panic(fmt.Errorf("TODO %v", t.Kind()))
 			}

@@ -15,7 +15,7 @@ func init() {
 
 // int isprint(int c);
 func (c *cpu) isprint() {
-	ch := readI32(c.rp - i32StackSz)
+	ch := readI32(c.sp)
 	var r int32
 	if ch >= ' ' && ch <= '~' {
 		r = 1
@@ -25,7 +25,7 @@ func (c *cpu) isprint() {
 
 // int tolower(int c);
 func (c *cpu) tolower() {
-	ch := readI32(c.rp - i32StackSz)
+	ch := readI32(c.sp)
 	if ch >= 'A' && ch <= 'Z' {
 		ch |= ' '
 	}

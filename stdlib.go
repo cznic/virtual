@@ -26,7 +26,7 @@ func init() {
 
 // int abs(int j);
 func (c *cpu) abs() {
-	j := readI32(c.rp - i32StackSz)
+	j := readI32(c.sp)
 	if j < 0 {
 		j = -j
 	}
@@ -49,7 +49,7 @@ func (c *cpu) calloc() {
 
 // void *malloc(size_t size);
 func (c *cpu) malloc() {
-	size := readULong(c.rp - longStackSz)
+	size := readULong(c.sp)
 	var p uintptr
 	if size <= mathutil.MaxInt {
 		p = c.m.malloc(int(size))

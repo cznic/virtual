@@ -109,7 +109,7 @@ type file struct{ _ int32 }
 
 // int fclose(FILE *stream);
 func (c *cpu) fclose() {
-	u := readPtr(c.rp - ptrStackSz)
+	u := readPtr(c.sp)
 	f := files.extract(readPtr(u))
 	if f == nil {
 		c.thread.errno = int32(syscall.EBADF)
@@ -130,7 +130,7 @@ func (c *cpu) fclose() {
 // int fgetc(FILE *stream);
 func (c *cpu) fgetc() {
 	p := buffer.Get(1)
-	if _, err := files.reader(readPtr(c.rp-ptrStackSz), c).Read(*p); err != nil {
+	if _, err := files.reader(readPtr(c.sp), c).Read(*p); err != nil {
 		writeI32(c.rp, eof)
 		buffer.Put(p)
 		return

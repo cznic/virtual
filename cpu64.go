@@ -7,6 +7,7 @@
 package virtual
 
 import (
+	"math"
 	"unsafe"
 )
 
@@ -18,6 +19,12 @@ const (
 func (c *cpu) push64(n, m int) {
 	c.sp -= i64StackSz
 	writeI64(c.sp, int64(n))
+}
+
+func (c *cpu) pushC128(n, m int) {
+	c.sp -= c128StackSz
+	writeC128(c.sp, complex(math.Float64frombits(uint64(n)), math.Float64frombits(uint64(m))))
+	c.ip++
 }
 
 func readLong(p uintptr) int64       { return *(*int64)(unsafe.Pointer(p)) }

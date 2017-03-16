@@ -39,7 +39,7 @@ func init() {
 
 // int ffs(int i);
 func (c *cpu) ffs() {
-	i := readI32(c.rp - i32StackSz)
+	i := readI32(c.sp)
 	if i == 0 {
 		writeI32(c.rp, 0)
 		return
@@ -53,7 +53,7 @@ func (c *cpu) ffs() {
 
 // int ffsl(long i);
 func (c *cpu) ffsl() {
-	i := readLong(c.rp - longStackSz)
+	i := readLong(c.sp)
 	if i == 0 {
 		writeI32(c.rp, 0)
 		return
@@ -67,7 +67,7 @@ func (c *cpu) ffsl() {
 
 // int ffsll(long long i);
 func (c *cpu) ffsll() {
-	i := readI64(c.rp - i64StackSz)
+	i := readI64(c.sp)
 	if i == 0 {
 		writeI32(c.rp, 0)
 		return

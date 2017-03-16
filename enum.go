@@ -14,6 +14,7 @@ const (
 	AP // N
 	AddF32
 	AddF64
+	AddC128
 	AddI32
 	AddI64
 	AddPtr // N
@@ -115,9 +116,12 @@ const (
 	EqI32
 	EqI64
 	EqI8
-	Ext  // N
-	FP   // N
-	Func // N
+	Ext     // N
+	FP      // N
+	Field8  // N + ext: size
+	Field16 // N + ext: size
+	Field64 // N + ext: size
+	Func    // N
 	GeqF32
 	GeqF64
 	GeqI32
@@ -208,6 +212,7 @@ const (
 	Push16         // N
 	Push32         // N
 	Push64         // N
+	PushC128       // N + ext: imag part
 	RemI32
 	RemI64
 	RemU32
@@ -257,6 +262,7 @@ const (
 	alloca
 	asin
 	atan
+	bswap64
 	calloc
 	ceil
 	clrsb
@@ -282,6 +288,7 @@ const (
 	floor
 	fopen
 	fprintf
+	frameAddress
 	fread
 	free
 	fwrite
