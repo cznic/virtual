@@ -308,6 +308,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 				c.sp += f32StackSz - i32StackSz
 				writeI32(c.sp, int32(v))
 			}
+		case ConvF32I64:
+			v := readF32(c.sp)
+			c.sp += f32StackSz - i64StackSz
+			writeI64(c.sp, int64(v))
 		case ConvF32U32:
 			switch v := readF32(c.sp); {
 			case v > maxConvF32U32:
@@ -1525,6 +1529,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.bswap64)
 		case frameAddress:
 			c.builtin(c.frameAddress)
+		case copysign:
+			c.builtin(c.copysign)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

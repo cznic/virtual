@@ -52,6 +52,7 @@ const (
 	ConvC64C128
 	ConvF32F64
 	ConvF32I32
+	ConvF32I64
 	ConvF32U32
 	ConvF64F32
 	ConvF64I32
@@ -271,6 +272,7 @@ const (
 	clz
 	clzl
 	clzll
+	copysign
 	cos
 	cosh
 	ctz

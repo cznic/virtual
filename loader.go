@@ -501,6 +501,8 @@ func (l *loader) int32Literal(dest []byte, t ir.Type, lit int32) {
 		*(*int64)((unsafe.Pointer)(&dest[0])) = int64(lit)
 	case ir.Float32:
 		*(*float32)((unsafe.Pointer)(&dest[0])) = float32(lit)
+	case ir.Float64:
+		*(*float64)((unsafe.Pointer)(&dest[0])) = float64(lit)
 	case ir.Pointer:
 		*(*uintptr)((unsafe.Pointer)(&dest[0])) = uintptr(lit)
 	default:
@@ -970,6 +972,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvI64I32})
 				case ir.Int64, ir.Uint64:
 					// ok
+				case ir.Float64:
+					l.emit(l.pos(x), Operation{Opcode: ConvI64F64})
 				case ir.Pointer:
 					switch l.ptrSize {
 					case 4:
@@ -986,6 +990,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvF32I32})
 				case ir.Uint32:
 					l.emit(l.pos(x), Operation{Opcode: ConvF32U32})
+				case ir.Int64:
+					l.emit(l.pos(x), Operation{Opcode: ConvF32I64})
 				case ir.Float64:
 					l.emit(l.pos(x), Operation{Opcode: ConvF32F64})
 				default:
@@ -1821,7 +1827,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: Store32})
 				case ir.Float64:
 					l.float64(x, float64(v.Value))
-					l.emit(l.pos(x), Operation{Opcode: Store32})
+					l.emit(l.pos(x), Operation{Opcode: Store64})
 				case ir.Pointer:
 					if v.Value == 0 {
 						switch l.ptrSize {
