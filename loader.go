@@ -259,7 +259,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 			case ir.Pointer:
 				switch typ := typ.(*ir.PointerType).Element; typ.Kind() {
 				case ir.Int8, ir.Int32:
-					*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.text(x.StringID))
+					*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.text(x.StringID, true))
 					l.out.TSRelative[off>>3] |= 1 << uint(off&7)
 				default:
 					panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, x.StringID))
@@ -341,7 +341,7 @@ func (l *loader) sizeof(tid ir.TypeID) int {
 
 func (l *loader) stackSize(tid ir.TypeID) int { return roundup(l.sizeof(tid), l.stackAlign) }
 
-func (l *loader) text(s ir.StringID) int {
+func (l *loader) text(s ir.StringID, null bool) int {
 	if p, ok := l.strings[s]; ok {
 		return p
 	}
@@ -349,7 +349,11 @@ func (l *loader) text(s ir.StringID) int {
 	p := len(l.out.Text)
 	l.strings[s] = p
 	l.out.Text = append(l.out.Text, dict.S(int(s))...)
-	sz := roundup(len(l.out.Text)+1, mallocAlign)
+	more := 0
+	if null {
+		more++
+	}
+	sz := roundup(len(l.out.Text)+more, mallocAlign)
 	l.out.Text = append(l.out.Text, make([]byte, sz-len(l.out.Text))...)
 	return p
 }
@@ -631,7 +635,7 @@ func (l *loader) compositeLiteral(tid ir.TypeID, v ir.Value) int {
 		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
 
-	r := l.text(ir.StringID(dict.ID(*p)))
+	r := l.text(ir.StringID(dict.ID(*p)), false)
 	buffer.Put(p)
 	return r
 }
@@ -1718,7 +1722,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 		case *ir.StringConst:
 			switch x.TypeID {
 			case idInt8P:
-				l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value)})
+				l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value, true)})
 			case idInt32P:
 				l.emit(l.pos(x), Operation{Opcode: Text, N: l.wtext(x.Value)})
 			default:
@@ -1815,6 +1819,9 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				case ir.Float32:
 					l.float32(x, float32(v.Value))
 					l.emit(l.pos(x), Operation{Opcode: Store32})
+				case ir.Float64:
+					l.float64(x, float64(v.Value))
+					l.emit(l.pos(x), Operation{Opcode: Store32})
 				case ir.Pointer:
 					if v.Value == 0 {
 						switch l.ptrSize {
@@ -1871,11 +1878,11 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch vt := l.tc.MustType(x.TypeID); {
 				case vt.Kind() == ir.Array:
 					l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
-					l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(v.StringID)})
+					l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(v.StringID, true)})
 					l.emit(l.pos(x), Operation{Opcode: StrNCopy, N: l.sizeof(x.TypeID)})
 				default:
 					l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
-					l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(v.StringID)})
+					l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(v.StringID, true)})
 					switch l.ptrSize {
 					case 4:
 						l.emit(l.pos(x), Operation{Opcode: Store32})
