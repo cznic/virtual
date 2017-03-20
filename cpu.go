@@ -175,6 +175,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readF64(c.sp)
 			c.sp += f64StackSz
 			writeF64(c.sp, readF64(c.sp)+b)
+		case AddC64: // a, b -> a + b
+			b := readC64(c.sp)
+			c.sp += c64StackSz
+			writeC64(c.sp, readC64(c.sp)+b)
 		case AddC128: // a, b -> a + b
 			b := readC128(c.sp)
 			c.sp += c128StackSz
@@ -295,6 +299,14 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readC64(c.sp)
 			c.sp -= c128StackSz - c64StackSz
 			writeC128(c.sp, complex128(v))
+		case ConvF32C64:
+			v := readF32(c.sp)
+			c.sp += f32StackSz - c64StackSz
+			writeC64(c.sp, complex(v, 0))
+		case ConvF32C128:
+			v := readF32(c.sp)
+			c.sp -= c128StackSz + f32StackSz
+			writeC128(c.sp, complex(float64(v), 0))
 		case ConvF32F64:
 			v := readF32(c.sp)
 			c.sp += f32StackSz - f64StackSz
@@ -325,6 +337,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readF64(c.sp)
 			c.sp += f64StackSz - f32StackSz
 			writeF32(c.sp, float32(v))
+		case ConvF64C128:
+			v := readF64(c.sp)
+			c.sp -= c128StackSz + f64StackSz
+			writeC128(c.sp, complex(v, 0))
 		case ConvF64U16:
 			v := readF64(c.sp)
 			c.sp += f64StackSz - i16StackSz
@@ -482,6 +498,14 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readF32(c.sp)
 			c.sp += f32StackSz
 			writeF32(c.sp, readF32(c.sp)/b)
+		case DivC64: // a, b -> a / b
+			b := readC64(c.sp)
+			c.sp += c64StackSz
+			writeC64(c.sp, readC64(c.sp)/b)
+		case DivC128: // a, b -> a / b
+			b := readC128(c.sp)
+			c.sp += c128StackSz
+			writeC128(c.sp, readC128(c.sp)/b)
 		case DivF64: // a, b -> a / b
 			b := readF64(c.sp)
 			c.sp += f64StackSz
@@ -862,6 +886,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			b := readC64(c.sp)
 			c.sp += c64StackSz
 			writeC64(c.sp, readC64(c.sp)*b)
+		case MulC128: // a, b -> a * b
+			b := readC128(c.sp)
+			c.sp += c128StackSz
+			writeC128(c.sp, readC128(c.sp)*b)
 		case MulF64: // a, b -> a * b
 			b := readF64(c.sp)
 			c.sp += f64StackSz
@@ -1273,6 +1301,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI64(readPtr(c.sp), v)
 			c.sp += ptrStackSz - i64StackSz
 			writeI64(c.sp, v)
+		case StoreC128: // adr, val -> val
+			v := readC128(c.sp)
+			c.sp += c128StackSz
+			writeC128(readPtr(c.sp), v)
+			c.sp -= c128StackSz + ptrStackSz
+			writeC128(c.sp, v)
 		case StoreBits8: // adr, val -> val
 			v := readI8(c.sp)
 			c.sp += i8StackSz
@@ -1380,7 +1414,11 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI64(c.sp, 0)
 
 		case abort:
-			return 1, nil
+			if !Testing {
+				return 1, nil
+			}
+
+			return 1, c.stackTrace()
 		case exit:
 			return int(readI32(c.sp)), nil
 		case printf:
@@ -1531,6 +1569,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.frameAddress)
 		case copysign:
 			c.builtin(c.copysign)
+		case cimagf:
+			c.builtin(c.cimagf)
+		case crealf:
+			c.builtin(c.crealf)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

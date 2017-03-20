@@ -136,7 +136,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 				break
 			}
 
-			*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.m[x.Index])
+			*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.m[x.Index])
 			if _, ok := l.objects[x.Index].(*ir.DataDefinition); ok {
 				l.out.DSRelative[off>>3] |= 1 << uint(off&7)
 			}
@@ -197,19 +197,19 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 		case *ir.Int32Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Int8, ir.Uint8:
-				*(*int8)((unsafe.Pointer)(&b[0])) = int8(x.Value)
+				*(*int8)(unsafe.Pointer(&b[0])) = int8(x.Value)
 			case ir.Int16, ir.Uint16:
-				*(*int16)((unsafe.Pointer)(&b[0])) = int16(x.Value)
+				*(*int16)(unsafe.Pointer(&b[0])) = int16(x.Value)
 			case ir.Int32, ir.Uint32:
-				*(*int32)((unsafe.Pointer)(&b[0])) = x.Value
+				*(*int32)(unsafe.Pointer(&b[0])) = x.Value
 			case ir.Int64, ir.Uint64:
-				*(*int64)((unsafe.Pointer)(&b[0])) = int64(x.Value)
+				*(*int64)(unsafe.Pointer(&b[0])) = int64(x.Value)
 			case ir.Float32:
-				*(*float32)((unsafe.Pointer)(&b[0])) = float32(x.Value)
+				*(*float32)(unsafe.Pointer(&b[0])) = float32(x.Value)
 			case ir.Float64:
-				*(*float64)((unsafe.Pointer)(&b[0])) = float64(x.Value)
+				*(*float64)(unsafe.Pointer(&b[0])) = float64(x.Value)
 			case ir.Pointer:
-				*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(x.Value)
+				*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(x.Value)
 			case ir.Struct:
 				f(off, typ.(*ir.StructOrUnionType).Fields[0].ID(), x)
 			default:
@@ -218,39 +218,41 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 		case *ir.Int64Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Int32, ir.Uint32:
-				*(*int32)((unsafe.Pointer)(&b[0])) = int32(x.Value)
+				*(*int32)(unsafe.Pointer(&b[0])) = int32(x.Value)
 			case ir.Int64, ir.Uint64:
-				*(*int64)((unsafe.Pointer)(&b[0])) = x.Value
+				*(*int64)(unsafe.Pointer(&b[0])) = x.Value
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
 		case *ir.Float32Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Float32:
-				*(*float32)((unsafe.Pointer)(&b[0])) = x.Value
+				*(*float32)(unsafe.Pointer(&b[0])) = x.Value
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
 		case *ir.Float64Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Float32:
-				*(*float32)((unsafe.Pointer)(&b[0])) = float32(x.Value)
+				*(*float32)(unsafe.Pointer(&b[0])) = float32(x.Value)
 			case ir.Float64:
-				*(*float64)((unsafe.Pointer)(&b[0])) = x.Value
+				*(*float64)(unsafe.Pointer(&b[0])) = x.Value
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
 		case *ir.Complex64Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
+			case ir.Complex64:
+				*(*complex64)(unsafe.Pointer(&b[0])) = x.Value
 			case ir.Complex128:
-				*(*complex128)((unsafe.Pointer)(&b[0])) = complex128(x.Value)
+				*(*complex128)(unsafe.Pointer(&b[0])) = complex128(x.Value)
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
 		case *ir.Complex128Value:
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Complex128:
-				*(*complex128)((unsafe.Pointer)(&b[0])) = x.Value
+				*(*complex128)(unsafe.Pointer(&b[0])) = x.Value
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
@@ -259,7 +261,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 			case ir.Pointer:
 				switch typ := typ.(*ir.PointerType).Element; typ.Kind() {
 				case ir.Int8, ir.Int32:
-					*(*uintptr)((unsafe.Pointer)(&b[0])) = uintptr(l.text(x.StringID, true))
+					*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.text(x.StringID, true))
 					l.out.TSRelative[off>>3] |= 1 << uint(off&7)
 				default:
 					panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, x.StringID))
@@ -273,6 +275,20 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 				}
 			default:
 				panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, x.StringID))
+			}
+		case *ir.WideStringValue:
+			switch typ := l.tc.MustType(t); typ.Kind() {
+			case ir.Array:
+				switch typ := typ.(*ir.ArrayType).Item; typ.Kind() {
+				case ir.Int32:
+					for i, v := range x.Value {
+						*(*rune)(unsafe.Pointer(&l.out.Data[off+4*i])) = v
+					}
+				default:
+					panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, string(x.Value)))
+				}
+			default:
+				panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, string(x.Value)))
 			}
 		default:
 			panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, x))
@@ -492,19 +508,19 @@ func (l *loader) complex128(x ir.Operation, n complex128) {
 func (l *loader) int32Literal(dest []byte, t ir.Type, lit int32) {
 	switch t.Kind() {
 	case ir.Int8, ir.Uint8:
-		*(*int8)((unsafe.Pointer)(&dest[0])) = int8(lit)
+		*(*int8)(unsafe.Pointer(&dest[0])) = int8(lit)
 	case ir.Int16, ir.Uint16:
-		*(*int16)((unsafe.Pointer)(&dest[0])) = int16(lit)
+		*(*int16)(unsafe.Pointer(&dest[0])) = int16(lit)
 	case ir.Int32, ir.Uint32:
-		*(*int32)((unsafe.Pointer)(&dest[0])) = lit
+		*(*int32)(unsafe.Pointer(&dest[0])) = lit
 	case ir.Int64, ir.Uint64:
-		*(*int64)((unsafe.Pointer)(&dest[0])) = int64(lit)
+		*(*int64)(unsafe.Pointer(&dest[0])) = int64(lit)
 	case ir.Float32:
-		*(*float32)((unsafe.Pointer)(&dest[0])) = float32(lit)
+		*(*float32)(unsafe.Pointer(&dest[0])) = float32(lit)
 	case ir.Float64:
-		*(*float64)((unsafe.Pointer)(&dest[0])) = float64(lit)
+		*(*float64)(unsafe.Pointer(&dest[0])) = float64(lit)
 	case ir.Pointer:
-		*(*uintptr)((unsafe.Pointer)(&dest[0])) = uintptr(lit)
+		*(*uintptr)(unsafe.Pointer(&dest[0])) = uintptr(lit)
 	default:
 		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
@@ -513,17 +529,17 @@ func (l *loader) int32Literal(dest []byte, t ir.Type, lit int32) {
 func (l *loader) int64Literal(dest []byte, t ir.Type, lit int64) {
 	switch t.Kind() {
 	case ir.Int8, ir.Uint8:
-		*(*int8)((unsafe.Pointer)(&dest[0])) = int8(lit)
+		*(*int8)(unsafe.Pointer(&dest[0])) = int8(lit)
 	case ir.Int16, ir.Uint16:
-		*(*int16)((unsafe.Pointer)(&dest[0])) = int16(lit)
+		*(*int16)(unsafe.Pointer(&dest[0])) = int16(lit)
 	case ir.Int32, ir.Uint32:
-		*(*int32)((unsafe.Pointer)(&dest[0])) = int32(lit)
+		*(*int32)(unsafe.Pointer(&dest[0])) = int32(lit)
 	case ir.Int64, ir.Uint64:
-		*(*int64)((unsafe.Pointer)(&dest[0])) = lit
+		*(*int64)(unsafe.Pointer(&dest[0])) = lit
 	case ir.Float32:
-		*(*float32)((unsafe.Pointer)(&dest[0])) = float32(lit)
+		*(*float32)(unsafe.Pointer(&dest[0])) = float32(lit)
 	case ir.Pointer:
-		*(*uintptr)((unsafe.Pointer)(&dest[0])) = uintptr(lit)
+		*(*uintptr)(unsafe.Pointer(&dest[0])) = uintptr(lit)
 	default:
 		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
@@ -532,7 +548,7 @@ func (l *loader) int64Literal(dest []byte, t ir.Type, lit int64) {
 func (l *loader) float32Literal(dest []byte, t ir.Type, lit float32) {
 	switch t.Kind() {
 	case ir.Float32:
-		*(*float32)((unsafe.Pointer)(&dest[0])) = lit
+		*(*float32)(unsafe.Pointer(&dest[0])) = lit
 	default:
 		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
@@ -541,7 +557,7 @@ func (l *loader) float32Literal(dest []byte, t ir.Type, lit float32) {
 func (l *loader) float64Literal(dest []byte, t ir.Type, lit float64) {
 	switch t.Kind() {
 	case ir.Float64:
-		*(*float64)((unsafe.Pointer)(&dest[0])) = lit
+		*(*float64)(unsafe.Pointer(&dest[0])) = lit
 	default:
 		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
@@ -560,6 +576,9 @@ func (l *loader) arrayLiteral(t ir.Type, v ir.Value) *[]byte {
 			switch y := v.(type) {
 			case *ir.Int32Value:
 				l.int32Literal(b[off:], item, y.Value)
+				i++
+			case *ir.Int64Value:
+				l.int64Literal(b[off:], item, y.Value)
 				i++
 			case *ir.Float32Value:
 				l.float32Literal(b[off:], item, y.Value)
@@ -706,6 +725,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: AddF32})
 			case ir.Float64:
 				l.emit(l.pos(x), Operation{Opcode: AddF64})
+			case ir.Complex64:
+				l.emit(l.pos(x), Operation{Opcode: AddC64})
 			case ir.Complex128:
 				l.emit(l.pos(x), Operation{Opcode: AddC128})
 			case ir.Pointer:
@@ -994,6 +1015,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvF32I64})
 				case ir.Float64:
 					l.emit(l.pos(x), Operation{Opcode: ConvF32F64})
+				case ir.Complex64:
+					l.emit(l.pos(x), Operation{Opcode: ConvF32C64})
+				case ir.Complex128:
+					l.emit(l.pos(x), Operation{Opcode: ConvF32C128})
 				default:
 					panic(fmt.Errorf("TODO %v", u.Kind()))
 				}
@@ -1015,6 +1040,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvF64F32})
 				case ir.Float64:
 					// ok
+				case ir.Complex128:
+					l.emit(l.pos(x), Operation{Opcode: ConvF64C128})
 				default:
 					panic(fmt.Errorf("TODO %v", u.Kind()))
 				}
@@ -1078,6 +1105,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: DivF32})
 			case ir.Float64:
 				l.emit(l.pos(x), Operation{Opcode: DivF64})
+			case ir.Complex64:
+				l.emit(l.pos(x), Operation{Opcode: DivC64})
+			case ir.Complex128:
+				l.emit(l.pos(x), Operation{Opcode: DivC128})
 			default:
 				panic(fmt.Errorf("internal error %s", x.TypeID))
 			}
@@ -1482,6 +1513,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				l.emit(l.pos(x), Operation{Opcode: MulF64})
 			case ir.Complex64:
 				l.emit(l.pos(x), Operation{Opcode: MulC64})
+			case ir.Complex128:
+				l.emit(l.pos(x), Operation{Opcode: MulC128})
 			case ir.Pointer:
 				switch l.ptrSize {
 				case 4:
@@ -1876,6 +1909,16 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				case ir.Float64:
 					l.float64(x, v.Value)
 					l.emit(l.pos(x), Operation{Opcode: Store64})
+				default:
+					panic(fmt.Errorf("%s: %v", x.Position, x.TypeID))
+				}
+				l.emit(l.pos(x), Operation{Opcode: AddSP, N: l.stackSize(x.TypeID)})
+			case *ir.Complex128Value:
+				l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
+				switch t := l.tc.MustType(x.TypeID); t.Kind() {
+				case ir.Complex128:
+					l.complex128(x, v.Value)
+					l.emit(l.pos(x), Operation{Opcode: StoreC128})
 				default:
 					panic(fmt.Errorf("%s: %v", x.Position, x.TypeID))
 				}

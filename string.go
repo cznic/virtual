@@ -156,13 +156,13 @@ func (c *cpu) strchr() {
 	ch := byte(readI32(c.sp))
 	for {
 		ch2 := readU8(s)
-		if ch2 == 0 {
-			writePtr(c.rp, 0)
+		if ch2 == ch {
+			writePtr(c.rp, s)
 			return
 		}
 
-		if ch2 == ch {
-			writePtr(c.rp, s)
+		if ch2 == 0 {
+			writePtr(c.rp, 0)
 			return
 		}
 

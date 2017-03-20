@@ -14,6 +14,7 @@ const (
 	AP // N
 	AddF32
 	AddF64
+	AddC64
 	AddC128
 	AddI32
 	AddI64
@@ -50,11 +51,14 @@ const (
 	Call // N
 	CallFP
 	ConvC64C128
+	ConvF32C64
+	ConvF32C128
 	ConvF32F64
 	ConvF32I32
 	ConvF32I64
 	ConvF32U32
 	ConvF64F32
+	ConvF64C128
 	ConvF64I32
 	ConvF64I64
 	ConvF64I8
@@ -104,6 +108,8 @@ const (
 	DSI8   // N
 	DSN    // N + ext: size
 	DivF32
+	DivC64
+	DivC128
 	DivF64
 	DivI32
 	DivI64
@@ -170,6 +176,7 @@ const (
 	LtU32
 	LtU64
 	MulC64
+	MulC128
 	MulF32
 	MulF64
 	MulI32
@@ -231,6 +238,7 @@ const (
 	Store16
 	Store32
 	Store64
+	StoreC128
 	Store8
 	StoreBits16 // N
 	StoreBits32 // N
@@ -266,6 +274,7 @@ const (
 	bswap64
 	calloc
 	ceil
+	cimagf
 	clrsb
 	clrsbl
 	clrsbll
@@ -275,6 +284,7 @@ const (
 	copysign
 	cos
 	cosh
+	crealf
 	ctz
 	ctzl
 	ctzll
