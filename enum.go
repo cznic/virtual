@@ -314,6 +314,7 @@ const (
 	memcmp
 	memcpy
 	memset
+	open
 	parity
 	parityl
 	parityll
@@ -322,6 +323,7 @@ const (
 	popcountll
 	pow
 	printf
+	read
 	returnAddress
 	round
 	sign_bit
@@ -343,4 +345,5 @@ const (
 	tolower
 	vfprintf
 	vprintf
+	write
 )

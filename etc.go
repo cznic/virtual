@@ -462,6 +462,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			memcmp,
 			memcpy,
 			memset,
+			open,
 			parity,
 			parityl,
 			parityll,
@@ -469,6 +470,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			popcountl,
 			popcountll,
 			pow,
+			read,
 			printf,
 			returnAddress,
 			round,
@@ -490,7 +492,8 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			tanh,
 			tolower,
 			vfprintf,
-			vprintf:
+			vprintf,
+			write:
 
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
 				return err
