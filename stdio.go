@@ -52,11 +52,15 @@ func init() {
 const eof = -1
 
 var (
-	files      = &fmap{m: map[uintptr]*os.File{}}
+	files = &fmap{
+		fd: map[uintptr]*os.File{},
+		m:  map[uintptr]*os.File{},
+	}
 	nullReader = bytes.NewBuffer(nil)
 )
 
 type fmap struct {
+	fd map[uintptr]*os.File
 	m  map[uintptr]*os.File
 	mu sync.Mutex
 }
@@ -64,6 +68,7 @@ type fmap struct {
 func (m *fmap) add(f *os.File, u uintptr) {
 	m.mu.Lock()
 	m.m[u] = f
+	m.fd[f.Fd()] = f
 	m.mu.Unlock()
 }
 
@@ -94,6 +99,22 @@ func (m *fmap) writer(u uintptr, c *cpu) io.Writer {
 	case f == os.Stderr:
 		return c.m.stderr
 	}
+	return f
+}
+
+func (m *fmap) fdWriter(fd uintptr, c *cpu) io.Writer {
+	switch fd {
+	case 0:
+		return ioutil.Discard
+	case 1:
+		return c.m.stdout
+	case 2:
+		return c.m.stderr
+	}
+
+	m.mu.Lock()
+	f := m.fd[fd]
+	m.mu.Unlock()
 	return f
 }
 

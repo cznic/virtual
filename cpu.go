@@ -1596,6 +1596,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.cimagf)
 		case crealf:
 			c.builtin(c.crealf)
+		case write:
+			c.builtin(c.write)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())
