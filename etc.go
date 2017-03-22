@@ -201,6 +201,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Load32,
 			Load64,
 			Load8,
+			NegIndexU32,
 			NegIndexI32,
 			NegIndexI64,
 			NegIndexU64,
@@ -231,7 +232,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			StoreBits8,
 			StrNCopy:
 
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, lo, op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, lo, uint(op.N)); err != nil {
 				return err
 			}
 		case Label:
@@ -334,6 +335,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			EqI8,
 			GeqF32,
 			GeqF64,
+			GeqI8,
 			GeqI32,
 			GeqI64,
 			GeqU32,
@@ -347,6 +349,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			JmpP,
 			LeqF32,
 			LeqF64,
+			LeqI8,
 			LeqI32,
 			LeqI64,
 			LeqU32,
@@ -377,6 +380,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			NeqC128,
 			NeqF32,
 			NeqF64,
+			NeqI8,
 			NeqI32,
 			NeqI64,
 			Not,

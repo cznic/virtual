@@ -18,8 +18,12 @@ const (
 
 func (c *cpu) push64(n, m int) {
 	c.sp -= i64StackSz
-	writeI64(c.sp, int64(m)<<32|int64(n))
+	writeU64(c.sp, uint64(uint(m))<<32|uint64(uint(n)))
 	c.ip++
+}
+
+func (c *cpu) pushC128(n, m int) {
+	panic("TODO")
 }
 
 func readLong(p uintptr) int64   { return int64(*(*int32)(unsafe.Pointer(p))) }

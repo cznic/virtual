@@ -131,6 +131,7 @@ const (
 	Func    // N
 	GeqF32
 	GeqF64
+	GeqI8
 	GeqI32
 	GeqI64
 	GeqU32
@@ -156,6 +157,7 @@ const (
 	Label // N
 	LeqF32
 	LeqF64
+	LeqI8
 	LeqI32
 	LeqI64
 	LeqU32
@@ -187,6 +189,7 @@ const (
 	NegI32
 	NegI64
 	NegI8
+	NegIndexU32 // N
 	NegIndexI32 // N
 	NegIndexI64 // N
 	NegIndexU64 // N
@@ -194,6 +197,7 @@ const (
 	NeqC64
 	NeqF32
 	NeqF64
+	NeqI8
 	NeqI32
 	NeqI64
 	Not
