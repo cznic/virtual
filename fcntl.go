@@ -4,6 +4,10 @@
 
 package virtual
 
+import (
+	"os"
+)
+
 func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("__builtin_open"): open,
@@ -13,5 +17,17 @@ func init() {
 
 // int open(const char *pathname, int flags, ...);
 func (c *cpu) open() {
-	panic("TODO")
+	ap := c.rp - ptrStackSz
+	pathname := GoString(readPtr(ap))
+	ap -= i32StackSz
+	flags := readI32(ap)
+	f, err := os.OpenFile(pathname, int(flags), 0600)
+	if err != nil {
+		c.thread.setErrno(err)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	files.add(f, 0)
+	writeI32(c.rp, int32(f.Fd()))
 }

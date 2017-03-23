@@ -226,7 +226,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.ip++
 			sz := op.N
 			c.sp -= uintptr(roundup(sz, stackAlign))
-			memcopy(c.sp, c.ap+uintptr(off), sz)
+			movemem(c.sp, c.ap+uintptr(off), sz)
 		case Argument8: // -> val
 			c.sp -= i8StackSz
 			writeI8(c.sp, readI8(c.ap+uintptr(op.N)))
@@ -467,7 +467,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Copy: // &dst, &src -> &dst
 			src := readPtr(c.sp)
 			c.sp += ptrStackSz
-			memcopy(readPtr(c.sp), src, op.N)
+			movemem(readPtr(c.sp), src, op.N)
 		case Cpl8: // a -> ^a
 			writeI8(c.sp, ^readI8(c.sp))
 		case Cpl32: // a -> ^a
@@ -483,7 +483,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.ip++
 			sz := op.N
 			c.sp -= uintptr(roundup(sz, stackAlign))
-			memcopy(c.sp, c.ds+uintptr(off), sz)
+			movemem(c.sp, c.ds+uintptr(off), sz)
 		case DSI8: // -> val
 			c.sp -= i8StackSz
 			writeI8(c.sp, readI8(c.ds+uintptr(op.N)))
@@ -872,7 +872,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.ip++
 			sz := op.N
 			c.sp += ptrStackSz - uintptr(roundup(sz, stackAlign))
-			memcopy(c.sp, p+uintptr(off), sz)
+			movemem(c.sp, p+uintptr(off), sz)
 		case Load8: // addr -> (addr+n)
 			p := readPtr(c.sp)
 			c.sp += ptrStackSz - i8StackSz
@@ -1304,8 +1304,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Store: // adr, val -> val
 			sz := op.N
 			adr := readPtr(c.sp + uintptr(roundup(sz, stackAlign)))
-			memcopy(adr, c.sp, sz)
-			memcopy(c.sp+ptrStackSz, c.sp, sz)
+			movemem(adr, c.sp, sz)
+			movemem(c.sp+ptrStackSz, c.sp, sz)
 			c.sp += ptrStackSz
 		case Store16: // adr, val -> val
 			v := readI16(c.sp)
@@ -1409,7 +1409,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.ip++
 			sz := op.N
 			c.sp -= uintptr(roundup(sz, stackAlign))
-			memcopy(c.sp, c.bp+uintptr(off), sz)
+			movemem(c.sp, c.bp+uintptr(off), sz)
 		case Variable8: // -> val
 			c.sp -= i8StackSz
 			writeI8(c.sp, readI8(c.bp+uintptr(op.N)))
@@ -1599,6 +1599,14 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.crealf)
 		case write:
 			c.builtin(c.write)
+		case mempcpy:
+			c.builtin(c.mempcpy)
+		case memmove:
+			c.builtin(c.memmove)
+		case open:
+			c.builtin(c.open)
+		case read:
+			c.builtin(c.read)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

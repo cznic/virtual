@@ -67,7 +67,9 @@ type fmap struct {
 
 func (m *fmap) add(f *os.File, u uintptr) {
 	m.mu.Lock()
-	m.m[u] = f
+	if u != 0 {
+		m.m[u] = f
+	}
 	m.fd[f.Fd()] = f
 	m.mu.Unlock()
 }
@@ -84,6 +86,22 @@ func (m *fmap) reader(u uintptr, c *cpu) io.Reader {
 	case f == os.Stderr:
 		return nullReader
 	}
+	return f
+}
+
+func (m *fmap) fdReader(fd uintptr, c *cpu) io.Reader {
+	switch fd {
+	case 0:
+		return c.m.stdin
+	case 1:
+		return ioutil.NopCloser(&bytes.Buffer{})
+	case 2:
+		return ioutil.NopCloser(&bytes.Buffer{})
+	}
+
+	m.mu.Lock()
+	f := m.fd[fd]
+	m.mu.Unlock()
 	return f
 }
 

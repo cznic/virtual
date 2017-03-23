@@ -317,6 +317,8 @@ const (
 	malloc
 	memcmp
 	memcpy
+	memmove
+	mempcpy
 	memset
 	open
 	parity

@@ -5,6 +5,7 @@
 package virtual
 
 import (
+	"io"
 	"math"
 	"syscall"
 	"unsafe"
@@ -21,7 +22,25 @@ func init() {
 
 // ssize_t read(int fd, void *buf, size_t count);
 func (c *cpu) read() {
-	panic("TODO")
+	ap := c.rp - i32StackSz
+	fd := readI32(ap)
+	ap -= ptrStackSz
+	buf := readPtr(ap)
+	count := readULong(ap - longStackSz)
+	f := files.fdReader(uintptr(fd), c)
+	n, err := f.Read((*[math.MaxInt32]byte)(unsafe.Pointer(buf))[:count])
+	if n != 0 {
+		writeULong(c.rp, uint64(n))
+		return
+	}
+
+	if err == io.EOF {
+		writeULong(c.rp, 0)
+		return
+	}
+
+	c.thread.setErrno(err)
+	writeI32(c.rp, -1)
 }
 
 // ssize_t write(int fd, const void *buf, size_t count);

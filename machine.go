@@ -12,6 +12,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"syscall"
 	"unsafe"
 
 	"github.com/cznic/internal/buffer"
@@ -51,11 +52,11 @@ func (m *memWriter) Write(b []byte) (int, error) {
 		return 0, nil
 	}
 
-	*m += memWriter(memcopy(uintptr(*m), uintptr((unsafe.Pointer)(&b[0])), len(b)))
+	*m += memWriter(movemem(uintptr(*m), uintptr((unsafe.Pointer)(&b[0])), len(b)))
 	return len(b), nil
 }
 
-func memcopy(dst, src uintptr, n int) int {
+func movemem(dst, src uintptr, n int) int {
 	return copy((*[math.MaxInt32]byte)(unsafe.Pointer(dst))[:n], (*[math.MaxInt32]byte)(unsafe.Pointer(src))[:n])
 }
 
@@ -314,3 +315,14 @@ type thread struct {
 }
 
 func (t *thread) close() error { return t.stackMem.Unmap() }
+
+func (t *thread) setErrno(err error) {
+	switch x := err.(type) {
+	case *os.PathError:
+		t.setErrno(x.Err)
+	case syscall.Errno:
+		t.errno = int32(x)
+	default:
+		panic(fmt.Errorf("TODO %T(%#v)", x, x))
+	}
+}

@@ -11,6 +11,8 @@ func init() {
 		dict.SID("__builtin_ffsll"):   ffsll,
 		dict.SID("__builtin_memcmp"):  memcmp,
 		dict.SID("__builtin_memcpy"):  memcpy,
+		dict.SID("__builtin_memmove"): memmove,
+		dict.SID("__builtin_mempcpy"): mempcpy,
 		dict.SID("__builtin_memset"):  memset,
 		dict.SID("__builtin_strcat"):  strcat,
 		dict.SID("__builtin_strchr"):  strchr,
@@ -25,6 +27,8 @@ func init() {
 		dict.SID("ffsll"):             ffsll,
 		dict.SID("memcmp"):            memcmp,
 		dict.SID("memcpy"):            memcpy,
+		dict.SID("memmove"):           memmove,
+		dict.SID("mempcpy"):           mempcpy,
 		dict.SID("memset"):            memset,
 		dict.SID("strcat"):            strcat,
 		dict.SID("strchr"):            strchr,
@@ -110,8 +114,29 @@ func (c *cpu) memcpy() {
 	ap := c.rp - ptrStackSz
 	dest := readPtr(ap)
 	ap -= ptrStackSz
-	memcopy(dest, readPtr(ap), int(readULong(ap-longStackSz)))
+	movemem(dest, readPtr(ap), int(readULong(ap-longStackSz)))
 	writePtr(c.rp, dest)
+}
+
+// void *memmove(void *dest, const void *src, size_t n);
+func (c *cpu) memmove() {
+	ap := c.rp - ptrStackSz
+	dest := readPtr(ap)
+	ap -= ptrStackSz
+	movemem(dest, readPtr(ap), int(readULong(ap-longStackSz)))
+	writePtr(c.rp, dest)
+}
+
+// void *mempcpy(void *dest, const void *src, size_t n);
+func (c *cpu) mempcpy() {
+	ap := c.rp - ptrStackSz
+	dest := readPtr(ap)
+	ap -= ptrStackSz
+	src := readPtr(ap)
+	ap -= longStackSz
+	n := int(readULong(ap))
+	movemem(dest, src, n)
+	writePtr(c.rp, dest+uintptr(n))
 }
 
 // void *memset(void *s, int c, size_t n)

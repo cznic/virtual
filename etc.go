@@ -465,6 +465,8 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			malloc,
 			memcmp,
 			memcpy,
+			memmove,
+			mempcpy,
 			memset,
 			open,
 			parity,
