@@ -161,11 +161,11 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 		case DSC128:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "pushC128"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "pushc128"); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "pushC128", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "pushc128", op.N); err != nil {
 					return err
 				}
 			}

@@ -33,8 +33,8 @@ func init() {
 
 // uint64_t __builtin_bswap64 (uint64_t x)
 func (c *cpu) bswap64() {
-	x := readULong(c.sp)
-	writeULong(
+	x := readU64(c.sp)
+	writeU64(
 		c.rp,
 		x&0x00000000000000ff<<56|
 			x&0x000000000000ff00<<40|
@@ -61,8 +61,8 @@ func (c *cpu) clrsb() {
 func (c *cpu) clrsbl() {
 	x := readLong(c.sp)
 	i := int32(1)
-	n := x >> 63 & 1
-	for ; i < 64 && x>>(63-uint(i))&1 == n; i++ {
+	n := x >> (longBits - 1) & 1
+	for ; i < longBits && x>>(longBits-1-uint(i))&1 == n; i++ {
 	}
 	writeI32(c.rp, i-1)
 }
@@ -90,7 +90,7 @@ func (c *cpu) clz() {
 func (c *cpu) clzl() {
 	x := readULong(c.sp)
 	var i int32
-	for ; i < 64 && x&(1<<uint(63-i)) == 0; i++ {
+	for ; i < longBits && x&(1<<uint(longBits-1-i)) == 0; i++ {
 	}
 	writeI32(c.rp, i)
 }
@@ -117,7 +117,7 @@ func (c *cpu) ctz() {
 func (c *cpu) ctzl() {
 	x := readULong(c.sp)
 	var i int32
-	for ; i < 64 && x&(1<<uint(i)) == 0; i++ {
+	for ; i < longBits && x&(1<<uint(i)) == 0; i++ {
 	}
 	writeI32(c.rp, i)
 }

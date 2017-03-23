@@ -23,7 +23,11 @@ func (c *cpu) push64(n, m int) {
 }
 
 func (c *cpu) pushC128(n, m int) {
-	panic("TODO")
+	re := math.Float64frombits(uint64(uint(m))<<32 | uint64(uint(n)))
+	im := math.Float64frombits(uint64(uint(c.code[c.ip+2].N))<<32 | uint64(uint(c.code[c.ip+1].N)))
+	c.ip += 3
+	c.sp -= c128StackSz
+	writeC128(c.sp, complex(re, im))
 }
 
 func readLong(p uintptr) int64   { return int64(*(*int32)(unsafe.Pointer(p))) }

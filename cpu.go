@@ -39,6 +39,7 @@ type jmpBuf struct {
 
 type cpu struct {
 	jmpBuf
+
 	code    []Operation
 	ds      uintptr // Data segment
 	fpStack []uintptr
@@ -135,7 +136,7 @@ func (c *cpu) stackTrace() error {
 
 func (c *cpu) trace() string {
 	h := c.ip + 1
-	if h < uintptr(len(c.code)) && c.code[h].Opcode == Ext {
+	for h < uintptr(len(c.code)) && c.code[h].Opcode == Ext {
 		h++
 	}
 	s := dumpCodeStr(c.code[c.ip:h], int(c.ip))
@@ -1232,7 +1233,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case PtrDiff: // p q -> p - q
 			q := readPtr(c.sp)
 			c.sp += ptrStackSz
-			writePtr(c.sp, uintptr(readPtr(c.sp)-q)/uintptr(op.N))
+			writePtr(c.sp, (readPtr(c.sp)-q)/uintptr(op.N))
 		case RemI32: // a, b -> a % b
 			b := readI32(c.sp)
 			c.sp += i32StackSz

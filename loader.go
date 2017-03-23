@@ -494,7 +494,14 @@ func (l *loader) complex128(x ir.Operation, n complex128) {
 	im := imag(n)
 	switch intSize {
 	case 4:
-		panic(fmt.Errorf("%s: TODO", x.Pos()))
+		re := math.Float64bits(re)
+		im := math.Float64bits(im)
+		l.emit(l.pos(x),
+			Operation{Opcode: PushC128, N: int(re)},
+			Operation{Opcode: Ext, N: int(re >> 32)},
+			Operation{Opcode: Ext, N: int(im)},
+			Operation{Opcode: Ext, N: int(im >> 32)},
+		)
 	case 8:
 		l.emit(l.pos(x),
 			Operation{Opcode: PushC128, N: int(math.Float64bits(re))},
@@ -868,9 +875,9 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			case ir.Uint8:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
-				case ir.Int8:
+				case ir.Int8, ir.Uint8:
 					// ok
-				case ir.Int16:
+				case ir.Int16, ir.Uint16:
 					l.emit(l.pos(x), Operation{Opcode: ConvU8I16})
 				case ir.Int32:
 					l.emit(l.pos(x), Operation{Opcode: ConvU8I32})
@@ -926,7 +933,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			case ir.Uint16:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
-				case ir.Int16:
+				case ir.Int16, ir.Uint16:
 					// ok
 				case ir.Int32:
 					l.emit(l.pos(x), Operation{Opcode: ConvU16I32})
