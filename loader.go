@@ -15,6 +15,8 @@ import (
 	"github.com/cznic/mathutil"
 )
 
+const ffiProlog = 2 // Call $+2, FFIReturn, Func, ...
+
 var (
 	builtins   = map[ir.NameID]Opcode{}
 	nonReturns = map[Opcode]struct{}{
@@ -1077,7 +1079,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					case 8:
 						// ok
 					}
-				case ir.Pointer:
+				case ir.Pointer, ir.Array:
 					// ok
 				default:
 					panic(fmt.Errorf("%s: TODO %v", x.Position, u.Kind()))
@@ -2051,6 +2053,7 @@ func (l *loader) load() error {
 				}
 			}
 
+			l.out.Code = append(l.out.Code, Operation{Call, i}, Operation{FFIReturn, 0})
 			l.m[i] = len(l.out.Code)
 			l.loadFunctionDefinition(i, x)
 		}

@@ -22,11 +22,9 @@ func init() {
 
 // ssize_t read(int fd, void *buf, size_t count);
 func (c *cpu) read() {
-	ap := c.rp - i32StackSz
-	fd := readI32(ap)
-	ap -= ptrStackSz
-	buf := readPtr(ap)
-	count := readULong(ap - longStackSz)
+	sp, count := popLong(c.sp)
+	sp, buf := popPtr(sp)
+	fd := readI32(sp)
 	f := files.fdReader(uintptr(fd), c)
 	n, err := f.Read((*[math.MaxInt32]byte)(unsafe.Pointer(buf))[:count])
 	if n != 0 {
@@ -45,11 +43,9 @@ func (c *cpu) read() {
 
 // ssize_t write(int fd, const void *buf, size_t count);
 func (c *cpu) write() {
-	ap := c.rp - i32StackSz
-	fd := readI32(ap)
-	ap -= ptrStackSz
-	buf := readPtr(ap)
-	count := readULong(ap - longStackSz)
+	sp, count := popLong(c.sp)
+	sp, buf := popPtr(sp)
+	fd := readI32(sp)
 	f := files.fdWriter(uintptr(fd), c)
 	n, err := f.Write((*[math.MaxInt32]byte)(unsafe.Pointer(buf))[:count])
 	if err != nil {

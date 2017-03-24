@@ -33,6 +33,14 @@ func (c *cpu) pushC128(n, m int) {
 func readLong(p uintptr) int64   { return int64(*(*int32)(unsafe.Pointer(p))) }
 func readULong(p uintptr) uint64 { return uint64(*(*uint32)(unsafe.Pointer(p))) }
 
+func writeLong(p uintptr, v int64) {
+	if v < math.MinInt32 || v > math.MaxInt32 {
+		panic("size_t overflow")
+	}
+
+	*(*int32)(unsafe.Pointer(p)) = int32(v)
+}
+
 func writeULong(p uintptr, v uint64) {
 	if v > math.MaxUint32 {
 		panic("size_t overflow")

@@ -51,14 +51,14 @@ const (
 	Call // N
 	CallFP
 	ConvC64C128
-	ConvF32C64
 	ConvF32C128
+	ConvF32C64
 	ConvF32F64
 	ConvF32I32
 	ConvF32I64
 	ConvF32U32
-	ConvF64F32
 	ConvF64C128
+	ConvF64F32
 	ConvF64I32
 	ConvF64I64
 	ConvF64I8
@@ -107,9 +107,9 @@ const (
 	DSI64  // N
 	DSI8   // N
 	DSN    // N + ext: size
-	DivF32
-	DivC64
 	DivC128
+	DivC64
+	DivF32
 	DivF64
 	DivI32
 	DivI64
@@ -123,17 +123,18 @@ const (
 	EqI32
 	EqI64
 	EqI8
-	Ext     // N
+	Ext // N
+	FFIReturn
 	FP      // N
-	Field8  // N + ext: size
 	Field16 // N + ext: size
 	Field64 // N + ext: size
+	Field8  // N + ext: size
 	Func    // N
 	GeqF32
 	GeqF64
-	GeqI8
 	GeqI32
 	GeqI64
+	GeqI8
 	GeqU32
 	GeqU64
 	GtF32
@@ -146,9 +147,9 @@ const (
 	IndexI16 // N
 	IndexI32 // N
 	IndexI64 // N
+	IndexI8  // N
 	IndexU32 // N
 	IndexU64 // N
-	IndexI8  // N
 	IndexU8  // N
 	Jmp      // N
 	JmpP
@@ -157,9 +158,9 @@ const (
 	Label // N
 	LeqF32
 	LeqF64
-	LeqI8
 	LeqI32
 	LeqI64
+	LeqI8
 	LeqU32
 	LeqU64
 	Load   // N + ext: size
@@ -177,8 +178,8 @@ const (
 	LtI64
 	LtU32
 	LtU64
-	MulC64
 	MulC128
+	MulC64
 	MulF32
 	MulF64
 	MulI32
@@ -189,17 +190,17 @@ const (
 	NegI32
 	NegI64
 	NegI8
-	NegIndexU32 // N
 	NegIndexI32 // N
 	NegIndexI64 // N
+	NegIndexU32 // N
 	NegIndexU64 // N
 	NeqC128
 	NeqC64
 	NeqF32
 	NeqF64
-	NeqI8
 	NeqI32
 	NeqI64
+	NeqI8
 	Not
 	Or32
 	Or64
@@ -220,10 +221,10 @@ const (
 	PreIncU32Bits  // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
 	PreIncU64Bits  // N + ext: bits<<16 | bitoffset<<8 | bitfieldWidth
 	PtrDiff        // N
-	Push8          // N
 	Push16         // N
 	Push32         // N
 	Push64         // N
+	Push8          // N
 	PushC128       // N + ext: imag part
 	RemI32
 	RemI64
@@ -329,6 +330,7 @@ const (
 	popcountll
 	pow
 	printf
+	qsort
 	read
 	returnAddress
 	round

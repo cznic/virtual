@@ -181,16 +181,15 @@ func (c *cpu) fgetc() {
 
 // char *fgets(char *s, int size, FILE *stream);
 func (c *cpu) fgets() {
-	ap := c.rp - ptrStackSz
-	s := readPtr(ap)
-	ap -= i32StackSz
-	size := int(readI32(ap))
-	f := files.reader(readPtr(ap-ptrStackSz), c)
+	sp, stream := popPtr(c.sp)
+	sp, size := popI32(sp)
+	s := readPtr(sp)
+	f := files.reader(stream, c)
 	p := buffer.Get(1)
 	b := *p
 	w := memWriter(s)
 	ok := false
-	for i := size - 1; i > 0; i-- {
+	for i := int(size) - 1; i > 0; i-- {
 		_, err := f.Read(b)
 		if err != nil {
 			if !ok {
@@ -216,10 +215,12 @@ func (c *cpu) fgets() {
 
 // FILE *fopen(const char *path, const char *mode);
 func (c *cpu) fopen() {
-	path := GoString(readPtr(c.rp - ptrStackSz))
+	sp, mode := popPtr(c.sp)
+	path := readPtr(sp)
+	p := GoString(path)
 	var f *os.File
 	var err error
-	switch path {
+	switch p {
 	case os.Stderr.Name():
 		f = os.Stderr
 	case os.Stdin.Name():
@@ -227,10 +228,9 @@ func (c *cpu) fopen() {
 	case os.Stdout.Name():
 		f = os.Stdout
 	default:
-		mode := GoString(readPtr(c.rp - 2*ptrStackSz))
-		switch mode {
+		switch mode := GoString(mode); mode {
 		case "r":
-			if f, err = os.OpenFile(path, os.O_RDONLY, 0666); err != nil {
+			if f, err = os.OpenFile(p, os.O_RDONLY, 0666); err != nil {
 				switch {
 				case os.IsNotExist(err):
 					c.thread.errno = int32(syscall.ENOENT)
@@ -243,7 +243,7 @@ func (c *cpu) fopen() {
 				return
 			}
 		case "w":
-			if f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
+			if f, err = os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
 				switch {
 				case os.IsPermission(err):
 					c.thread.errno = int32(syscall.EPERM)
@@ -276,48 +276,42 @@ func (c *cpu) free() { c.m.free(readPtr(c.rp - ptrStackSz)) }
 
 // size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 func (c *cpu) fread() {
-	ap := c.rp - ptrStackSz
-	ptr := readPtr(ap)
-	ap -= longStackSz
-	size := readULong(ap)
-	ap -= longStackSz
-	nmemb := readULong(ap)
-	ap -= ptrStackSz
-	hi, lo := mathutil.MulUint128_64(size, nmemb)
+	sp, stream := popPtr(c.sp)
+	sp, nmemb := popLong(sp)
+	sp, size := popLong(sp)
+	ptr := readPtr(sp)
+	hi, lo := mathutil.MulUint128_64(uint64(size), uint64(nmemb))
 	if hi != 0 || lo > math.MaxInt32 {
 		c.thread.errno = int32(syscall.E2BIG)
 		writeULong(c.rp, 0)
 		return
 	}
 
-	n, err := files.reader(readPtr(ap), c).Read((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
+	n, err := files.reader(stream, c).Read((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
 	if err != nil {
 		c.thread.errno = int32(syscall.EIO)
 	}
-	writeULong(c.rp, uint64(n)/size)
+	writeLong(c.rp, int64(n)/size)
 }
 
 // size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 func (c *cpu) fwrite() {
-	ap := c.rp - ptrStackSz
-	ptr := readPtr(ap)
-	ap -= longStackSz
-	size := readULong(ap)
-	ap -= longStackSz
-	nmemb := readULong(ap)
-	ap -= ptrStackSz
-	hi, lo := mathutil.MulUint128_64(size, nmemb)
+	sp, stream := popPtr(c.sp)
+	sp, nmemb := popLong(sp)
+	sp, size := popLong(sp)
+	ptr := readPtr(sp)
+	hi, lo := mathutil.MulUint128_64(uint64(size), uint64(nmemb))
 	if hi != 0 || lo > math.MaxInt32 {
 		c.thread.errno = int32(syscall.E2BIG)
 		writeULong(c.rp, 0)
 		return
 	}
 
-	n, err := files.writer(readPtr(ap), c).Write((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
+	n, err := files.writer(stream, c).Write((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
 	if err != nil {
 		c.thread.errno = int32(syscall.EIO)
 	}
-	writeULong(c.rp, uint64(n)/size)
+	writeLong(c.rp, int64(n)/size)
 }
 
 func goFprintf(w io.Writer, format, argp uintptr) int32 {
@@ -481,20 +475,15 @@ func (c *cpu) sprintf() {
 
 // int vfprintf(FILE *stream, const char *format, va_list ap);
 func (c *cpu) vfprintf() {
-	p := c.rp - ptrStackSz
-	stream := readPtr(p)
-	p -= ptrStackSz
-	format := readPtr(p)
-	p -= ptrStackSz
-	ap := readPtr(p)
+	sp, ap := popPtr(c.sp)
+	sp, format := popPtr(sp)
+	stream := readPtr(sp)
 	writeI32(c.rp, goFprintf(files.writer(stream, c), format, ap))
 }
 
 // int vprintf(const char *format, va_list ap);
 func (c *cpu) vprintf() {
-	p := c.rp - ptrStackSz
-	format := readPtr(p)
-	p -= ptrStackSz
-	ap := readPtr(p)
+	sp, ap := popPtr(c.sp)
+	format := readPtr(sp)
 	writeI32(c.rp, goFprintf(c.m.stdout, format, ap))
 }

@@ -29,4 +29,5 @@ func (c *cpu) pushC128(n, m int) {
 
 func readLong(p uintptr) int64       { return *(*int64)(unsafe.Pointer(p)) }
 func readULong(p uintptr) uint64     { return *(*uint64)(unsafe.Pointer(p)) }
+func writeLong(p uintptr, v int64)   { *(*int64)(unsafe.Pointer(p)) = v }
 func writeULong(p uintptr, v uint64) { *(*uint64)(unsafe.Pointer(p)) = v }

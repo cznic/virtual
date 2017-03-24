@@ -59,6 +59,7 @@ func init() {
 	})
 }
 
+// int isinf(double x);
 func (c *cpu) isinf() {
 	var r int32
 	if math.IsInf(readF64(c.sp), 0) {
@@ -67,6 +68,7 @@ func (c *cpu) isinf() {
 	writeI32(c.rp, r)
 }
 
+// int isinff(float x);
 func (c *cpu) isinff() {
 	var r int32
 	if math.IsInf(float64(readF32(c.sp)), 0) {
@@ -94,6 +96,7 @@ func (c *cpu) sqrt()     { writeF64(c.rp, math.Sqrt(readF64(c.sp))) }
 func (c *cpu) tan()      { writeF64(c.rp, math.Tan(readF64(c.sp))) }
 func (c *cpu) tanh()     { writeF64(c.rp, math.Tanh(readF64(c.sp))) }
 
+// int sign_bit(double x);
 func (c *cpu) sign_bit() {
 	var r int32
 	if math.Signbit(readF64(c.sp)) {
@@ -102,6 +105,7 @@ func (c *cpu) sign_bit() {
 	writeI32(c.rp, r)
 }
 
+// int sign_bitf(float x);
 func (c *cpu) sign_bitf() {
 	var r int32
 	if math.Signbit(float64(readF32(c.sp))) {
@@ -110,6 +114,7 @@ func (c *cpu) sign_bitf() {
 	writeI32(c.rp, r)
 }
 
+// double round(double x);
 func (c *cpu) round() {
 	v := readF64(c.sp)
 	switch {
