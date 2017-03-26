@@ -935,6 +935,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			case ir.Uint16:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
+				case ir.Int8, ir.Uint8:
+					// ok
 				case ir.Int16, ir.Uint16:
 					// ok
 				case ir.Int32:

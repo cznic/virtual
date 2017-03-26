@@ -280,6 +280,7 @@ const (
 	calloc
 	ceil
 	cimagf
+	close_
 	clrsb
 	clrsbl
 	clrsbll

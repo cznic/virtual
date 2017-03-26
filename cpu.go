@@ -135,7 +135,7 @@ func (c *cpu) stackTrace() (err error) {
 		sp += ptrStackSz
 		ap = readPtr(sp)
 		sp += ptrStackSz
-		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem) {
+		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem) || bp == 0 || sp == 0 || ap == 0 {
 			break
 		}
 
@@ -1626,6 +1626,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.read)
 		case qsort:
 			c.builtin(c.qsort)
+		case close_:
+			c.builtin(c.close)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

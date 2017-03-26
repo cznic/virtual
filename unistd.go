@@ -13,11 +13,31 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
+		dict.SID("__builtin_close"): close_,
 		dict.SID("__builtin_read"):  read,
-		dict.SID("read"):            read,
 		dict.SID("__builtin_write"): write,
+		dict.SID("close"):           close_,
+		dict.SID("read"):            read,
 		dict.SID("write"):           write,
 	})
+}
+
+// int close(int fd);
+func (c *cpu) close() {
+	f := files.extractFd(uintptr(readI32(c.sp)))
+	if f == nil {
+		c.thread.errno = int32(syscall.EBADF)
+		writeI32(c.rp, eof)
+		return
+	}
+
+	if err := f.Close(); err != nil {
+		c.thread.errno = int32(syscall.EIO)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	writeI32(c.rp, 0)
 }
 
 // ssize_t read(int fd, void *buf, size_t count);

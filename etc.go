@@ -430,6 +430,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			calloc,
 			ceil,
 			cimagf,
+			close_,
 			clrsb,
 			clrsbl,
 			clrsbll,

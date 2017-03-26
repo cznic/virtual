@@ -144,6 +144,14 @@ func (m *fmap) extract(u uintptr) *os.File {
 	return f
 }
 
+func (m *fmap) extractFd(fd uintptr) *os.File {
+	m.mu.Lock()
+	f := m.fd[fd]
+	delete(m.fd, fd)
+	m.mu.Unlock()
+	return f
+}
+
 type file struct{ _ int32 }
 
 // int fclose(FILE *stream);
@@ -332,6 +340,7 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 		case '%':
 			modifiers := ""
 			long := 0
+			var w []interface{}
 		more:
 			ch := readI8(format)
 			format++
@@ -339,10 +348,15 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.':
 				modifiers += string(ch)
 				goto more
+			case '*':
+				argp -= i32StackSz
+				w = append(w, readI32(argp))
+				modifiers += string(ch)
+				goto more
 			case 'c':
 				argp -= i32StackSz
 				arg := readI32(argp)
-				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sc", modifiers), arg)
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sc", modifiers), append(w, arg)...)
 				written += n
 			case 'd', 'i':
 				var arg interface{}
@@ -362,7 +376,7 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					argp -= i64StackSz
 					arg = readI64(argp)
 				}
-				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sd", modifiers), arg)
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sd", modifiers), append(w, arg)...)
 				written += n
 			case 'u':
 				var arg interface{}
@@ -382,7 +396,7 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					argp -= i64StackSz
 					arg = readU64(argp)
 				}
-				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sd", modifiers), arg)
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sd", modifiers), append(w, arg)...)
 				written += n
 			case 'x':
 				var arg interface{}
@@ -402,7 +416,7 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					argp -= i64StackSz
 					arg = readU64(argp)
 				}
-				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sx", modifiers), arg)
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sx", modifiers), append(w, arg)...)
 				written += n
 			case 'l':
 				long++
@@ -410,17 +424,17 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 			case 'f':
 				argp -= f64StackSz
 				arg := readF64(argp)
-				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sf", modifiers), arg)
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sf", modifiers), append(w, arg)...)
 				written += n
 			case 'p':
 				argp -= ptrStackSz
 				arg := readPtr(argp)
-				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sp", modifiers), unsafe.Pointer(arg))
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sp", modifiers), append(w, unsafe.Pointer(arg))...)
 				written += n
 			case 'g':
 				argp -= f64StackSz
 				arg := readF64(argp)
-				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sg", modifiers), arg)
+				n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%sg", modifiers), append(w, arg)...)
 				written += n
 			case 's':
 				argp -= ptrStackSz
@@ -434,7 +448,7 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					c := readI8(arg)
 					arg++
 					if c == 0 {
-						n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%ss", modifiers), b2.Bytes())
+						n, _ := fmt.Fprintf(&b, fmt.Sprintf("%%%ss", modifiers), append(w, b2.Bytes())...)
 						b2.Close()
 						written += n
 						break
