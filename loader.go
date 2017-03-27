@@ -831,36 +831,6 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 		case *ir.CallFP:
 			l.emit(l.pos(x), Operation{Opcode: CallFP})
 		case *ir.Convert:
-			if x.Bits != 0 {
-				switch {
-				case x.Result.Signed():
-					switch t := l.tc.MustType(x.TypeID); t.Kind() {
-					case ir.Int8, ir.Uint8:
-						l.emit(l.pos(x), Operation{Opcode: BitfieldI8, N: (8-x.BitOffset-x.Bits)<<8 | 8 - x.Bits})
-					case ir.Int16, ir.Uint16:
-						l.emit(l.pos(x), Operation{Opcode: BitfieldI16, N: (16-x.BitOffset-x.Bits)<<8 | 16 - x.Bits})
-					case ir.Int32, ir.Uint32:
-						l.emit(l.pos(x), Operation{Opcode: BitfieldI32, N: (32-x.BitOffset-x.Bits)<<8 | 32 - x.Bits})
-					case ir.Int64, ir.Uint64:
-						l.emit(l.pos(x), Operation{Opcode: BitfieldI64, N: (64-x.BitOffset-x.Bits)<<8 | 64 - x.Bits})
-					default:
-						panic(fmt.Errorf("%s: TODO %v:%v@%v, %v", x.Position, x.TypeID, x.Bits, x.BitOffset, x.Result))
-					}
-				default:
-					switch t := l.tc.MustType(x.TypeID); t.Kind() {
-					case ir.Int8, ir.Uint8:
-						l.emit(l.pos(x), Operation{Opcode: BitfieldU8, N: (8-x.BitOffset-x.Bits)<<8 | 8 - x.Bits})
-					case ir.Int16, ir.Uint16:
-						l.emit(l.pos(x), Operation{Opcode: BitfieldU16, N: (16-x.BitOffset-x.Bits)<<8 | 16 - x.Bits})
-					case ir.Int32, ir.Uint32:
-						l.emit(l.pos(x), Operation{Opcode: BitfieldU32, N: (32-x.BitOffset-x.Bits)<<8 | 32 - x.Bits})
-					case ir.Int64, ir.Uint64:
-						l.emit(l.pos(x), Operation{Opcode: BitfieldU64, N: (64-x.BitOffset-x.Bits)<<8 | 64 - x.Bits})
-					default:
-						panic(fmt.Errorf("%s: TODO %v:%v@%v, %v", x.Position, x.TypeID, x.Bits, x.BitOffset, x.Result))
-					}
-				}
-			}
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int8:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
@@ -1267,10 +1237,6 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				panic(fmt.Errorf("%s: TODO %T(%v)", x.Position, ex, ex))
 			}
 		case *ir.Field:
-			if x.Bits != 0 {
-				panic(fmt.Errorf("%#05x\t%s:%s: internal error", ip, f.NameID, x.Position))
-			}
-
 			fields := l.model.Layout(l.tc.MustType(x.TypeID).(*ir.PointerType).Element.(*ir.StructOrUnionType))
 			switch {
 			case x.Address:
@@ -1467,10 +1433,6 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				panic(fmt.Errorf("TODO %v", t.Kind()))
 			}
 		case *ir.Load:
-			if x.Bits != 0 {
-				panic(fmt.Errorf("%#05x\t%s:%s: internal error", ip, f.NameID, x.Position))
-			}
-
 			switch sz := l.sizeof(l.tc.MustType(x.TypeID).(*ir.PointerType).Element.ID()); sz {
 			case 1:
 				l.emit(l.pos(x), Operation{Opcode: Load8})
@@ -1621,7 +1583,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 		case *ir.PostIncrement:
 			switch {
 			case x.Bits != 0:
-				switch t := l.tc.MustType(x.TypeID); t.Kind() {
+				switch t := l.tc.MustType(x.BitFieldType); t.Kind() {
 				case ir.Int32, ir.Uint32:
 					l.emit(l.pos(x),
 						Operation{Opcode: PostIncU32Bits, N: x.Delta},
@@ -1656,7 +1618,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 		case *ir.PreIncrement:
 			switch {
 			case x.Bits != 0:
-				switch t := l.tc.MustType(x.TypeID); t.Kind() {
+				switch t := l.tc.MustType(x.BitFieldType); t.Kind() {
 				case ir.Int32, ir.Uint32:
 					l.emit(l.pos(x),
 						Operation{Opcode: PreIncU32Bits, N: x.Delta},
@@ -1757,7 +1719,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					}
 				}
 				mask := (uint64(1)<<uint(x.Bits) - 1) << uint(x.BitOffset)
-				switch l.sizeof(x.BitFieldType) {
+				switch l.sizeof(x.TypeID) {
 				case 1:
 					l.emit(l.pos(x), Operation{Opcode: StoreBits8, N: int(mask)})
 				case 2:
@@ -1767,7 +1729,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				case 8:
 					l.emit(l.pos(x), Operation{Opcode: StoreBits64, N: int(mask)})
 				default:
-					panic(fmt.Errorf("%s: internal error %s", x.Position, x.BitFieldType))
+					panic(fmt.Errorf("%s: internal error %s", x.Position, x.TypeID))
 				}
 				break
 			}
