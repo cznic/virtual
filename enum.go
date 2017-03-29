@@ -316,6 +316,7 @@ const (
 	isprint
 	log
 	log10
+	longjmp
 	malloc
 	memcmp
 	memcpy
@@ -335,6 +336,7 @@ const (
 	read
 	returnAddress
 	round
+	setjmp
 	sign_bit
 	sign_bitf
 	sin

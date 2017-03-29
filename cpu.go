@@ -28,13 +28,14 @@ type Operation struct {
 	N int
 }
 
+// typedef void *__JMP_BUF_TYPE__[7];
 type jmpBuf struct {
 	ap       uintptr // Arguments pointer
 	bp       uintptr // Base pointer
-	fpStackP int
+	fpStackP uintptr
 	ip       uintptr // Instruction pointer
 	rp       uintptr // Results pointer
-	rpStackP int
+	rpStackP uintptr
 	sp       uintptr // Stack pointer
 }
 
@@ -1035,7 +1036,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI32(c.sp, v)
 			writeI32(p, v+int32(op.N))
 		case PostIncU32Bits: // adr -> (*adr)++
-			d := uint32(op.N)
+			d := uint64(op.N)
 			op = code[c.ip]
 			c.ip++
 			bits := uint(op.N >> 16)
@@ -1043,7 +1044,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			w := op.N & 0xff
 			p := readPtr(c.sp)
 			c.sp += ptrStackSz - i32StackSz
-			m := (uint64(1)<<bits - 1) << bitoff
+			m0 := uint64(1)<<bits - 1
+			m := m0 << bitoff
 			var u uint64
 			switch w {
 			case 1:
@@ -1057,10 +1059,11 @@ func (c *cpu) run(code []Operation) (int, error) {
 			default:
 				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
-			v := uint32(u & m >> bitoff)
-			writeU32(c.sp, v)
+			v := u & m >> bitoff
+			writeU32(c.sp, uint32(v))
 			v += d
-			u = u&^m | uint64(v)<<bitoff&m
+			v &= m0
+			u = u&^m | v<<bitoff&m
 			switch w {
 			case 1:
 				writeU8(p, uint8(u))
@@ -1082,7 +1085,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			w := op.N & 0xff
 			p := readPtr(c.sp)
 			c.sp += ptrStackSz - i32StackSz
-			m := (uint64(1)<<bits - 1) << bitoff
+			m0 := uint64(1)<<bits - 1
+			m := m0 << bitoff
 			var u uint64
 			switch w {
 			case 1:
@@ -1099,6 +1103,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := u & m >> bitoff
 			writeU64(c.sp, v)
 			v += d
+			v &= m0
 			u = u&^m | v<<bitoff&m
 			switch w {
 			case 1:
@@ -1153,8 +1158,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readI64(p) + int64(op.N)
 			writeI64(c.sp, v)
 			writeI64(p, v)
-		case PreIncU32Bits: // adr -> (*adr)++
-			d := uint32(op.N)
+		case PreIncU32Bits: // adr -> ++(*adr)
+			d := uint64(op.N)
 			op = code[c.ip]
 			c.ip++
 			bits := uint(op.N >> 16)
@@ -1162,7 +1167,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			w := op.N & 0xff
 			p := readPtr(c.sp)
 			c.sp += ptrStackSz - i32StackSz
-			m := (uint64(1)<<bits - 1) << bitoff
+			m0 := uint64(1)<<bits - 1
+			m := m0 << bitoff
 			var u uint64
 			switch w {
 			case 1:
@@ -1176,9 +1182,9 @@ func (c *cpu) run(code []Operation) (int, error) {
 			default:
 				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
-			v := uint32(u&m>>bitoff) + d
-			writeU32(c.sp, v)
-			u = u&^m | uint64(v)<<bitoff&m
+			v := u&m>>bitoff + d&m0
+			writeU32(c.sp, uint32(v))
+			u = u&^m | v<<bitoff&m
 			switch w {
 			case 1:
 				writeU8(p, uint8(u))
@@ -1191,7 +1197,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			default:
 				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
-		case PreIncU64Bits: // adr -> (*adr)++
+		case PreIncU64Bits: // adr -> ++(*adr)
 			d := uint64(op.N)
 			op = code[c.ip]
 			c.ip++
@@ -1200,7 +1206,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			w := op.N & 0xff
 			p := readPtr(c.sp)
 			c.sp -= i64StackSz - ptrStackSz
-			m := (uint64(1)<<bits - 1) << bitoff
+			m0 := uint64(1)<<bits - 1
+			m := m0 << bitoff
 			var u uint64
 			switch w {
 			case 1:
@@ -1214,7 +1221,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			default:
 				return -1, fmt.Errorf("internal error: %v\n%s", op, c.stackTrace())
 			}
-			v := u&m>>bitoff + d
+			v := (u&m>>bitoff + d) & m0
 			writeU64(c.sp, v)
 			u = u&^m | v<<bitoff&m
 			switch w {
@@ -1628,6 +1635,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.qsort)
 		case close_:
 			c.builtin(c.close)
+		case setjmp:
+			c.builtin(c.setjmp)
+		case longjmp:
+			c.builtin(c.longjmp)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())
