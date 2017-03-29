@@ -20,8 +20,7 @@ func init() {
 // void longjmp(jmp_buf env, int val);
 func (c *cpu) longjmp() {
 	sp, val := popI32(c.sp)
-	env := readPtr(sp)
-	movemem(uintptr(unsafe.Pointer(&c.jmpBuf)), env, int(unsafe.Sizeof(jmpBuf{})))
+	c.jmpBuf = *(*jmpBuf)(unsafe.Pointer(readPtr(sp)))
 	c.fpStack = c.fpStack[:c.fpStackP]
 	c.rpStack = c.rpStack[:c.rpStackP]
 	if val == 0 {
@@ -32,9 +31,8 @@ func (c *cpu) longjmp() {
 
 // int setjmp(jmp_buf env);
 func (c *cpu) setjmp() {
-	env := readPtr(c.sp)
 	c.fpStackP = uintptr(len(c.fpStack))
 	c.rpStackP = uintptr(len(c.rpStack))
-	movemem(env, uintptr(unsafe.Pointer(&c.jmpBuf)), int(unsafe.Sizeof(jmpBuf{})))
+	*(*jmpBuf)(unsafe.Pointer(readPtr(c.sp))) = c.jmpBuf
 	writeI32(c.rp, 0)
 }

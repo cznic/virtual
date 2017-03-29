@@ -1469,6 +1469,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			return 1, c.stackTrace()
 		case exit:
 			return int(readI32(c.sp)), nil
+		case builtin:
+			var ip uintptr
+			c.sp, ip = popPtr(c.sp)
+			c.run(code)
+			c.ip = ip
+
 		case printf:
 			c.builtin(c.printf)
 		case sinh:

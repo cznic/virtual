@@ -277,6 +277,7 @@ const (
 	asin
 	atan
 	bswap64
+	builtin
 	calloc
 	ceil
 	cimagf

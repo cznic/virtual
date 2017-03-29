@@ -190,8 +190,50 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 					}
 					id := ir.StringID(dict.ID(buf.Bytes()))
 					f(off, t, &ir.StringValue{StringID: id})
+				case ir.Pointer:
+					switch elem := elem.(*ir.PointerType).Element; elem.Kind() {
+					case ir.Function:
+						var buf buffer.Bytes
+						for _, v := range x.Values {
+							switch x := v.(type) {
+							case *ir.AddressValue:
+								if x.Label != 0 {
+									panic("TODO")
+								}
+
+								switch x.Linkage {
+								case ir.ExternalLinkage:
+									switch ex := l.objects[x.Index].(type) {
+									case *ir.FunctionDefinition:
+										switch l.ptrSize {
+										case 4:
+											var b [4]byte
+											*(*uintptr)(unsafe.Pointer(&b)) = uintptr(l.m[x.Index])
+											buf.Write(b[:])
+										case 8:
+											var b [8]byte
+											*(*uintptr)(unsafe.Pointer(&b)) = uintptr(l.m[x.Index])
+											buf.Write(b[:])
+										default:
+											panic(fmt.Errorf("internal error %v", l.ptrSize))
+										}
+									default:
+										panic(fmt.Errorf("internal error %T", ex))
+									}
+								default:
+									panic(fmt.Errorf("internal error %v", x.Linkage))
+								}
+							default:
+								panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, v))
+							}
+						}
+						id := ir.StringID(dict.ID(buf.Bytes()))
+						f(off, t, &ir.StringValue{StringID: id})
+					default:
+						panic(fmt.Errorf("%s: TODO %v %v %v: %v", d.Position, t, elem, elem.Kind(), v))
+					}
 				default:
-					panic(fmt.Errorf("%s: TODO %v %v: %v", d.Position, elem, elem.Kind(), v))
+					panic(fmt.Errorf("%s: TODO %v %v %v: %v", d.Position, t, elem, elem.Kind(), v))
 				}
 			default:
 				panic(fmt.Errorf("%s: TODO %v %v: %v", d.Position, t, typ.Kind(), v))
@@ -265,6 +307,14 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 				case ir.Int8, ir.Int32:
 					*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.text(x.StringID, true))
 					l.out.TSRelative[off>>3] |= 1 << uint(off&7)
+				case ir.Pointer:
+					switch typ := typ.(*ir.PointerType).Element; typ.Kind() {
+					case ir.Function:
+						*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.text(x.StringID, true))
+						l.out.TSRelative[off>>3] |= 1 << uint(off&7)
+					default:
+						panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, x.StringID))
+					}
 				default:
 					panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, x.StringID))
 				}
@@ -1986,6 +2036,25 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 	}
 }
 
+func (l *loader) loadBuiltin(op Opcode, f *ir.FunctionDefinition) {
+	l.prev = Operation{}
+	fp := f.Position
+	fi := PCInfo{PC: len(l.out.Code), Line: fp.Line, Name: f.NameID}
+	switch op {
+	case exit:
+		l.emit(fi,
+			Operation{Opcode: AddSP, N: ptrStackSz},
+			Operation{Opcode: op},
+		)
+	default:
+		l.emit(fi,
+			Operation{Opcode: builtin},
+			Operation{Opcode: op},
+			Operation{Opcode: FFIReturn},
+		)
+	}
+}
+
 func (l *loader) load() error {
 	var ds int
 	for i, v := range l.objects { // Allocate global initialized data.
@@ -2011,8 +2080,10 @@ func (l *loader) load() error {
 	for i, v := range l.objects {
 		switch x := v.(type) {
 		case *ir.FunctionDefinition:
-			if _, ok := builtins[x.NameID]; ok && len(x.Body) == 1 {
+			if op, ok := builtins[x.NameID]; ok && len(x.Body) == 1 {
 				if _, ok := x.Body[0].(*ir.Panic); ok {
+					l.m[i] = len(l.out.Code)
+					l.loadBuiltin(op, x)
 					break
 				}
 			}

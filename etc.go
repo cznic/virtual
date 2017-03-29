@@ -5,6 +5,7 @@
 package virtual
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -16,7 +17,6 @@ import (
 var (
 	idInt32P = ir.TypeID(dict.SID("*int32"))
 	idInt8P  = ir.TypeID(dict.SID("*int8"))
-	idUint8P = ir.TypeID(dict.SID("*uint8"))
 )
 
 // KillError is the error returned by the CPU of a killed machine.
@@ -41,13 +41,16 @@ func DumpCode(w io.Writer, code []Operation, start int) error {
 func DumpCodeStr(code []Operation, start int) buffer.Bytes {
 	var buf buffer.Bytes
 	dumpCode(&buf, code, start)
+	s := bytes.Replace(buf.Bytes(), []byte("\n\n"), []byte("\n"), -1)
+	buf.Close()
+	buf.Write(s)
 	return buf
 }
 
 func dumpCodeStr(code []Operation, start int) []byte {
 	var buf buffer.Bytes
 	dumpCode(&buf, code, start)
-	return buf.Bytes()
+	return bytes.Replace(buf.Bytes(), []byte("\n\n"), []byte("\n"), -1)
 }
 
 func dumpCode(w io.Writer, code []Operation, start int) error {
@@ -193,9 +196,6 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			IndexU64,
 			IndexI8,
 			IndexU8,
-			Jmp,
-			Jnz,
-			Jz,
 			Load,
 			Load16,
 			Load32,
@@ -335,7 +335,6 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			EqI32,
 			EqI64,
 			EqI8,
-			FFIReturn,
 			GeqF32,
 			GeqF64,
 			GeqI32,
@@ -394,7 +393,6 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			RemI64,
 			RemU32,
 			RemU64,
-			Return,
 			RshI16,
 			RshI32,
 			RshI64,
@@ -420,7 +418,6 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Zero32,
 			Zero64,
 
-			abort,
 			abs,
 			acos,
 			alloca,
@@ -444,7 +441,6 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ctz,
 			ctzl,
 			ctzll,
-			exit,
 			exp,
 			fabs,
 			fclose,
@@ -529,6 +525,17 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			}
 		case Argument64:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push64", op.N); err != nil {
+				return err
+			}
+		case builtin:
+			if i != 0 {
+				fmt.Fprintln(w)
+			}
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
+				return err
+			}
+		case exit, abort, FFIReturn, Return, Jmp, Jz, Jnz:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n\n\n", start+i, width, lo); err != nil {
 				return err
 			}
 		case Func:
