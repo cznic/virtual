@@ -534,8 +534,12 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
 				return err
 			}
-		case exit, abort, FFIReturn, Return, Jmp, Jz, Jnz:
+		case exit, abort, FFIReturn, Return:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n\n\n", start+i, width, lo); err != nil {
+				return err
+			}
+		case Jmp, Jz, Jnz:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n\n\n", start+i, width, lo, uint(op.N)); err != nil {
 				return err
 			}
 		case Func:
