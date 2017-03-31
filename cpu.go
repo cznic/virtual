@@ -456,6 +456,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI32(c.sp, int32(readU16(c.sp)))
 		case ConvU16U32:
 			writeU32(c.sp, uint32(readU16(c.sp)))
+		case ConvU16U64:
+			v := readU16(c.sp)
+			c.sp -= i64StackSz - i16StackSz
+			writeU64(c.sp, uint64(v))
 		case ConvU16I64:
 			v := readU16(c.sp)
 			c.sp -= i64StackSz - i16StackSz

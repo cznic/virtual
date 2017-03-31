@@ -23,6 +23,7 @@ var (
 		abort: {},
 		exit:  {},
 		Panic: {},
+		JmpP:  {},
 	}
 )
 
@@ -84,6 +85,7 @@ type labelNfo struct {
 }
 
 type loader struct {
+	csLabels    map[int]*ir.AddressValue
 	dsLabels    map[int]*ir.AddressValue
 	m           map[int]int // Object #: {BSS,Code,Data,Text} index.
 	model       ir.MemoryModel
@@ -95,6 +97,7 @@ type loader struct {
 	stackAlign  int
 	strings     map[ir.StringID]int
 	tc          ir.TypeCache
+	tsLabels    map[int]*ir.AddressValue
 	wstrings    map[ir.StringID]int
 }
 
@@ -110,6 +113,7 @@ func newLoader(modelName string, objects []ir.Object) *loader {
 	}
 
 	return &loader{
+		csLabels:    map[int]*ir.AddressValue{},
 		dsLabels:    map[int]*ir.AddressValue{},
 		m:           map[int]int{},
 		model:       model,
@@ -121,6 +125,7 @@ func newLoader(modelName string, objects []ir.Object) *loader {
 		stackAlign:  int(ptrItem.Align),
 		strings:     map[ir.StringID]int{},
 		tc:          ir.TypeCache{},
+		tsLabels:    map[int]*ir.AddressValue{},
 		wstrings:    map[ir.StringID]int{},
 	}
 }
@@ -622,7 +627,7 @@ func (l *loader) float64Literal(dest []byte, t ir.Type, lit float64) {
 	}
 }
 
-func (l *loader) arrayLiteral(t ir.Type, v ir.Value) *[]byte {
+func (l *loader) arrayLiteral(t ir.Type, v ir.Value, o int) *[]byte {
 	p := buffer.CGet(l.sizeof(t.ID()))
 	b := *p
 	item := t.(*ir.ArrayType).Item
@@ -643,8 +648,16 @@ func (l *loader) arrayLiteral(t ir.Type, v ir.Value) *[]byte {
 				l.float32Literal(b[off:], item, y.Value)
 				i++
 			case *ir.CompositeValue:
-				l.compositeValue(b[off:], item, y)
+				l.compositeValue(b[off:], item, y, o)
 				i++
+			case *ir.AddressValue:
+				if y.Label != 0 {
+					l.tsLabels[o+off] = y
+					i++
+					break
+				}
+
+				panic(fmt.Errorf("TODO %T", y))
 			default:
 				panic(fmt.Errorf("TODO %T", y))
 			}
@@ -655,13 +668,13 @@ func (l *loader) arrayLiteral(t ir.Type, v ir.Value) *[]byte {
 	return p
 }
 
-func (l *loader) compositeValue(dest []byte, t ir.Type, lit ir.Value) {
+func (l *loader) compositeValue(dest []byte, t ir.Type, lit ir.Value, o int) {
 	var p *[]byte
 	switch t.Kind() {
 	case ir.Array:
-		p = l.arrayLiteral(t, lit)
+		p = l.arrayLiteral(t, lit, o)
 	case ir.Struct, ir.Union:
-		p = l.structLiteral(t, lit)
+		p = l.structLiteral(t, lit, o)
 	default:
 		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
@@ -669,7 +682,7 @@ func (l *loader) compositeValue(dest []byte, t ir.Type, lit ir.Value) {
 	buffer.Put(p)
 }
 
-func (l *loader) structLiteral(t ir.Type, v ir.Value) *[]byte {
+func (l *loader) structLiteral(t ir.Type, v ir.Value, o int) *[]byte {
 	st := t.(*ir.StructOrUnionType)
 	fields := st.Fields
 	layout := l.model.Layout(st)
@@ -692,7 +705,7 @@ func (l *loader) structLiteral(t ir.Type, v ir.Value) *[]byte {
 				l.float64Literal(b[layout[i].Offset:], fields[i], y.Value)
 				i++
 			case *ir.CompositeValue:
-				l.compositeValue(b[layout[i].Offset:], fields[i], y)
+				l.compositeValue(b[layout[i].Offset:], fields[i], y, o)
 				i++
 			default:
 				panic(fmt.Errorf("TODO %T", y))
@@ -708,9 +721,9 @@ func (l *loader) compositeLiteral(tid ir.TypeID, v ir.Value) int {
 	var p *[]byte
 	switch t := l.tc.MustType(tid); t.Kind() {
 	case ir.Array:
-		p = l.arrayLiteral(t, v)
+		p = l.arrayLiteral(t, v, len(l.out.Text))
 	case ir.Struct, ir.Union:
-		p = l.structLiteral(t, v)
+		p = l.structLiteral(t, v, len(l.out.Text))
 	default:
 		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
@@ -920,8 +933,17 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvI16U32})
 				case ir.Int64, ir.Uint64:
 					l.emit(l.pos(x), Operation{Opcode: ConvI16I64})
+				case ir.Pointer:
+					switch l.ptrSize {
+					case 4:
+						l.emit(l.pos(x), Operation{Opcode: ConvU16U32})
+					case 8:
+						l.emit(l.pos(x), Operation{Opcode: ConvU16U64})
+					default:
+						panic(fmt.Errorf("%s: TODO %v", x.Position, l.ptrSize))
+					}
 				default:
-					panic(fmt.Errorf("TODO %v", u.Kind()))
+					panic(fmt.Errorf("%s: TODO %v", x.Position, u.Kind()))
 				}
 			case ir.Int32:
 				switch u := l.tc.MustType(x.Result); u.Kind() {
@@ -965,6 +987,15 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					l.emit(l.pos(x), Operation{Opcode: ConvU16U32})
 				case ir.Int64, ir.Uint64:
 					l.emit(l.pos(x), Operation{Opcode: ConvU16I64})
+				case ir.Pointer:
+					switch l.ptrSize {
+					case 4:
+						l.emit(l.pos(x), Operation{Opcode: ConvU16U32})
+					case 8:
+						l.emit(l.pos(x), Operation{Opcode: ConvU16U64})
+					default:
+						panic(fmt.Errorf("%s: TODO %v", x.Position, l.ptrSize))
+					}
 				default:
 					panic(fmt.Errorf("%s: TODO %v", x.Position, u.Kind()))
 				}
@@ -1387,6 +1418,26 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			default:
 				panic(fmt.Errorf("%s: TODO %v", x.Position, t.Kind()))
 			}
+		case *ir.Const:
+			switch v := x.Value.(type) {
+			case *ir.AddressValue:
+				if v.Label != 0 {
+					l.csLabels[len(l.out.Code)] = v
+					switch l.ptrSize {
+					case 4:
+						l.emit(l.pos(x), Operation{Opcode: Push32})
+					case 8:
+						l.emit(l.pos(x), Operation{Opcode: Push64})
+					default:
+						panic("internal error")
+					}
+					break
+				}
+
+				panic(fmt.Errorf("%s: TODO %T", x.Position, v))
+			default:
+				panic(fmt.Errorf("%s: TODO %T", x.Position, v))
+			}
 		case *ir.Const32:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
 			case ir.Int8, ir.Uint8, ir.Int16, ir.Uint16, ir.Int32, ir.Uint32:
@@ -1699,7 +1750,10 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				}
 			}
 		case *ir.PtrDiff:
-			sz := l.sizeof(l.tc.MustType(x.PtrType).(*ir.PointerType).Element.ID())
+			sz := 1
+			if x.PtrType != idVoidP {
+				sz = l.sizeof(l.tc.MustType(x.PtrType).(*ir.PointerType).Element.ID())
+			}
 			l.emit(l.pos(x), Operation{Opcode: PtrDiff, N: sz})
 		case *ir.Rem:
 			switch t := l.tc.MustType(x.TypeID); t.Kind() {
@@ -1847,7 +1901,16 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				// nop
 			case *ir.AddressValue:
 				if v.Label != 0 {
-					panic("TODO")
+					l.csLabels[len(l.out.Code)] = v
+					switch l.ptrSize {
+					case 4:
+						l.emit(l.pos(x), Operation{Opcode: Push32})
+					case 8:
+						l.emit(l.pos(x), Operation{Opcode: Push64})
+					default:
+						panic("internal error")
+					}
+					break
 				}
 
 				l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
@@ -1871,7 +1934,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 							l.emit(l.pos(x), Operation{Opcode: AddSP, N: l.ptrSize})
 						}
 					default:
-						panic(fmt.Errorf("%s.%05x: TODO %T(%v)", f.NameID, ip, ex, ex))
+						panic(fmt.Errorf("%s: %s.%05x: TODO %T(%v)", x.Position, f.NameID, ip, ex, ex))
 					}
 				case ir.InternalLinkage:
 					panic(fmt.Errorf("%s.%05x: TODO %T(%v)", f.NameID, ip, v, v))
@@ -2109,6 +2172,19 @@ func (l *loader) load() error {
 			}
 
 			l.out.Code[i].N = n
+		case Push32, Push64:
+			v, ok := l.csLabels[i]
+			if !ok {
+				break
+			}
+
+			nfo := labelNfo{index: v.Index, nm: v.Label}
+			ip, ok := l.namedLabels[nfo]
+			if !ok {
+				return fmt.Errorf("%s: undefined label %s", l.objects[v.Index].Base().NameID, v.Label)
+			}
+
+			l.out.Code[i].N = ip
 		}
 	}
 	l.out.Data = *buffer.CGet(ds - l.out.BSS)
@@ -2130,6 +2206,15 @@ func (l *loader) load() error {
 		}
 
 		*(*uintptr)(unsafe.Pointer(&l.out.Data[off])) = uintptr(ip)
+	}
+	for off, v := range l.tsLabels {
+		nfo := labelNfo{index: v.Index, nm: v.Label}
+		ip, ok := l.namedLabels[nfo]
+		if !ok {
+			return fmt.Errorf("%s: undefined label %s", l.objects[v.Index].Base().NameID, v.Label)
+		}
+
+		*(*uintptr)(unsafe.Pointer(&l.out.Text[off])) = uintptr(ip)
 	}
 	h := -1
 	for i, v := range l.out.TSRelative {

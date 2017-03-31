@@ -17,6 +17,7 @@ import (
 var (
 	idInt32P = ir.TypeID(dict.SID("*int32"))
 	idInt8P  = ir.TypeID(dict.SID("*int8"))
+	idVoidP  = ir.TypeID(dict.SID("*struct{}"))
 )
 
 // KillError is the error returned by the CPU of a killed machine.
@@ -248,6 +249,10 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 					return err
 				}
 			}
+		case JmpP:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(sp)\n\n", start+i, width, "jmp"); err != nil {
+				return err
+			}
 		case // no N
 			AddF32,
 			AddF64,
@@ -307,6 +312,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			ConvU16I32,
 			ConvU16I64,
 			ConvU16U32,
+			ConvU16U64,
 			ConvU32F32,
 			ConvU32F64,
 			ConvU32I16,
@@ -348,7 +354,6 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			GtI64,
 			GtU32,
 			GtU64,
-			JmpP,
 			LeqF32,
 			LeqF64,
 			LeqI32,
