@@ -137,7 +137,7 @@ func (c *cpu) frameAddress() {
 	bp := c.bp
 	ip := c.ip - 1
 	sp := c.sp
-	for ip < uintptr(len(c.code)) {
+	for level != 0 && ip < uintptr(len(c.code)) {
 		sp = bp
 		bp = readPtr(sp)
 		sp += 2 * ptrStackSz
@@ -146,10 +146,6 @@ func (c *cpu) frameAddress() {
 		}
 
 		ip = readPtr(sp) - 1
-		if level == 0 {
-			break
-		}
-
 		level--
 	}
 	writePtr(c.rp, bp)
