@@ -131,6 +131,15 @@ func newLoader(modelName string, objects []ir.Object) *loader {
 }
 
 func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
+	brk := off + l.sizeof(d.TypeID)
+
+	malloc := func(dst, n int, b []byte) {
+		copy(l.out.Data[brk:], b)
+		l.out.DSRelative[dst>>3] |= 1 << uint(dst&7)
+		*(*uintptr)(unsafe.Pointer(&l.out.Data[dst])) = uintptr(brk)
+		brk += roundup(n, mallocAlign)
+	}
+
 	var f func(int, ir.TypeID, ir.Value)
 	f = func(off int, t ir.TypeID, v ir.Value) {
 		b := l.out.Data[off:]
@@ -143,7 +152,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 				break
 			}
 
-			*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.m[x.Index])
+			*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.m[x.Index]) + x.Offset
 			if _, ok := l.objects[x.Index].(*ir.DataDefinition); ok {
 				l.out.DSRelative[off>>3] |= 1 << uint(off&7)
 			}
@@ -179,8 +188,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 							panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, v))
 						}
 					}
-					id := ir.StringID(dict.ID(buf.Bytes()))
-					f(off, t, &ir.StringValue{StringID: id})
+					malloc(off, buf.Len(), buf.Bytes())
 				case ir.Int32:
 					var buf buffer.Bytes
 					for _, v := range x.Values {
@@ -193,8 +201,7 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 							panic(fmt.Errorf("%s: TODO %T: %v", d.Position, x, v))
 						}
 					}
-					id := ir.StringID(dict.ID(buf.Bytes()))
-					f(off, t, &ir.StringValue{StringID: id})
+					malloc(off, buf.Len(), buf.Bytes())
 				case ir.Pointer:
 					switch elem := elem.(*ir.PointerType).Element; elem.Kind() {
 					case ir.Function:
@@ -213,11 +220,11 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 										switch l.ptrSize {
 										case 4:
 											var b [4]byte
-											*(*uintptr)(unsafe.Pointer(&b)) = uintptr(l.m[x.Index])
+											*(*uintptr)(unsafe.Pointer(&b)) = uintptr(l.m[x.Index]) + x.Offset
 											buf.Write(b[:])
 										case 8:
 											var b [8]byte
-											*(*uintptr)(unsafe.Pointer(&b)) = uintptr(l.m[x.Index])
+											*(*uintptr)(unsafe.Pointer(&b)) = uintptr(l.m[x.Index]) + x.Offset
 											buf.Write(b[:])
 										default:
 											panic(fmt.Errorf("internal error %v", l.ptrSize))
@@ -306,16 +313,17 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 				panic(fmt.Errorf("%s: TODO %v: %v", d.Position, t, v))
 			}
 		case *ir.StringValue:
+			delta := int(x.Offset)
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Pointer:
 				switch typ := typ.(*ir.PointerType).Element; typ.Kind() {
 				case ir.Int8, ir.Int32:
-					*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.text(x.StringID, true))
+					*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.text(x.StringID, true, delta))
 					l.out.TSRelative[off>>3] |= 1 << uint(off&7)
 				case ir.Pointer:
 					switch typ := typ.(*ir.PointerType).Element; typ.Kind() {
 					case ir.Function:
-						*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.text(x.StringID, true))
+						*(*uintptr)(unsafe.Pointer(&b[0])) = uintptr(l.text(x.StringID, true, delta))
 						l.out.TSRelative[off>>3] |= 1 << uint(off&7)
 					default:
 						panic(fmt.Errorf("%s: TODO %v: %q", d.Position, typ, x.StringID))
@@ -414,9 +422,9 @@ func (l *loader) sizeof(tid ir.TypeID) int {
 
 func (l *loader) stackSize(tid ir.TypeID) int { return roundup(l.sizeof(tid), l.stackAlign) }
 
-func (l *loader) text(s ir.StringID, null bool) int {
+func (l *loader) text(s ir.StringID, null bool, off int) int {
 	if p, ok := l.strings[s]; ok {
-		return p
+		return p + off
 	}
 
 	p := len(l.out.Text)
@@ -428,7 +436,7 @@ func (l *loader) text(s ir.StringID, null bool) int {
 	}
 	sz := roundup(len(l.out.Text)+more, mallocAlign)
 	l.out.Text = append(l.out.Text, make([]byte, sz-len(l.out.Text))...)
-	return p
+	return p + off
 }
 
 func (l *loader) wtext(s ir.StringID) int {
@@ -728,7 +736,7 @@ func (l *loader) compositeLiteral(tid ir.TypeID, v ir.Value) int {
 		panic(fmt.Errorf("TODO %s", t.Kind()))
 	}
 
-	r := l.text(ir.StringID(dict.ID(*p)), false)
+	r := l.text(ir.StringID(dict.ID(*p)), false, 0)
 	buffer.Put(p)
 	return r
 }
@@ -1064,6 +1072,8 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					case 8:
 						// ok
 					}
+				case ir.Union:
+					l.emit(l.pos(x), Operation{Opcode: ConvI64, N: l.sizeof(x.Result)})
 				default:
 					panic(fmt.Errorf("%s: TODO %v", x.Position, u.Kind()))
 				}
@@ -1853,7 +1863,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 		case *ir.StringConst:
 			switch x.TypeID {
 			case idInt8P:
-				l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value, true)})
+				l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(x.Value, true, 0)})
 			case idInt32P:
 				l.emit(l.pos(x), Operation{Opcode: Text, N: l.wtext(x.Value)})
 			default:
@@ -2044,11 +2054,11 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				switch vt := l.tc.MustType(x.TypeID); {
 				case vt.Kind() == ir.Array:
 					l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
-					l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(v.StringID, true)})
+					l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(v.StringID, true, 0)})
 					l.emit(l.pos(x), Operation{Opcode: StrNCopy, N: l.sizeof(x.TypeID)})
 				default:
 					l.emit(l.pos(x), Operation{Opcode: BP, N: variables[x.Index].off})
-					l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(v.StringID, true)})
+					l.emit(l.pos(x), Operation{Opcode: Text, N: l.text(v.StringID, true, 0)})
 					switch l.ptrSize {
 					case 4:
 						l.emit(l.pos(x), Operation{Opcode: Store32})
@@ -2118,6 +2128,114 @@ func (l *loader) loadBuiltin(op Opcode, f *ir.FunctionDefinition) {
 	}
 }
 
+func (l *loader) vsize(v ir.Value, t ir.Type) (r int) {
+	switch t.Kind() {
+	case ir.Array:
+		u := t.(*ir.ArrayType).Item
+		switch x := v.(type) {
+		case *ir.CompositeValue:
+			for _, v := range x.Values {
+				r += l.vsize(v, u)
+			}
+		case
+			nil,
+			*ir.StringValue:
+			// nop
+		default:
+			panic(fmt.Errorf("%v:%v, %T", t.ID(), t.Kind(), x))
+		}
+	case
+		ir.Int8, ir.Int16, ir.Int32, ir.Int64,
+		ir.Uint8, ir.Uint16, ir.Uint32, ir.Uint64,
+		ir.Float32, ir.Float64,
+		ir.Complex64, ir.Complex128:
+		// nop
+	case ir.Pointer:
+		u := t.(*ir.PointerType).Element
+		switch x := v.(type) {
+		case
+			*ir.AddressValue,
+			*ir.Int32Value,
+			*ir.StringValue:
+			// nop
+		case *ir.CompositeValue:
+			r = len(x.Values) * l.sizeof(u.ID())
+			for _, v := range x.Values {
+				r += l.vsize(v, u)
+			}
+		default:
+			panic(fmt.Errorf("%v:%v, %T", t.ID(), t.Kind(), x))
+		}
+	case ir.Struct, ir.Union:
+		u := t.(*ir.StructOrUnionType)
+		switch x := v.(type) {
+		case nil:
+			// nop
+		case *ir.CompositeValue:
+			if t.Kind() == ir.Union && len(x.Values) > 1 {
+				panic("internal error")
+			}
+
+			for i, v := range x.Values {
+				r += l.vsize(v, u.Fields[i])
+			}
+		case
+			*ir.AddressValue,
+			*ir.Int32Value:
+			// nop
+		default:
+			panic(fmt.Errorf("%v:%v, %T", t.ID(), t.Kind(), x))
+		}
+	default:
+		panic(fmt.Errorf("%v:%v", t.ID(), t.Kind()))
+	}
+	return roundup(r, mallocAlign)
+}
+
+func (l *loader) size(v ir.Value, t ir.Type) (r int) {
+	r = l.sizeof(t.ID())
+	switch t.Kind() {
+	case ir.Array:
+		u := t.(*ir.ArrayType)
+		switch x := v.(type) {
+		case *ir.CompositeValue:
+			for _, v := range x.Values {
+				r += l.vsize(v, u.Item)
+			}
+		case
+			*ir.StringValue,
+			*ir.WideStringValue:
+			// nop
+		default:
+			panic(fmt.Errorf("%v:%v, %T", t.ID(), t.Kind(), x))
+		}
+	case
+		ir.Int8, ir.Int16, ir.Int32, ir.Int64,
+		ir.Uint8, ir.Uint16, ir.Uint32, ir.Uint64,
+		ir.Float32, ir.Float64,
+		ir.Complex64, ir.Complex128,
+		ir.Pointer:
+		// nop
+	case ir.Struct, ir.Union:
+		switch x := v.(type) {
+		case *ir.CompositeValue:
+			if t.Kind() == ir.Union && len(x.Values) > 1 {
+				panic("internal error")
+			}
+
+			u := t.(*ir.StructOrUnionType)
+			for i, v := range x.Values {
+				r += l.vsize(v, u.Fields[i])
+			}
+		default:
+			panic(fmt.Errorf("%v:%v, %T", t.ID(), t.Kind(), x))
+		}
+	default:
+		panic(fmt.Errorf("%v:%v", t.ID(), t.Kind()))
+	}
+	return r
+}
+
 func (l *loader) load() error {
 	var ds int
 	for i, v := range l.objects { // Allocate global initialized data.
@@ -2125,7 +2243,11 @@ func (l *loader) load() error {
 		case *ir.DataDefinition:
 			if x.Value != nil {
 				l.m[i] = ds
-				ds += roundup(l.sizeof(x.TypeID), mallocAlign)
+				//TODO- fmt.Println(x.Position) //TODO-
+				//TODO- if a, b := l.size(x.Value, l.tc.MustType(x.TypeID)), l.sizeof(x.TypeID); a != b {
+				//TODO- 	fmt.Printf("\tsize %v, sizeof %v\tXXX\n", a, b) //TODO-
+				//TODO- }
+				ds += roundup(l.size(x.Value, l.tc.MustType(x.TypeID)), mallocAlign)
 			}
 		}
 	}

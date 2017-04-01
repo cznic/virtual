@@ -75,6 +75,7 @@ const (
 	ConvI32I16
 	ConvI32I64
 	ConvI32I8
+	ConvI64 // N
 	ConvI64F64
 	ConvI64I16
 	ConvI64I32

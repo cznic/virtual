@@ -392,6 +392,15 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readI32(c.sp)
 			c.sp -= i64StackSz - i32StackSz
 			writeI64(c.sp, int64(v))
+		case ConvI64:
+			v := readI64(c.sp)
+			c.sp += i64StackSz
+			c.sp -= uintptr(op.N)
+			for p, n := c.sp, op.N; n > 0; n -= ptrStackSz {
+				writePtr(p, 0)
+				p += ptrStackSz
+			}
+			writeI64(c.sp, v)
 		case ConvI64I8:
 			v := readI64(c.sp)
 			c.sp += i64StackSz - i8StackSz

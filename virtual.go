@@ -56,5 +56,6 @@ func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, h
 	writePtr(t.sp, pargv) // argv
 	t.sp -= ptrStackSz
 	writePtr(t.sp, 0xcafebabe) // return address, not used
+	t.cpu.ip = ffiProlog
 	return t.run(b.Code)
 }
