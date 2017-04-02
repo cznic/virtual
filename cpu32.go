@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build 386
+// +build 386 arm arm64be armbe mips mipsle ppc ppc64le s390 s390x sparc
 
 package virtual
 
@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	model    = 32
+	model    = 32 //TODO-
 	longBits = 32
 )
 
