@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	model    = 64 //TODO-
 	longBits = 64
 )
 

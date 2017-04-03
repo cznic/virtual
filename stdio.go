@@ -365,13 +365,8 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					argp -= i32StackSz
 					arg = readI32(argp)
 				case 1:
-					if model == 32 {
-						argp -= i32StackSz
-						arg = readI32(argp)
-						break
-					}
-
-					fallthrough
+					argp -= longStackSz
+					arg = readLong(argp)
 				default:
 					argp -= i64StackSz
 					arg = readI64(argp)
@@ -385,13 +380,8 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					argp -= i32StackSz
 					arg = readU32(argp)
 				case 1:
-					if model == 32 {
-						argp -= i32StackSz
-						arg = readU32(argp)
-						break
-					}
-
-					fallthrough
+					argp -= longStackSz
+					arg = readULong(argp)
 				default:
 					argp -= i64StackSz
 					arg = readU64(argp)
@@ -405,13 +395,8 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 					argp -= i32StackSz
 					arg = readU32(argp)
 				case 1:
-					if model == 32 {
-						argp -= i32StackSz
-						arg = readU32(argp)
-						break
-					}
-
-					fallthrough
+					argp -= longStackSz
+					arg = readULong(argp)
 				default:
 					argp -= i64StackSz
 					arg = readU64(argp)

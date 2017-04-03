@@ -85,6 +85,7 @@ func (s *sorter) Less(i, j int) bool {
 	// Argument #2
 	c.sp -= ptrStackSz
 	writePtr(c.sp, s.ptr(j))
+	// C callout
 	c.ip = s.compar
 	c.run(c.code)
 	// Pop result
