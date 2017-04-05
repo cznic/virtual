@@ -6,9 +6,6 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_ffs"):     ffs,
-		dict.SID("__builtin_ffsl"):    ffsl,
-		dict.SID("__builtin_ffsll"):   ffsll,
 		dict.SID("__builtin_memcmp"):  memcmp,
 		dict.SID("__builtin_memcpy"):  memcpy,
 		dict.SID("__builtin_memmove"): memmove,
@@ -22,9 +19,6 @@ func init() {
 		dict.SID("__builtin_strncmp"): strncmp,
 		dict.SID("__builtin_strncpy"): strncpy,
 		dict.SID("__builtin_strrchr"): strrchr,
-		dict.SID("ffs"):               ffs,
-		dict.SID("ffsl"):              ffsl,
-		dict.SID("ffsll"):             ffsll,
 		dict.SID("memcmp"):            memcmp,
 		dict.SID("memcpy"):            memcpy,
 		dict.SID("memmove"):           memmove,
@@ -39,48 +33,6 @@ func init() {
 		dict.SID("strncpy"):           strncpy,
 		dict.SID("strrchr"):           strrchr,
 	})
-}
-
-// int ffs(int i);
-func (c *cpu) ffs() {
-	i := readI32(c.sp)
-	if i == 0 {
-		writeI32(c.rp, 0)
-		return
-	}
-
-	var r int32
-	for ; r < 32 && i&(1<<uint(r)) == 0; r++ {
-	}
-	writeI32(c.rp, r+1)
-}
-
-// int ffsl(long i);
-func (c *cpu) ffsl() {
-	i := readLong(c.sp)
-	if i == 0 {
-		writeI32(c.rp, 0)
-		return
-	}
-
-	var r int32
-	for ; r < longBits && i&(1<<uint(r)) == 0; r++ {
-	}
-	writeI32(c.rp, r+1)
-}
-
-// int ffsll(long long i);
-func (c *cpu) ffsll() {
-	i := readI64(c.sp)
-	if i == 0 {
-		writeI32(c.rp, 0)
-		return
-	}
-
-	var r int32
-	for ; r < 64 && i&(1<<uint(r)) == 0; r++ {
-	}
-	writeI32(c.rp, r+1)
 }
 
 // int memcmp(const void *s1, const void *s2, size_t n)
