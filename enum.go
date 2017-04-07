@@ -340,8 +340,8 @@ const (
 	returnAddress
 	round
 	setjmp
-	sign_bit
-	sign_bitf
+	__signbit
+	__signbitf
 	sin
 	sinh
 	sprintf

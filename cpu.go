@@ -1626,10 +1626,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.returnAddress)
 		case alloca:
 			c.builtin(c.alloca)
-		case sign_bit:
-			c.builtin(c.sign_bit)
-		case sign_bitf:
-			c.builtin(c.sign_bitf)
+		case __signbit:
+			c.builtin(c.signbit)
+		case __signbitf:
+			c.builtin(c.signbitf)
 		case bswap64:
 			c.builtin(c.bswap64)
 		case frameAddress:
