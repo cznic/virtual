@@ -19,8 +19,12 @@ var (
 )
 
 // Exec runs the program in b and returns its exit status or an error, if any.
-func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int) (exitStatus int, err error) {
-	m, err := newMachine(b, heapSize, stdin, stdout, stderr)
+//
+// If a stack trace is produced on error, the PCInfo is interpreted relative to
+// tracePath and if a corresponding source file is available there the trace is
+// extended with the respective source code lines.
+func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int, tracePath string) (exitStatus int, err error) {
+	m, err := newMachine(b, heapSize, stdin, stdout, stderr, tracePath)
 	if err != nil {
 		return 0, err
 	}

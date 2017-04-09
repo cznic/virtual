@@ -5,8 +5,11 @@
 package virtual
 
 import (
+	"bytes"
 	"errors"
+	"io/ioutil"
 	"math"
+	"path/filepath"
 	"runtime/debug"
 
 	"github.com/cznic/internal/buffer"
@@ -107,7 +110,8 @@ func (c *cpu) stackTrace() (err error) {
 		}
 	}()
 
-	var buf buffer.Bytes
+	var buf, lbuf buffer.Bytes
+	m := map[string][][]byte{}
 	bp := c.bp
 	ip := c.ip - 1
 	sp := c.sp
@@ -127,7 +131,26 @@ func (c *cpu) stackTrace() (err error) {
 			}
 			fmt.Fprintf(&buf, ")\n")
 			fmt.Fprintf(&buf, "\t%s\t", li.Position())
-			dumpCode(&buf, c.code[ip:ip+1], int(ip))
+			dumpCode(&lbuf, c.code[ip:ip+1], int(ip))
+			b := lbuf.Bytes()
+			buf.Write(b[:len(b)-1])
+			lbuf.Reset()
+			src, ok := m[p.Filename]
+			if !ok {
+				f := p.Filename
+				if !filepath.IsAbs(f) {
+					f = filepath.Join(c.m.tracePath, p.Filename)
+				}
+				b, err := ioutil.ReadFile(f)
+				if err == nil {
+					src = bytes.Split(b, []byte{'\n'})
+				}
+				m[p.Filename] = src
+			}
+			if p.Line-1 < len(src) {
+				fmt.Fprintf(&buf, "\t// %s", bytes.TrimSpace(src[p.Line-1]))
+			}
+			buf.WriteByte('\n')
 		default:
 			dumpCode(&buf, c.code[ip:ip+1], int(ip))
 		}
@@ -1497,7 +1520,11 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case builtin:
 			var ip uintptr
 			c.sp, ip = popPtr(c.sp)
-			c.run(code)
+			es, err := c.run(code)
+			if err != nil {
+				return es, err
+			}
+
 			c.ip = ip
 
 		case printf:
@@ -1670,6 +1697,22 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.setjmp)
 		case longjmp:
 			c.builtin(c.longjmp)
+		case pthread_mutex_lock:
+			c.builtin(c.pthreadMutexLock)
+		case pthread_mutex_unlock:
+			c.builtin(c.pthreadMutexUnlock)
+		case pthread_mutexattr_init:
+			c.builtin(c.pthreadMutexAttrInit)
+		case pthread_mutexattr_settype:
+			c.builtin(c.pthreadMutexAttrSetType)
+		case pthread_mutex_init:
+			c.builtin(c.pthreadMutexInit)
+		case pthread_mutexattr_destroy:
+			c.builtin(c.pthreadMutexAttrDestroy)
+		case pthread_mutex_destroy:
+			c.builtin(c.pthreadMutexDestroy)
+		case lstat:
+			c.builtin(c.lstat)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

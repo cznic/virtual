@@ -11,7 +11,6 @@ import (
 func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("fcntl"): fcntl,
-		dict.SID("lstat"): lstat,
 		dict.SID("open"):  open,
 	})
 }

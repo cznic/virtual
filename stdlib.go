@@ -83,7 +83,11 @@ func (s *sorter) Less(i, j int) bool {
 	writePtr(c.sp, s.ptr(j))
 	// C callout
 	c.ip = s.compar
-	c.run(c.code)
+	_, err := c.run(c.code)
+	if err != nil {
+		panic(err)
+	}
+
 	// Pop result
 	r := readI32(c.sp)
 	c.sp += i32StackSz

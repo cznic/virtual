@@ -52,7 +52,7 @@ func init() {
 // ============================================================================
 
 func TestAbort(t *testing.T) {
-	m, err := newMachine(nil, 0, nil, nil, nil)
+	m, err := newMachine(nil, 0, nil, nil, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestAbort(t *testing.T) {
 }
 
 func TestExit(t *testing.T) {
-	m, err := newMachine(nil, 0, nil, nil, nil)
+	m, err := newMachine(nil, 0, nil, nil, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,7 +102,7 @@ func TestExit(t *testing.T) {
 }
 
 func TestKill(t *testing.T) {
-	m, err := newMachine(nil, 0, nil, nil, nil)
+	m, err := newMachine(nil, 0, nil, nil, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}

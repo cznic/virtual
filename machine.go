@@ -90,12 +90,13 @@ type machine struct {
 	stopped   bool
 	threads   []*thread
 	threadsMu sync.Mutex
+	tracePath string
 	ts        uintptr
 	tsFile    *os.File
 	tsMem     mmap.MMap
 }
 
-func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writer) (*machine, error) {
+func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writer, tracePath string) (*machine, error) {
 	var (
 		bssSize      int
 		data, text   []byte
@@ -168,18 +169,19 @@ func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writ
 	}
 
 	return &machine{
-		brk:     ds + uintptr(brk),
-		bss:     ds + uintptr(dsSize),
-		bssSize: bssSize,
-		ds:      ds,
-		dsMem:   dsMem,
-		stderr:  stderr,
-		stdin:   stdin,
-		stdout:  stdout,
-		stop:    make(chan struct{}),
-		ts:      ts,
-		tsFile:  tsFile,
-		tsMem:   tsMem,
+		brk:       ds + uintptr(brk),
+		bss:       ds + uintptr(dsSize),
+		bssSize:   bssSize,
+		ds:        ds,
+		dsMem:     dsMem,
+		stderr:    stderr,
+		stdin:     stdin,
+		stdout:    stdout,
+		stop:      make(chan struct{}),
+		tracePath: tracePath,
+		ts:        ts,
+		tsFile:    tsFile,
+		tsMem:     tsMem,
 	}, nil
 }
 
