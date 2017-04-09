@@ -6,10 +6,8 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_cimagf"): cimagf,
-		dict.SID("__builtin_crealf"): crealf,
-		dict.SID("cimagf"):           cimagf,
-		dict.SID("crealf"):           crealf,
+		dict.SID("cimagf"): cimagf,
+		dict.SID("crealf"): crealf,
 	})
 }
 

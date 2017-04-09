@@ -451,6 +451,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			v := readI8(c.sp)
 			c.sp -= i64StackSz - i8StackSz
 			writeI64(c.sp, int64(v))
+		case ConvI8F64:
+			v := readI8(c.sp)
+			c.sp -= f64StackSz - i8StackSz
+			writeF64(c.sp, float64(v))
 		case ConvU8I16:
 			writeI16(c.sp, int16(readU8(c.sp)))
 		case ConvU8I32:
@@ -778,6 +782,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			x := readI16(c.sp)
 			c.sp += i16StackSz
 			addPtr(c.sp, uintptr(op.N*int(x)))
+		case IndexU16: // addr, index -> addr + n*index
+			x := readU16(c.sp)
+			c.sp += i16StackSz
+			addPtr(c.sp, uintptr(op.N*int(x)))
 		case IndexI32: // addr, index -> addr + n*index
 			x := readI32(c.sp)
 			c.sp += i32StackSz
@@ -960,6 +968,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeF32(c.sp, -readF32(c.sp))
 		case NegF64: // a -> -a
 			writeF64(c.sp, -readF64(c.sp))
+		case NegIndexU16: // addr, index -> addr - n*index
+			x := readU16(c.sp)
+			c.sp += i16StackSz
+			addPtr(c.sp, uintptr(uint16(-op.N)*x))
 		case NegIndexU32: // addr, index -> addr - n*index
 			x := readU32(c.sp)
 			c.sp += i32StackSz

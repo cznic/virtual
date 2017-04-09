@@ -6,8 +6,7 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_alloca"): alloca,
-		dict.SID("alloca"):           alloca,
+		dict.SID("alloca"): alloca,
 	})
 }
 

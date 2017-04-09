@@ -10,8 +10,9 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_open"): open,
-		dict.SID("open"):           open,
+		dict.SID("fcntl"): fcntl,
+		dict.SID("lstat"): lstat,
+		dict.SID("open"):  open,
 	})
 }
 

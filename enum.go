@@ -84,6 +84,7 @@ const (
 	ConvI8I16
 	ConvI8I32
 	ConvI8I64
+	ConvI8F64
 	ConvI8U32
 	ConvU16I32
 	ConvU16I64
@@ -147,6 +148,7 @@ const (
 	GtU64
 	Index    // N
 	IndexI16 // N
+	IndexU16 // N
 	IndexI32 // N
 	IndexI64 // N
 	IndexI8  // N
@@ -194,6 +196,7 @@ const (
 	NegI8
 	NegIndexI32 // N
 	NegIndexI64 // N
+	NegIndexU16 // N
 	NegIndexU32 // N
 	NegIndexU64 // N
 	NeqC128
@@ -272,8 +275,11 @@ const (
 
 	// builtins
 
+	__signbit
+	__signbitf
 	abort
 	abs
+	access
 	acos
 	alloca
 	asin
@@ -297,10 +303,17 @@ const (
 	ctz
 	ctzl
 	ctzll
+	dlclose
+	dlerror
+	dlopen
+	dlsym
 	exit
 	exp
 	fabs
+	fchmod
+	fchown
 	fclose
+	fcntl
 	ffs
 	ffsl
 	ffsll
@@ -312,20 +325,34 @@ const (
 	frameAddress
 	fread
 	free
+	fstat
+	fsync
+	ftruncate
 	fwrite
+	getcwd
+	getenv
+	geteuid
+	getpid
+	gettimeofday
 	isinf
 	isinff
 	isinfl
 	isprint
+	localtime
 	log
 	log10
 	longjmp
+	lseek
+	lstat
 	malloc
 	memcmp
 	memcpy
 	memmove
 	mempcpy
 	memset
+	mkdir
+	mmap_
+	munmap
 	open
 	parity
 	parityl
@@ -335,17 +362,30 @@ const (
 	popcountll
 	pow
 	printf
+	pthread_create
+	pthread_join
+	pthread_mutex_destroy
+	pthread_mutex_init
+	pthread_mutex_lock
+	pthread_mutex_trylock
+	pthread_mutex_unlock
+	pthread_mutexattr_destroy
+	pthread_mutexattr_init
+	pthread_mutexattr_settype
 	qsort
 	read
+	readlink
+	realloc
 	returnAddress
+	rmdir
 	round
 	setjmp
-	__signbit
-	__signbitf
 	sin
 	sinh
+	sleep
 	sprintf
 	sqrt
+	stat
 	strcat
 	strchr
 	strcmp
@@ -354,9 +394,13 @@ const (
 	strncmp
 	strncpy
 	strrchr
+	sysconf
 	tan
 	tanh
+	time
 	tolower
+	unlink
+	utimes
 	vfprintf
 	vprintf
 	write

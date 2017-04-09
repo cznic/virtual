@@ -6,16 +6,11 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_ffs"):    ffs,
-		dict.SID("__builtin_ffsl"):   ffsl,
-		dict.SID("__builtin_ffsll"):  ffsll,
-		dict.SID("__builtin_index"):  strchr,
-		dict.SID("__builtin_rindex"): strrchr,
-		dict.SID("ffs"):              ffs,
-		dict.SID("ffsl"):             ffsl,
-		dict.SID("ffsll"):            ffsll,
-		dict.SID("index"):            strchr,
-		dict.SID("rindex"):           strrchr,
+		dict.SID("ffs"):    ffs,
+		dict.SID("ffsl"):   ffsl,
+		dict.SID("ffsll"):  ffsll,
+		dict.SID("index"):  strchr,
+		dict.SID("rindex"): strrchr,
 	})
 }
 

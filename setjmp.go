@@ -10,10 +10,8 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_longjmp"): longjmp,
-		dict.SID("__builtin_setjmp"):  setjmp,
-		dict.SID("longjmp"):           longjmp,
-		dict.SID("setjmp"):            setjmp,
+		dict.SID("longjmp"): longjmp,
+		dict.SID("setjmp"):  setjmp,
 	})
 }
 

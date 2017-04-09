@@ -13,12 +13,22 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_close"): close_,
-		dict.SID("__builtin_read"):  read,
-		dict.SID("__builtin_write"): write,
-		dict.SID("close"):           close_,
-		dict.SID("read"):            read,
-		dict.SID("write"):           write,
+		dict.SID("access"):    access,
+		dict.SID("close"):     close_,
+		dict.SID("fchown"):    fchown,
+		dict.SID("fsync"):     fsync,
+		dict.SID("ftruncate"): ftruncate,
+		dict.SID("getcwd"):    getcwd,
+		dict.SID("geteuid"):   geteuid,
+		dict.SID("getpid"):    getpid,
+		dict.SID("lseek"):     lseek,
+		dict.SID("read"):      read,
+		dict.SID("readlink"):  readlink,
+		dict.SID("rmdir"):     rmdir,
+		dict.SID("sleep"):     sleep,
+		dict.SID("sysconf"):   sysconf,
+		dict.SID("unlink"):    unlink,
+		dict.SID("write"):     write,
 	})
 }
 
