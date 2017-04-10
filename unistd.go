@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"syscall"
 	"unsafe"
 
 	"github.com/cznic/ccir/libc"
@@ -52,6 +53,16 @@ func (c *cpu) close() {
 	writeI32(c.rp, 0)
 }
 
+// int fsync(int fildes);
+func (c *cpu) fsync() {
+	fildes := readI32(c.sp)
+	r, _, err := syscall.Syscall(syscall.SYS_FSYNC, uintptr(fildes), 0, 0)
+	if err != 0 {
+		c.setErrno(err)
+	}
+	writeLong(c.rp, int64(r))
+}
+
 // char *getcwd(char *buf, size_t size);
 func (c *cpu) getcwd() {
 	sp, size := popLong(c.sp)
@@ -81,8 +92,23 @@ func (c *cpu) getcwd() {
 	writePtr(c.rp, buf)
 }
 
+// uid_t geteuid(void);
+func (c *cpu) geteuid() { writeU32(c.rp, uint32(syscall.Geteuid())) }
+
 // pid_t getpid(void);
 func (c *cpu) getpid() { writeI32(c.rp, int32(os.Getpid())) }
+
+// off_t lseek(int fildes, off_t offset, int whence);
+func (c *cpu) lseek() {
+	sp, whence := popI32(c.sp)
+	sp, offset := popLong(sp)
+	fildes := readI32(sp)
+	r, _, err := syscall.Syscall(syscall.SYS_LSEEK, uintptr(fildes), uintptr(offset), uintptr(whence))
+	if err != 0 {
+		c.setErrno(err)
+	}
+	writeLong(c.rp, int64(r))
+}
 
 // ssize_t read(int fd, void *buf, size_t count);
 func (c *cpu) read() {
@@ -103,6 +129,16 @@ func (c *cpu) read() {
 
 	c.thread.setErrno(err)
 	writeI32(c.rp, -1)
+}
+
+// int unlink(const char *path);
+func (c *cpu) unlink() {
+	path := readPtr(c.sp)
+	r, _, err := syscall.Syscall(syscall.SYS_UNLINK, path, 0, 0)
+	if err != 0 {
+		c.setErrno(err)
+	}
+	writeLong(c.rp, int64(r))
 }
 
 // ssize_t write(int fd, const void *buf, size_t count);

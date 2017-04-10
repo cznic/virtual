@@ -7,6 +7,7 @@ package virtual
 import (
 	"fmt"
 	"os"
+	"syscall"
 
 	"github.com/cznic/ccir/libc"
 )
@@ -23,19 +24,23 @@ func (c *cpu) fcntl() {
 	ap := c.rp - i32StackSz
 	fildes := readI32(ap)
 	ap -= i32StackSz
-	switch cmd := readI32(ap); cmd {
-	case libc.Fcntl_F_GETFD:
-		f := files.fdReader(uintptr(fildes), c)
-		if f == nil {
-			c.setErrno(libc.Errno_EBADF)
-			writeI32(c.rp, -1)
-			return
-		}
-
-		panic(fmt.Errorf("TODO35 %v", f.(*os.File).Name()))
-	default:
-		panic(fmt.Errorf("TODO37 %v %v", fildes, cmd))
+	cmd := readI32(ap)
+	ap -= i32StackSz
+	arg := readPtr(ap)
+	switch fildes {
+	case libc.Unistd_STDIN_FILENO:
+		panic(fmt.Errorf("TODO30 %v %v", fildes, cmd))
+	case libc.Unistd_STDOUT_FILENO:
+		panic(fmt.Errorf("TODO30 %v %v", fildes, cmd))
+	case libc.Unistd_STDERR_FILENO:
+		panic(fmt.Errorf("TODO30 %v %v", fildes, cmd))
 	}
+
+	r, _, err := syscall.Syscall(syscall.SYS_FCNTL, uintptr(fildes), uintptr(cmd), arg)
+	if r != 0 {
+		c.setErrno(err)
+	}
+	writeI32(c.rp, int32(r))
 }
 
 // int open(const char *pathname, int flags, ...);

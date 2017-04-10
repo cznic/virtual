@@ -141,3 +141,10 @@ func (c *cpu) qsort() {
 	sort.Sort(s)
 	c.ip = ip
 }
+
+// void *realloc(void *ptr, size_t size);
+func (c *cpu) realloc() {
+	sp, size := popLong(c.sp)
+	ptr := readPtr(sp)
+	writePtr(c.rp, c.m.realloc(ptr, int(size)))
+}

@@ -79,11 +79,11 @@ func (m *fmap) reader(u uintptr, c *cpu) io.Reader {
 
 func (m *fmap) fdReader(fd uintptr, c *cpu) io.Reader {
 	switch fd {
-	case 0:
+	case libc.Unistd_STDIN_FILENO:
 		return c.m.stdin
-	case 1:
+	case libc.Unistd_STDOUT_FILENO:
 		return ioutil.NopCloser(&bytes.Buffer{})
-	case 2:
+	case libc.Unistd_STDERR_FILENO:
 		return ioutil.NopCloser(&bytes.Buffer{})
 	}
 
@@ -110,11 +110,11 @@ func (m *fmap) writer(u uintptr, c *cpu) io.Writer {
 
 func (m *fmap) fdWriter(fd uintptr, c *cpu) io.Writer {
 	switch fd {
-	case 0:
+	case libc.Unistd_STDIN_FILENO:
 		return ioutil.Discard
-	case 1:
+	case libc.Unistd_STDOUT_FILENO:
 		return c.m.stdout
-	case 2:
+	case libc.Unistd_STDERR_FILENO:
 		return c.m.stderr
 	}
 

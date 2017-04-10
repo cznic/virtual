@@ -274,6 +274,16 @@ func (m *machine) malloc(n int) uintptr { //TODO real malloc
 	return 0
 }
 
+func (m *machine) realloc(p uintptr, n int) uintptr { //TODO real realloc
+	q := m.malloc(n)
+	if q == 0 {
+		return 0
+	}
+
+	movemem(q, p, n)
+	return q
+}
+
 func (m *machine) newThread(stackSize int) (*thread, error) {
 	stackSize = roundup(stackSize, mmapPage)
 	stackMem, err := mmap.MapRegion(nil, stackSize, mmap.RDWR, mmap.ANON, 0)

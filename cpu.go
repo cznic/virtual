@@ -1739,6 +1739,18 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.stat)
 		case fcntl:
 			c.builtin(c.fcntl)
+		case fstat:
+			c.builtin(c.fstat)
+		case lseek:
+			c.builtin(c.lseek)
+		case unlink:
+			c.builtin(c.unlink)
+		case realloc:
+			c.builtin(c.realloc)
+		case geteuid:
+			c.builtin(c.geteuid)
+		case fsync:
+			c.builtin(c.fsync)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())
