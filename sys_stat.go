@@ -7,7 +7,6 @@ package virtual
 import (
 	"fmt"
 	"os"
-	//"github.com/cznic/ccir/libc"
 )
 
 func init() {
@@ -26,13 +25,24 @@ func (c *cpu) lstat() {
 	file := GoString(readPtr(sp))
 	_, err := os.Lstat(file)
 	if err != nil {
-		switch {
-		case os.IsNotExist(err):
-			panic(fmt.Errorf("TODO 32 %q %#x", file, buf))
-			//TODO must set errno
-			//TODO writeI32(c.rp, libc.Xerrno_ENOENT)
-			//TODO return
-		}
+		c.thread.setErrno(err)
+		writeI32(c.rp, -1)
+		return
 	}
-	panic(fmt.Errorf("TODO 33 %q %#x", file, buf))
+
+	panic(fmt.Errorf("TODO 34 %q %#x", file, buf))
+}
+
+// extern int stat(char *__file, struct stat *__buf);
+func (c *cpu) stat() {
+	sp, buf := popPtr(c.sp)
+	file := GoString(readPtr(sp))
+	_, err := os.Stat(file)
+	if err != nil {
+		c.thread.setErrno(err)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	panic(fmt.Errorf("TODO 34 %q %#x", file, buf))
 }

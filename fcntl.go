@@ -5,7 +5,10 @@
 package virtual
 
 import (
+	"fmt"
 	"os"
+
+	"github.com/cznic/ccir/libc"
 )
 
 func init() {
@@ -13,6 +16,26 @@ func init() {
 		dict.SID("fcntl"): fcntl,
 		dict.SID("open"):  open,
 	})
+}
+
+// int fcntl(int fildes, int cmd, ...);
+func (c *cpu) fcntl() {
+	ap := c.rp - i32StackSz
+	fildes := readI32(ap)
+	ap -= i32StackSz
+	switch cmd := readI32(ap); cmd {
+	case libc.Fcntl_F_GETFD:
+		f := files.fdReader(uintptr(fildes), c)
+		if f == nil {
+			c.setErrno(libc.Errno_EBADF)
+			writeI32(c.rp, -1)
+			return
+		}
+
+		panic(fmt.Errorf("TODO35 %v", f.(*os.File).Name()))
+	default:
+		panic(fmt.Errorf("TODO37 %v %v", fildes, cmd))
+	}
 }
 
 // int open(const char *pathname, int flags, ...);

@@ -19,6 +19,8 @@ var (
 )
 
 // Exec runs the program in b and returns its exit status or an error, if any.
+// It's the caller responsibility to ensure the binary was produced for this
+// architecture and platform.
 //
 // If a stack trace is produced on error, the PCInfo is interpreted relative to
 // tracePath and if a corresponding source file is available there the trace is

@@ -270,6 +270,9 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			dlerror,
 			dlopen,
 			dlsym,
+			__signbit,
+			__signbitf,
+			errno_location,
 			exp,
 			fabs,
 			fchmod,
@@ -311,8 +314,6 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			memcpy,
 			memmove,
 			mempcpy,
-			__signbit,
-			__signbitf,
 			memset,
 			mkdir,
 			mmap_,
@@ -588,7 +589,11 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
 				return err
 			}
-		case exit, abort, FFIReturn, Return:
+		case exit, abort:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n\n\n", start+i, width, "#"+lo); err != nil {
+				return err
+			}
+		case FFIReturn, Return:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n\n\n", start+i, width, lo); err != nil {
 				return err
 			}

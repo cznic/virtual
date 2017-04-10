@@ -307,6 +307,7 @@ const (
 	dlerror
 	dlopen
 	dlsym
+	errno_location
 	exit
 	exp
 	fabs

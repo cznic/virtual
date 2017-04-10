@@ -76,14 +76,11 @@ type Binary struct {
 	Data       []byte
 	Functions  []PCInfo
 	Lines      []PCInfo
-	Model      string
 	TSRelative []byte // Bit vector of text segment-relative pointers in Data.
 	Text       []byte
 }
 
-func newBinary(model string) *Binary {
-	return &Binary{Model: model}
-}
+func newBinary() *Binary { return &Binary{} }
 
 type nfo struct {
 	off int
@@ -112,17 +109,13 @@ type loader struct {
 	wstrings    map[ir.StringID]int
 }
 
-func newLoader(modelName string, objects []ir.Object) *loader {
-	model, ok := ir.MemoryModels[modelName]
-	if !ok {
-		panic(fmt.Errorf("unknown memory model %q", modelName))
+func newLoader(objects []ir.Object) *loader {
+	model, err := ir.NewMemoryModel()
+	if err != nil {
+		panic(err)
 	}
 
-	ptrItem, ok := model[ir.Pointer]
-	if !ok {
-		panic(fmt.Errorf("invalid memory model %q, missing item for pointer", modelName))
-	}
-
+	ptrItem, _ := model[ir.Pointer]
 	return &loader{
 		csLabels:    map[int]*ir.AddressValue{},
 		dsLabels:    map[int]*ir.AddressValue{},
@@ -130,7 +123,7 @@ func newLoader(modelName string, objects []ir.Object) *loader {
 		model:       model,
 		namedLabels: map[labelNfo]int{},
 		objects:     objects,
-		out:         newBinary(modelName),
+		out:         newBinary(),
 		prev:        Operation{Opcode: -1},
 		ptrSize:     int(ptrItem.Size),
 		stackAlign:  int(ptrItem.Align),
@@ -2391,7 +2384,9 @@ func (l *loader) load() error {
 }
 
 // LoadMain translates program in objects into a Binary or an error, if any.
-func LoadMain(model string, objects []ir.Object) (_ *Binary, err error) {
+// It's the caller responsibility to ensure the objects were produced for this
+// architecture and platform.
+func LoadMain(objects []ir.Object) (_ *Binary, err error) {
 	if !Testing {
 		defer func() {
 			switch x := recover().(type) {
@@ -2403,7 +2398,7 @@ func LoadMain(model string, objects []ir.Object) (_ *Binary, err error) {
 		}()
 	}
 
-	l := newLoader(model, objects)
+	l := newLoader(objects)
 	if err := l.load(); err != nil {
 		return nil, err
 	}

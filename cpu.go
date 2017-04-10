@@ -9,8 +9,10 @@ import (
 	"errors"
 	"io/ioutil"
 	"math"
+	"os"
 	"path/filepath"
 	"runtime/debug"
+	"syscall"
 
 	"github.com/cznic/internal/buffer"
 )
@@ -47,6 +49,7 @@ type cpu struct {
 
 	code    []Operation
 	ds      uintptr // Data segment
+	errno   uintptr // errno_location
 	fpStack []uintptr
 	m       *machine
 	rpStack []uintptr
@@ -101,6 +104,19 @@ func (c *cpu) builtin(f func()) {
 	c.sp = c.rp
 	c.rp = c.rpStack[n-1]
 	c.rpStack = c.rpStack[:n-1]
+}
+
+func (c *cpu) setErrno(err interface{}) {
+	switch x := err.(type) {
+	case int:
+		writeI32(c.errno, int32(x))
+	case *os.PathError:
+		c.setErrno(x.Err)
+	case syscall.Errno:
+		writeI32(c.errno, int32(x))
+	default:
+		panic(fmt.Errorf("TODO %T(%#v)", x, x))
+	}
 }
 
 func (c *cpu) stackTrace() (err error) {
@@ -159,7 +175,7 @@ func (c *cpu) stackTrace() (err error) {
 		sp += ptrStackSz
 		ap = readPtr(sp)
 		sp += ptrStackSz
-		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem) || bp == 0 || sp == 0 || ap == 0 {
+		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem)-ptrStackSz || bp == 0 || sp == 0 || ap == 0 {
 			break
 		}
 
@@ -1713,6 +1729,16 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.pthreadMutexDestroy)
 		case lstat:
 			c.builtin(c.lstat)
+		case errno_location:
+			c.builtin(c.errnoLocation)
+		case getcwd:
+			c.builtin(c.getcwd)
+		case getpid:
+			c.builtin(c.getpid)
+		case stat:
+			c.builtin(c.stat)
+		case fcntl:
+			c.builtin(c.fcntl)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

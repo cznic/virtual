@@ -12,7 +12,6 @@ import (
 	"os"
 	"sort"
 	"sync"
-	"syscall"
 	"unsafe"
 
 	"github.com/cznic/internal/buffer"
@@ -287,7 +286,7 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 		cpu: cpu{
 			jmpBuf: jmpBuf{
 				bp: 0xdeadbeef,
-				sp: ss + uintptr(stackSize),
+				sp: ss + uintptr(stackSize) - ptrSize,
 			},
 			ds:   m.ds,
 			m:    m,
@@ -297,7 +296,9 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 		ss:       ss,
 		stackMem: stackMem,
 	}
-	t.cpu.thread = t
+	t.errno = t.cpu.sp
+	t.setErrno(0)
+	t.thread = t
 	m.threadsMu.Lock()
 	m.threads = append(m.threads, t)
 	m.threadsMu.Unlock()
@@ -311,20 +312,8 @@ func (m *machine) sbrk(n int) uintptr {
 
 type thread struct {
 	cpu
-	errno    int32
 	ss       uintptr // Stack segment
 	stackMem mmap.MMap
 }
 
 func (t *thread) close() error { return t.stackMem.Unmap() }
-
-func (t *thread) setErrno(err error) {
-	switch x := err.(type) {
-	case *os.PathError:
-		t.setErrno(x.Err)
-	case syscall.Errno:
-		t.errno = int32(x)
-	default:
-		panic(fmt.Errorf("TODO %T(%#v)", x, x))
-	}
-}

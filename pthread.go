@@ -73,11 +73,11 @@ func (c *cpu) pthreadMutexInit() {
 func (c *cpu) pthreadMutexLock() {
 	mu := mutexes.mu(readPtr(c.sp))
 	switch mu.attr {
-	case libc.Xpthread_PTHREAD_MUTEX_NORMAL:
+	case libc.Pthread_PTHREAD_MUTEX_NORMAL:
 		mu.Lock()
 		mu.t = c.thread
 		mu.cnt = 0
-	case libc.Xpthread_PTHREAD_MUTEX_RECURSIVE:
+	case libc.Pthread_PTHREAD_MUTEX_RECURSIVE:
 		switch {
 		case c.thread == mu.t:
 			mu.cnt++
@@ -97,7 +97,7 @@ func (c *cpu) pthreadMutexUnlock() {
 	mu := mutexes.mu(readPtr(c.sp))
 	var r int32
 	switch mu.attr {
-	case libc.Xpthread_PTHREAD_MUTEX_NORMAL:
+	case libc.Pthread_PTHREAD_MUTEX_NORMAL:
 		switch {
 		case c.thread == mu.t:
 			mu.Unlock()
@@ -105,7 +105,7 @@ func (c *cpu) pthreadMutexUnlock() {
 		default:
 			panic("TODO")
 		}
-	case libc.Xpthread_PTHREAD_MUTEX_RECURSIVE:
+	case libc.Pthread_PTHREAD_MUTEX_RECURSIVE:
 		switch {
 		case c.thread == mu.t:
 			mu.cnt--

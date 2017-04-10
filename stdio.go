@@ -13,9 +13,9 @@ import (
 	"os"
 	"sync"
 
-	"syscall"
 	"unsafe"
 
+	"github.com/cznic/ccir/libc"
 	"github.com/cznic/internal/buffer"
 	"github.com/cznic/mathutil"
 )
@@ -147,15 +147,15 @@ func (c *cpu) fclose() {
 	u := readPtr(c.sp)
 	f := files.extract(readPtr(u))
 	if f == nil {
-		c.thread.errno = int32(syscall.EBADF)
-		writeI32(c.rp, eof)
+		writeI32(c.thread.errno, libc.Errno_EBADF)
+		writeI32(c.rp, libc.Stdio_EOF)
 		return
 	}
 
 	c.m.free(u)
 	if err := f.Close(); err != nil {
-		c.thread.errno = int32(syscall.EIO)
-		writeI32(c.rp, eof)
+		writeI32(c.thread.errno, libc.Errno_EIO)
+		writeI32(c.rp, libc.Stdio_EOF)
 		return
 	}
 
@@ -229,11 +229,11 @@ func (c *cpu) fopen() {
 			if f, err = os.OpenFile(p, os.O_RDONLY, 0666); err != nil {
 				switch {
 				case os.IsNotExist(err):
-					c.thread.errno = int32(syscall.ENOENT)
+					writeI32(c.thread.errno, libc.Errno_ENOENT)
 				case os.IsPermission(err):
-					c.thread.errno = int32(syscall.EPERM)
+					writeI32(c.thread.errno, libc.Errno_EPERM)
 				default:
-					c.thread.errno = int32(syscall.EACCES)
+					writeI32(c.thread.errno, libc.Errno_EACCES)
 				}
 				writePtr(c.rp, 0)
 				return
@@ -242,9 +242,9 @@ func (c *cpu) fopen() {
 			if f, err = os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
 				switch {
 				case os.IsPermission(err):
-					c.thread.errno = int32(syscall.EPERM)
+					writeI32(c.thread.errno, libc.Errno_EPERM)
 				default:
-					c.thread.errno = int32(syscall.EACCES)
+					writeI32(c.thread.errno, libc.Errno_EACCES)
 				}
 				writePtr(c.rp, 0)
 				return
@@ -278,14 +278,14 @@ func (c *cpu) fread() {
 	ptr := readPtr(sp)
 	hi, lo := mathutil.MulUint128_64(uint64(size), uint64(nmemb))
 	if hi != 0 || lo > math.MaxInt32 {
-		c.thread.errno = int32(syscall.E2BIG)
+		writeI32(c.thread.errno, libc.Errno_E2BIG)
 		writeULong(c.rp, 0)
 		return
 	}
 
 	n, err := files.reader(stream, c).Read((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
 	if err != nil {
-		c.thread.errno = int32(syscall.EIO)
+		writeI32(c.thread.errno, libc.Errno_EIO)
 	}
 	writeLong(c.rp, int64(n)/size)
 }
@@ -298,14 +298,14 @@ func (c *cpu) fwrite() {
 	ptr := readPtr(sp)
 	hi, lo := mathutil.MulUint128_64(uint64(size), uint64(nmemb))
 	if hi != 0 || lo > math.MaxInt32 {
-		c.thread.errno = int32(syscall.E2BIG)
+		writeI32(c.thread.errno, libc.Errno_E2BIG)
 		writeULong(c.rp, 0)
 		return
 	}
 
 	n, err := files.writer(stream, c).Write((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
 	if err != nil {
-		c.thread.errno = int32(syscall.EIO)
+		writeI32(c.thread.errno, libc.Errno_EIO)
 	}
 	writeLong(c.rp, int64(n)/size)
 }
