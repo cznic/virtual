@@ -49,12 +49,12 @@ type cpu struct {
 
 	code    []Operation
 	ds      uintptr // Data segment
-	errno   uintptr // errno_location
 	fpStack []uintptr
 	m       *machine
 	rpStack []uintptr
 	stop    chan struct{}
 	thread  *thread
+	tls     uintptr
 	ts      uintptr // Text segment
 }
 
@@ -109,11 +109,11 @@ func (c *cpu) builtin(f func()) {
 func (c *cpu) setErrno(err interface{}) {
 	switch x := err.(type) {
 	case int:
-		writeI32(c.errno, int32(x))
+		writeI32(c.tls+unsafe.Offsetof(tls{}.errno), int32(x))
 	case *os.PathError:
 		c.setErrno(x.Err)
 	case syscall.Errno:
-		writeI32(c.errno, int32(x))
+		writeI32(c.tls+unsafe.Offsetof(tls{}.errno), int32(x))
 	default:
 		panic(fmt.Errorf("TODO %T(%#v)", x, x))
 	}
@@ -175,7 +175,7 @@ func (c *cpu) stackTrace() (err error) {
 		sp += ptrStackSz
 		ap = readPtr(sp)
 		sp += ptrStackSz
-		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem)-ptrStackSz || bp == 0 || sp == 0 || ap == 0 {
+		if i := sp - c.thread.ss; int(i) >= len(c.thread.stackMem)-int(tlsStackSize) || bp == 0 || sp == 0 || ap == 0 {
 			break
 		}
 

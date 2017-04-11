@@ -28,7 +28,6 @@ func init() {
 		dict.SID("fopen"):    fopen,
 		dict.SID("fprintf"):  fprintf,
 		dict.SID("fread"):    fread,
-		dict.SID("free"):     free,
 		dict.SID("fwrite"):   fwrite,
 		dict.SID("printf"):   printf,
 		dict.SID("sprintf"):  sprintf,
@@ -36,8 +35,6 @@ func init() {
 		dict.SID("vprintf"):  vprintf,
 	})
 }
-
-const eof = -1
 
 var (
 	files = &fmap{
@@ -147,14 +144,14 @@ func (c *cpu) fclose() {
 	u := readPtr(c.sp)
 	f := files.extract(readPtr(u))
 	if f == nil {
-		writeI32(c.thread.errno, libc.Errno_EBADF)
+		c.setErrno(libc.Errno_EBADF)
 		writeI32(c.rp, libc.Stdio_EOF)
 		return
 	}
 
 	c.m.free(u)
 	if err := f.Close(); err != nil {
-		writeI32(c.thread.errno, libc.Errno_EIO)
+		c.setErrno(libc.Errno_EIO)
 		writeI32(c.rp, libc.Stdio_EOF)
 		return
 	}
@@ -166,7 +163,7 @@ func (c *cpu) fclose() {
 func (c *cpu) fgetc() {
 	p := buffer.Get(1)
 	if _, err := files.reader(readPtr(c.sp), c).Read(*p); err != nil {
-		writeI32(c.rp, eof)
+		writeI32(c.rp, libc.Stdio_EOF)
 		buffer.Put(p)
 		return
 	}
@@ -229,11 +226,11 @@ func (c *cpu) fopen() {
 			if f, err = os.OpenFile(p, os.O_RDONLY, 0666); err != nil {
 				switch {
 				case os.IsNotExist(err):
-					writeI32(c.thread.errno, libc.Errno_ENOENT)
+					c.setErrno(libc.Errno_ENOENT)
 				case os.IsPermission(err):
-					writeI32(c.thread.errno, libc.Errno_EPERM)
+					c.setErrno(libc.Errno_EPERM)
 				default:
-					writeI32(c.thread.errno, libc.Errno_EACCES)
+					c.setErrno(libc.Errno_EACCES)
 				}
 				writePtr(c.rp, 0)
 				return
@@ -242,9 +239,9 @@ func (c *cpu) fopen() {
 			if f, err = os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
 				switch {
 				case os.IsPermission(err):
-					writeI32(c.thread.errno, libc.Errno_EPERM)
+					c.setErrno(libc.Errno_EPERM)
 				default:
-					writeI32(c.thread.errno, libc.Errno_EACCES)
+					c.setErrno(libc.Errno_EACCES)
 				}
 				writePtr(c.rp, 0)
 				return
@@ -278,14 +275,14 @@ func (c *cpu) fread() {
 	ptr := readPtr(sp)
 	hi, lo := mathutil.MulUint128_64(uint64(size), uint64(nmemb))
 	if hi != 0 || lo > math.MaxInt32 {
-		writeI32(c.thread.errno, libc.Errno_E2BIG)
+		c.setErrno(libc.Errno_E2BIG)
 		writeULong(c.rp, 0)
 		return
 	}
 
 	n, err := files.reader(stream, c).Read((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
 	if err != nil {
-		writeI32(c.thread.errno, libc.Errno_EIO)
+		c.setErrno(libc.Errno_EIO)
 	}
 	writeLong(c.rp, int64(n)/size)
 }
@@ -298,14 +295,14 @@ func (c *cpu) fwrite() {
 	ptr := readPtr(sp)
 	hi, lo := mathutil.MulUint128_64(uint64(size), uint64(nmemb))
 	if hi != 0 || lo > math.MaxInt32 {
-		writeI32(c.thread.errno, libc.Errno_E2BIG)
+		c.setErrno(libc.Errno_E2BIG)
 		writeULong(c.rp, 0)
 		return
 	}
 
 	n, err := files.writer(stream, c).Write((*[math.MaxInt32]byte)(unsafe.Pointer(ptr))[:lo])
 	if err != nil {
-		writeI32(c.thread.errno, libc.Errno_EIO)
+		c.setErrno(libc.Errno_EIO)
 	}
 	writeLong(c.rp, int64(n)/size)
 }

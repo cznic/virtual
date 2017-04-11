@@ -28,6 +28,7 @@ func init() {
 		dict.SID("__builtin_popcountl"):      popcountl,
 		dict.SID("__builtin_popcountll"):     popcountll,
 		dict.SID("__builtin_return_address"): returnAddress,
+		dict.SID("__builtin_trap"):           abort,
 	})
 }
 

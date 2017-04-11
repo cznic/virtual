@@ -4,6 +4,10 @@
 
 package virtual
 
+import (
+	"unsafe"
+)
+
 func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("__errno_location"): errno_location,
@@ -11,4 +15,4 @@ func init() {
 }
 
 // extern int *__errno_location(void);
-func (c *cpu) errnoLocation() { writePtr(c.rp, c.errno) }
+func (c *cpu) errnoLocation() { writePtr(c.rp, c.tls+unsafe.Offsetof(tls{}.errno)) }

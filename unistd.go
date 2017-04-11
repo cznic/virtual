@@ -39,13 +39,13 @@ func init() {
 func (c *cpu) close() {
 	f := files.extractFd(uintptr(readI32(c.sp)))
 	if f == nil {
-		writeI32(c.thread.errno, libc.Errno_EBADF)
-		writeI32(c.rp, eof)
+		c.setErrno(libc.Errno_EBADF)
+		writeI32(c.rp, -1)
 		return
 	}
 
 	if err := f.Close(); err != nil {
-		writeI32(c.thread.errno, libc.Errno_EIO)
+		c.setErrno(libc.Errno_EIO)
 		writeI32(c.rp, -1)
 		return
 	}
@@ -149,7 +149,7 @@ func (c *cpu) write() {
 	f := files.fdWriter(uintptr(fd), c)
 	n, err := f.Write((*[math.MaxInt32]byte)(unsafe.Pointer(buf))[:count])
 	if err != nil {
-		writeI32(c.thread.errno, libc.Errno_EIO)
+		c.setErrno(libc.Errno_EIO)
 	}
 	writeULong(c.rp, uint64(n))
 }

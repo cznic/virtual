@@ -20,21 +20,22 @@ import (
 )
 
 const (
-	c128StackSz = (16 + stackAlign - 1) &^ (stackAlign - 1)
-	c64StackSz  = f64StackSz
-	f32StackSz  = i32StackSz
-	f64StackSz  = i64StackSz
-	i16StackSz  = (2 + stackAlign - 1) &^ (stackAlign - 1)
-	i32StackSz  = (4 + stackAlign - 1) &^ (stackAlign - 1)
-	i64StackSz  = (8 + stackAlign - 1) &^ (stackAlign - 1)
-	i8StackSz   = (1 + stackAlign - 1) &^ (stackAlign - 1)
-	intSize     = mathutil.IntBits / 8
-	longStackSz = (longBits/8 + stackAlign - 1) &^ (stackAlign - 1)
-	mallocAlign = ptrSize
-	mmapPage    = 1 << 16
-	ptrSize     = mathutil.UintPtrBits / 8
-	ptrStackSz  = (ptrSize + stackAlign - 1) &^ (stackAlign - 1)
-	stackAlign  = ptrSize
+	c128StackSz  = (16 + stackAlign - 1) &^ (stackAlign - 1)
+	c64StackSz   = f64StackSz
+	f32StackSz   = i32StackSz
+	f64StackSz   = i64StackSz
+	i16StackSz   = (2 + stackAlign - 1) &^ (stackAlign - 1)
+	i32StackSz   = (4 + stackAlign - 1) &^ (stackAlign - 1)
+	i64StackSz   = (8 + stackAlign - 1) &^ (stackAlign - 1)
+	i8StackSz    = (1 + stackAlign - 1) &^ (stackAlign - 1)
+	intSize      = mathutil.IntBits / 8
+	longStackSz  = (longBits/8 + stackAlign - 1) &^ (stackAlign - 1)
+	mallocAlign  = ptrSize
+	mmapPage     = 1 << 16
+	ptrSize      = mathutil.UintPtrBits / 8
+	ptrStackSz   = (ptrSize + stackAlign - 1) &^ (stackAlign - 1)
+	stackAlign   = ptrSize
+	tlsStackSize = (unsafe.Sizeof(tls{}) + stackAlign - 1) &^ (stackAlign - 1)
 )
 
 type memWriter uintptr
@@ -296,7 +297,7 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 		cpu: cpu{
 			jmpBuf: jmpBuf{
 				bp: 0xdeadbeef,
-				sp: ss + uintptr(stackSize) - ptrSize,
+				sp: ss + uintptr(stackSize) - tlsStackSize,
 			},
 			ds:   m.ds,
 			m:    m,
@@ -306,7 +307,7 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 		ss:       ss,
 		stackMem: stackMem,
 	}
-	t.errno = t.cpu.sp
+	t.tls = t.cpu.sp
 	t.setErrno(0)
 	t.thread = t
 	m.threadsMu.Lock()
@@ -327,3 +328,7 @@ type thread struct {
 }
 
 func (t *thread) close() error { return t.stackMem.Unmap() }
+
+type tls struct {
+	errno int32
+}

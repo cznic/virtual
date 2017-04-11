@@ -12,15 +12,15 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__builtin_trap"): abort,
-		dict.SID("abort"):          abort,
-		dict.SID("abs"):            abs,
-		dict.SID("calloc"):         calloc,
-		dict.SID("exit"):           exit,
-		dict.SID("getenv"):         getenv,
-		dict.SID("malloc"):         malloc,
-		dict.SID("qsort"):          qsort,
-		dict.SID("realloc"):        realloc,
+		dict.SID("abort"):   abort,
+		dict.SID("abs"):     abs,
+		dict.SID("calloc"):  calloc,
+		dict.SID("exit"):    exit,
+		dict.SID("free"):    free,
+		dict.SID("getenv"):  getenv,
+		dict.SID("malloc"):  malloc,
+		dict.SID("qsort"):   qsort,
+		dict.SID("realloc"): realloc,
 	})
 }
 
