@@ -351,6 +351,7 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			sprintf,
 			sqrt,
 			stat,
+			register_stdfiles,
 			strcat,
 			strchr,
 			strcmp,

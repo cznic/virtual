@@ -46,6 +46,9 @@ func (c *cpu) calloc() {
 	writePtr(c.rp, p)
 }
 
+// void free(void *ptr);
+func (c *cpu) free() { c.m.free(readPtr(c.rp - ptrStackSz)) }
+
 // void *malloc(size_t size);
 func (c *cpu) malloc() {
 	size := readLong(c.sp)

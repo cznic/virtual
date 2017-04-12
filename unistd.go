@@ -5,13 +5,7 @@
 package virtual
 
 import (
-	"io"
-	"math"
-	"os"
 	"syscall"
-	"unsafe"
-
-	"github.com/cznic/ccir/libc"
 )
 
 func init() {
@@ -37,20 +31,12 @@ func init() {
 
 // int close(int fd);
 func (c *cpu) close() {
-	f := files.extractFd(uintptr(readI32(c.sp)))
-	if f == nil {
-		c.setErrno(libc.Errno_EBADF)
-		writeI32(c.rp, -1)
-		return
+	fd := readI32(c.sp)
+	r, _, err := syscall.Syscall(syscall.SYS_CLOSE, uintptr(fd), 0, 0)
+	if err != 0 {
+		c.setErrno(err)
 	}
-
-	if err := f.Close(); err != nil {
-		c.setErrno(libc.Errno_EIO)
-		writeI32(c.rp, -1)
-		return
-	}
-
-	writeI32(c.rp, 0)
+	writeI32(c.rp, int32(r))
 }
 
 // int fsync(int fildes);
@@ -60,43 +46,31 @@ func (c *cpu) fsync() {
 	if err != 0 {
 		c.setErrno(err)
 	}
-	writeLong(c.rp, int64(r))
+	writeI32(c.rp, int32(r))
 }
 
 // char *getcwd(char *buf, size_t size);
 func (c *cpu) getcwd() {
 	sp, size := popLong(c.sp)
-	if size == 0 {
-		c.setErrno(libc.Errno_EINVAL)
-		writePtr(c.rp, 0)
-		return
-	}
-
 	buf := readPtr(sp)
-	cwd, err := os.Getwd()
-	if err != nil {
+	r, _, err := syscall.Syscall(syscall.SYS_GETCWD, buf, uintptr(size), 0)
+	if err != 0 {
 		c.setErrno(err)
-		writePtr(c.rp, 0)
-		return
 	}
-
-	if int64(len(cwd)+1) > int64(size) {
-		c.setErrno(libc.Errno_ERANGE)
-		writePtr(c.rp, 0)
-		return
-	}
-
-	b := []byte(cwd)
-	movemem(buf, uintptr(unsafe.Pointer(&b[0])), len(b))
-	writeI8(buf+uintptr(len(cwd)), 0)
-	writePtr(c.rp, buf)
+	writePtr(c.rp, r)
 }
 
 // uid_t geteuid(void);
-func (c *cpu) geteuid() { writeU32(c.rp, uint32(syscall.Geteuid())) }
+func (c *cpu) geteuid() {
+	r, _, _ := syscall.RawSyscall(syscall.SYS_GETEUID, 0, 0, 0)
+	writeU32(c.rp, uint32(r))
+}
 
 // pid_t getpid(void);
-func (c *cpu) getpid() { writeI32(c.rp, int32(os.Getpid())) }
+func (c *cpu) getpid() {
+	r, _, _ := syscall.RawSyscall(syscall.SYS_GETPID, 0, 0, 0)
+	writeI32(c.rp, int32(r))
+}
 
 // off_t lseek(int fildes, off_t offset, int whence);
 func (c *cpu) lseek() {
@@ -115,20 +89,11 @@ func (c *cpu) read() {
 	sp, count := popLong(c.sp)
 	sp, buf := popPtr(sp)
 	fd := readI32(sp)
-	f := files.fdReader(uintptr(fd), c)
-	n, err := f.Read((*[math.MaxInt32]byte)(unsafe.Pointer(buf))[:count])
-	if n != 0 {
-		writeULong(c.rp, uint64(n))
-		return
+	r, _, err := syscall.Syscall(syscall.SYS_READ, uintptr(fd), buf, uintptr(count))
+	if err != 0 {
+		c.thread.setErrno(err)
 	}
-
-	if err == io.EOF {
-		writeULong(c.rp, 0)
-		return
-	}
-
-	c.thread.setErrno(err)
-	writeI32(c.rp, -1)
+	writeLong(c.rp, int64(r))
 }
 
 // int unlink(const char *path);
@@ -138,7 +103,7 @@ func (c *cpu) unlink() {
 	if err != 0 {
 		c.setErrno(err)
 	}
-	writeLong(c.rp, int64(r))
+	writeI32(c.rp, int32(r))
 }
 
 // ssize_t write(int fd, const void *buf, size_t count);
@@ -146,10 +111,9 @@ func (c *cpu) write() {
 	sp, count := popLong(c.sp)
 	sp, buf := popPtr(sp)
 	fd := readI32(sp)
-	f := files.fdWriter(uintptr(fd), c)
-	n, err := f.Write((*[math.MaxInt32]byte)(unsafe.Pointer(buf))[:count])
-	if err != nil {
-		c.setErrno(libc.Errno_EIO)
+	r, _, err := syscall.Syscall(syscall.SYS_WRITE, uintptr(fd), buf, uintptr(count))
+	if err != 0 {
+		c.thread.setErrno(err)
 	}
-	writeULong(c.rp, uint64(n))
+	writeLong(c.rp, int64(r))
 }

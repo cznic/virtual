@@ -1543,8 +1543,6 @@ func (c *cpu) run(code []Operation) (int, error) {
 
 			c.ip = ip
 
-		case printf:
-			c.builtin(c.printf)
 		case sinh:
 			c.builtin(c.sinh)
 		case cosh:
@@ -1603,22 +1601,6 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.memcpy)
 		case memcmp:
 			c.builtin(c.memcmp)
-		case sprintf:
-			c.builtin(c.sprintf)
-		case fopen:
-			c.builtin(c.fopen)
-		case fwrite:
-			c.builtin(c.fwrite)
-		case fclose:
-			c.builtin(c.fclose)
-		case fread:
-			c.builtin(c.fread)
-		case fgetc:
-			c.builtin(c.fgetc)
-		case fgets:
-			c.builtin(c.fgets)
-		case fprintf:
-			c.builtin(c.fprintf)
 		case tolower:
 			c.builtin(c.tolower)
 		case malloc:
@@ -1665,12 +1647,6 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.parityl)
 		case parityll:
 			c.builtin(c.parityll)
-		case vfprintf:
-			c.builtin(c.vfprintf)
-		case vprintf:
-			c.builtin(c.vprintf)
-		case free:
-			c.builtin(c.free)
 		case isinf:
 			c.builtin(c.isinf)
 		case isinff:
@@ -1695,20 +1671,12 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.cimagf)
 		case crealf:
 			c.builtin(c.crealf)
-		case write:
-			c.builtin(c.write)
 		case mempcpy:
 			c.builtin(c.mempcpy)
 		case memmove:
 			c.builtin(c.memmove)
-		case open:
-			c.builtin(c.open)
-		case read:
-			c.builtin(c.read)
 		case qsort:
 			c.builtin(c.qsort)
-		case close_:
-			c.builtin(c.close)
 		case setjmp:
 			c.builtin(c.setjmp)
 		case longjmp:
@@ -1727,30 +1695,64 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.pthreadMutexAttrDestroy)
 		case pthread_mutex_destroy:
 			c.builtin(c.pthreadMutexDestroy)
-		case lstat:
-			c.builtin(c.lstat)
 		case errno_location:
 			c.builtin(c.errnoLocation)
+		case realloc:
+			c.builtin(c.realloc)
+		case register_stdfiles:
+			c.builtin(c.register_stdfiles)
+		case printf:
+			c.builtin(c.printf)
+		case sprintf:
+			c.builtin(c.sprintf)
+		case fopen:
+			c.builtin(c.fopen)
+		case fwrite:
+			c.builtin(c.fwrite)
+		case fclose:
+			c.builtin(c.fclose)
+		case fread:
+			c.builtin(c.fread)
+		case fgetc:
+			c.builtin(c.fgetc)
+		case fgets:
+			c.builtin(c.fgets)
+		case fprintf:
+			c.builtin(c.fprintf)
+		case vfprintf:
+			c.builtin(c.vfprintf)
+		case vprintf:
+			c.builtin(c.vprintf)
+		case free:
+			c.builtin(c.free)
+		case lstat:
+			c.builtin(c.lstat)
+		case stat:
+			c.builtin(c.lstat)
 		case getcwd:
 			c.builtin(c.getcwd)
 		case getpid:
 			c.builtin(c.getpid)
-		case stat:
-			c.builtin(c.stat)
+		case open:
+			c.builtin(c.open)
 		case fcntl:
 			c.builtin(c.fcntl)
 		case fstat:
 			c.builtin(c.fstat)
 		case lseek:
 			c.builtin(c.lseek)
+		case read:
+			c.builtin(c.read)
+		case close_:
+			c.builtin(c.close)
 		case unlink:
 			c.builtin(c.unlink)
-		case realloc:
-			c.builtin(c.realloc)
 		case geteuid:
 			c.builtin(c.geteuid)
+		case write:
+			c.builtin(c.write)
 		case fsync:
-			c.builtin(c.fsync)
+			c.builtin(c.write)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

@@ -12,7 +12,6 @@ import (
 	"math"
 	"os"
 	"sync"
-
 	"unsafe"
 
 	"github.com/cznic/ccir/libc"
@@ -22,101 +21,77 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("fclose"):   fclose,
-		dict.SID("fgetc"):    fgetc,
-		dict.SID("fgets"):    fgets,
-		dict.SID("fopen"):    fopen,
-		dict.SID("fprintf"):  fprintf,
-		dict.SID("fread"):    fread,
-		dict.SID("fwrite"):   fwrite,
-		dict.SID("printf"):   printf,
-		dict.SID("sprintf"):  sprintf,
-		dict.SID("vfprintf"): vfprintf,
-		dict.SID("vprintf"):  vprintf,
+		dict.SID("__register_stdfiles"): register_stdfiles,
+		dict.SID("fclose"):              fclose,
+		dict.SID("fgetc"):               fgetc,
+		dict.SID("fgets"):               fgets,
+		dict.SID("fopen"):               fopen,
+		dict.SID("fprintf"):             fprintf,
+		dict.SID("fread"):               fread,
+		dict.SID("fwrite"):              fwrite,
+		dict.SID("printf"):              printf,
+		dict.SID("sprintf"):             sprintf,
+		dict.SID("vfprintf"):            vfprintf,
+		dict.SID("vprintf"):             vprintf,
 	})
 }
 
 var (
+	stdin, stdout, stderr uintptr
+)
+
+// void __register_stdfiles(void *, void *, void *);
+func (c *cpu) register_stdfiles() {
+	var sp uintptr
+	sp, stderr = popPtr(c.sp)
+	sp, stdout = popPtr(sp)
+	stdin = readPtr(sp)
+}
+
+var (
 	files = &fmap{
-		fd: map[uintptr]*os.File{},
-		m:  map[uintptr]*os.File{},
+		m: map[uintptr]*os.File{},
 	}
 	nullReader = bytes.NewBuffer(nil)
 )
 
 type fmap struct {
-	fd map[uintptr]*os.File
 	m  map[uintptr]*os.File
 	mu sync.Mutex
 }
 
 func (m *fmap) add(f *os.File, u uintptr) {
 	m.mu.Lock()
-	if u != 0 {
-		m.m[u] = f
-	}
-	m.fd[f.Fd()] = f
+	m.m[u] = f
 	m.mu.Unlock()
 }
 
 func (m *fmap) reader(u uintptr, c *cpu) io.Reader {
+	switch u {
+	case stdin:
+		return c.m.stdin
+	case stdout, stderr:
+		return nullReader
+	}
+
 	m.mu.Lock()
 	f := m.m[u]
-	m.mu.Unlock()
-	switch {
-	case f == os.Stdin:
-		return c.m.stdin
-	case f == os.Stdout:
-		return nullReader
-	case f == os.Stderr:
-		return nullReader
-	}
-	return f
-}
-
-func (m *fmap) fdReader(fd uintptr, c *cpu) io.Reader {
-	switch fd {
-	case libc.Unistd_STDIN_FILENO:
-		return c.m.stdin
-	case libc.Unistd_STDOUT_FILENO:
-		return ioutil.NopCloser(&bytes.Buffer{})
-	case libc.Unistd_STDERR_FILENO:
-		return ioutil.NopCloser(&bytes.Buffer{})
-	}
-
-	m.mu.Lock()
-	f := m.fd[fd]
 	m.mu.Unlock()
 	return f
 }
 
 func (m *fmap) writer(u uintptr, c *cpu) io.Writer {
+	switch u {
+	case stdin:
+		return ioutil.Discard
+	case stdout:
+		return c.m.stdout
+	case stderr:
+		return c.m.stderr
+	}
+
 	m.mu.Lock()
 	f := m.m[u]
-	m.mu.Unlock()
-	switch {
-	case f == os.Stdin:
-		return ioutil.Discard
-	case f == os.Stdout:
-		return c.m.stdout
-	case f == os.Stderr:
-		return c.m.stderr
-	}
-	return f
-}
-
-func (m *fmap) fdWriter(fd uintptr, c *cpu) io.Writer {
-	switch fd {
-	case libc.Unistd_STDIN_FILENO:
-		return ioutil.Discard
-	case libc.Unistd_STDOUT_FILENO:
-		return c.m.stdout
-	case libc.Unistd_STDERR_FILENO:
-		return c.m.stderr
-	}
-
-	m.mu.Lock()
-	f := m.fd[fd]
 	m.mu.Unlock()
 	return f
 }
@@ -129,20 +104,21 @@ func (m *fmap) extract(u uintptr) *os.File {
 	return f
 }
 
-func (m *fmap) extractFd(fd uintptr) *os.File {
-	m.mu.Lock()
-	f := m.fd[fd]
-	delete(m.fd, fd)
-	m.mu.Unlock()
-	return f
-}
-
 type file struct{ _ int32 }
 
 // int fclose(FILE *stream);
 func (c *cpu) fclose() {
 	u := readPtr(c.sp)
-	f := files.extract(readPtr(u))
+	switch {
+	case u == stdin:
+	case u == stdout:
+	case u == stderr:
+		c.setErrno(libc.Errno_EIO)
+		writeI32(c.rp, libc.Stdio_EOF)
+		return
+	}
+
+	f := files.extract(u)
 	if f == nil {
 		c.setErrno(libc.Errno_EBADF)
 		writeI32(c.rp, libc.Stdio_EOF)
@@ -211,16 +187,17 @@ func (c *cpu) fopen() {
 	sp, mode := popPtr(c.sp)
 	path := readPtr(sp)
 	p := GoString(path)
-	var f *os.File
-	var err error
+	var u uintptr
 	switch p {
 	case os.Stderr.Name():
-		f = os.Stderr
+		u = stderr
 	case os.Stdin.Name():
-		f = os.Stdin
+		u = stdin
 	case os.Stdout.Name():
-		f = os.Stdout
+		u = stdout
 	default:
+		var f *os.File
+		var err error
 		switch mode := GoString(mode); mode {
 		case "r":
 			if f, err = os.OpenFile(p, os.O_RDONLY, 0666); err != nil {
@@ -232,8 +209,6 @@ func (c *cpu) fopen() {
 				default:
 					c.setErrno(libc.Errno_EACCES)
 				}
-				writePtr(c.rp, 0)
-				return
 			}
 		case "w":
 			if f, err = os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
@@ -243,16 +218,15 @@ func (c *cpu) fopen() {
 				default:
 					c.setErrno(libc.Errno_EACCES)
 				}
-				writePtr(c.rp, 0)
-				return
 			}
 		default:
 			panic(mode)
 		}
+		if f != nil {
+			u = c.m.malloc(int(unsafe.Sizeof(file{})))
+			files.add(f, u)
+		}
 	}
-
-	u := c.m.malloc(int(unsafe.Sizeof(file{})))
-	files.add(f, u)
 	writePtr(c.rp, u)
 }
 
@@ -263,9 +237,6 @@ func (c *cpu) fprintf() {
 	ap -= ptrStackSz
 	writeI32(c.rp, goFprintf(files.writer(stream, c), readPtr(ap), ap))
 }
-
-// void free(void *ptr);
-func (c *cpu) free() { c.m.free(readPtr(c.rp - ptrStackSz)) }
 
 // size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 func (c *cpu) fread() {
@@ -296,7 +267,7 @@ func (c *cpu) fwrite() {
 	hi, lo := mathutil.MulUint128_64(uint64(size), uint64(nmemb))
 	if hi != 0 || lo > math.MaxInt32 {
 		c.setErrno(libc.Errno_E2BIG)
-		writeULong(c.rp, 0)
+		writeLong(c.rp, 0)
 		return
 	}
 
@@ -445,7 +416,8 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 
 // int printf(const char *format, ...);
 func (c *cpu) printf() {
-	writeI32(c.rp, goFprintf(c.m.stdout, readPtr(c.rp-ptrStackSz), c.rp-ptrStackSz))
+	ap := c.rp - ptrStackSz
+	writeI32(c.rp, goFprintf(c.m.stdout, readPtr(ap), ap))
 }
 
 // int sprintf(char *str, const char *format, ...);

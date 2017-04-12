@@ -387,6 +387,7 @@ const (
 	sprintf
 	sqrt
 	stat
+	register_stdfiles
 	strcat
 	strchr
 	strcmp

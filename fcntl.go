@@ -5,11 +5,7 @@
 package virtual
 
 import (
-	"fmt"
-	"os"
 	"syscall"
-
-	"github.com/cznic/ccir/libc"
 )
 
 func init() {
@@ -27,17 +23,8 @@ func (c *cpu) fcntl() {
 	cmd := readI32(ap)
 	ap -= i32StackSz
 	arg := readPtr(ap)
-	switch fildes {
-	case libc.Unistd_STDIN_FILENO:
-		panic(fmt.Errorf("TODO30 %v %v", fildes, cmd))
-	case libc.Unistd_STDOUT_FILENO:
-		panic(fmt.Errorf("TODO30 %v %v", fildes, cmd))
-	case libc.Unistd_STDERR_FILENO:
-		panic(fmt.Errorf("TODO30 %v %v", fildes, cmd))
-	}
-
 	r, _, err := syscall.Syscall(syscall.SYS_FCNTL, uintptr(fildes), uintptr(cmd), arg)
-	if r != 0 {
+	if err != 0 {
 		c.setErrno(err)
 	}
 	writeI32(c.rp, int32(r))
@@ -46,16 +33,14 @@ func (c *cpu) fcntl() {
 // int open(const char *pathname, int flags, ...);
 func (c *cpu) open() {
 	ap := c.rp - ptrStackSz
-	pathname := GoString(readPtr(ap))
+	pathname := readPtr(ap)
 	ap -= i32StackSz
 	flags := readI32(ap)
-	f, err := os.OpenFile(pathname, int(flags), 0600)
-	if err != nil {
+	ap -= i32StackSz
+	mode := readU32(ap)
+	r, _, err := syscall.Syscall(syscall.SYS_OPEN, pathname, uintptr(flags), uintptr(mode))
+	if err != 0 {
 		c.thread.setErrno(err)
-		writeI32(c.rp, -1)
-		return
 	}
-
-	files.add(f, 0)
-	writeI32(c.rp, int32(f.Fd()))
+	writeI32(c.rp, int32(r))
 }
