@@ -109,10 +109,8 @@ type file struct{ _ int32 }
 // int fclose(FILE *stream);
 func (c *cpu) fclose() {
 	u := readPtr(c.sp)
-	switch {
-	case u == stdin:
-	case u == stdout:
-	case u == stderr:
+	switch u {
+	case stdin, stdout, stderr:
 		c.setErrno(libc.Errno_EIO)
 		writeI32(c.rp, libc.Stdio_EOF)
 		return
