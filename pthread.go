@@ -14,6 +14,7 @@ import (
 func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("pthread_create"):            pthread_create,
+		dict.SID("pthread_equal"):             pthread_equal,
 		dict.SID("pthread_join"):              pthread_join,
 		dict.SID("pthread_mutex_destroy"):     pthread_mutex_destroy,
 		dict.SID("pthread_mutex_init"):        pthread_mutex_init,
@@ -23,16 +24,16 @@ func init() {
 		dict.SID("pthread_mutexattr_destroy"): pthread_mutexattr_destroy,
 		dict.SID("pthread_mutexattr_init"):    pthread_mutexattr_init,
 		dict.SID("pthread_mutexattr_settype"): pthread_mutexattr_settype,
+		dict.SID("pthread_self"):              pthread_self,
 	})
 }
 
 type mu struct {
-	sync.Mutex
-	t *thread
-
-	cnt int
-
-	attr int32
+	attr  int32
+	count int
+	inner sync.Mutex
+	outer sync.Mutex
+	owner uintptr
 }
 
 type mutexMap struct {
@@ -55,6 +56,17 @@ var (
 	mutexes = &mutexMap{m: map[uintptr]*mu{}}
 )
 
+// extern int pthread_equal(pthread_t __thread1, pthread_t __thread2);
+func (c *cpu) pthreadEqual() {
+	sp, thread2 := popLong(c.sp)
+	switch {
+	case readLong(sp) == thread2:
+		writeI32(c.rp, 1)
+	default:
+		writeI32(c.rp, 0)
+	}
+}
+
 // extern int pthread_mutex_destroy(pthread_mutex_t * __mutex);
 func (c *cpu) pthreadMutexDestroy() {
 	mutexes.Lock()
@@ -65,62 +77,96 @@ func (c *cpu) pthreadMutexDestroy() {
 // extern int pthread_mutex_init(pthread_mutex_t * __mutex, pthread_mutexattr_t * __mutexattr);
 func (c *cpu) pthreadMutexInit() {
 	sp, mutexattr := popPtr(c.sp)
-	mutexes.mu(readPtr(sp)).attr = readI32(mutexattr)
+	attr := int32(libc.Pthread_PTHREAD_MUTEX_NORMAL)
+	if mutexattr != 0 {
+		attr = readI32(mutexattr)
+	}
+	mutexes.mu(readPtr(sp)).attr = attr
 	writeI32(c.rp, 0)
 }
 
 // extern int pthread_mutex_lock(pthread_mutex_t * __mutex);
 func (c *cpu) pthreadMutexLock() {
+	threadID := c.tlsp.threadID
 	mu := mutexes.mu(readPtr(c.sp))
+	mu.outer.Lock()
 	switch mu.attr {
 	case libc.Pthread_PTHREAD_MUTEX_NORMAL:
-		mu.Lock()
-		mu.t = c.thread
-		mu.cnt = 0
+		mu.owner = threadID
+		mu.count = 1
+		mu.inner.Lock()
 	case libc.Pthread_PTHREAD_MUTEX_RECURSIVE:
-		switch {
-		case c.thread == mu.t:
-			mu.cnt++
+		switch mu.owner {
+		case 0:
+			mu.owner = threadID
+			mu.count = 1
+			mu.inner.Lock()
+		case threadID:
+			mu.count++
 		default:
-			mu.Lock()
-			mu.t = c.thread
-			mu.cnt = 0
+			panic("TODO105")
 		}
 	default:
 		panic(fmt.Errorf("attr %#x", mu.attr))
 	}
+	mu.outer.Unlock()
+	writeI32(c.rp, 0)
+}
+
+// int pthread_mutex_trylock(pthread_mutex_t *mutex);
+func (c *cpu) pthreadMutexTryLock() {
+	threadID := c.tlsp.threadID
+	mu := mutexes.mu(readPtr(c.sp))
+	mu.outer.Lock()
+	switch mu.attr {
+	case libc.Pthread_PTHREAD_MUTEX_NORMAL:
+		switch mu.owner {
+		case 0:
+			mu.owner = threadID
+			mu.count = 1
+			mu.inner.Lock()
+		case threadID:
+			panic("TODO127")
+		default:
+			panic("TODO129")
+		}
+	default:
+		panic(fmt.Errorf("attr %#x", mu.attr))
+	}
+	mu.outer.Unlock()
 	writeI32(c.rp, 0)
 }
 
 // extern int pthread_mutex_unlock(pthread_mutex_t * __mutex);
 func (c *cpu) pthreadMutexUnlock() {
+	threadID := c.tlsp.threadID
 	mu := mutexes.mu(readPtr(c.sp))
 	var r int32
+	mu.outer.Lock()
 	switch mu.attr {
 	case libc.Pthread_PTHREAD_MUTEX_NORMAL:
-		switch {
-		case c.thread == mu.t:
-			mu.Unlock()
-			mu.t = nil
-		default:
-			panic("TODO")
-		}
+		mu.owner = 0
+		mu.count = 0
+		mu.inner.Unlock()
 	case libc.Pthread_PTHREAD_MUTEX_RECURSIVE:
-		switch {
-		case c.thread == mu.t:
-			mu.cnt--
-			if mu.cnt != 0 {
+		switch mu.owner {
+		case 0:
+			panic("TODO140")
+		case threadID:
+			mu.count--
+			if mu.count != 0 {
 				break
 			}
 
-			mu.Unlock()
-			mu.t = nil
+			mu.owner = 0
+			mu.inner.Unlock()
 		default:
-			panic("TODO")
+			panic("TODO144")
 		}
 	default:
 		panic(fmt.Errorf("TODO %#x", mu.attr))
 	}
+	mu.outer.Unlock()
 	writeI32(c.rp, r)
 }
 
@@ -142,3 +188,6 @@ func (c *cpu) pthreadMutexAttrSetType() {
 	writeI32(readPtr(sp), kind)
 	writeI32(c.rp, 0)
 }
+
+// pthread_t pthread_self(void);
+func (c *cpu) pthreadSelf() { writeULong(c.rp, uint64(c.tlsp.threadID)) }

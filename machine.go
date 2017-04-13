@@ -12,6 +12,7 @@ import (
 	"os"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/cznic/internal/buffer"
@@ -30,7 +31,7 @@ const (
 	i8StackSz    = (1 + stackAlign - 1) &^ (stackAlign - 1)
 	intSize      = mathutil.IntBits / 8
 	longStackSz  = (longBits/8 + stackAlign - 1) &^ (stackAlign - 1)
-	mallocAlign  = ptrSize
+	mallocAlign  = 2 * ptrSize
 	mmapPage     = 1 << 16
 	ptrSize      = mathutil.UintPtrBits / 8
 	ptrStackSz   = (ptrSize + stackAlign - 1) &^ (stackAlign - 1)
@@ -88,6 +89,7 @@ type machine struct {
 	stop      chan struct{}
 	stopMu    sync.Mutex
 	stopped   bool
+	threadID  uintptr
 	threads   []*thread
 	threadsMu sync.Mutex
 	tracePath string
@@ -308,6 +310,8 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 		stackMem: stackMem,
 	}
 	t.tls = t.cpu.sp
+	t.tlsp = (*tls)(unsafe.Pointer(t.cpu.sp))
+	t.tlsp.threadID = atomic.AddUintptr(&m.threadID, 1)
 	t.setErrno(0)
 	t.thread = t
 	m.threadsMu.Lock()
@@ -330,5 +334,6 @@ type thread struct {
 func (t *thread) close() error { return t.stackMem.Unmap() }
 
 type tls struct {
-	errno int32
+	errno    int32
+	threadID uintptr
 }

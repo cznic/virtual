@@ -23,6 +23,7 @@ func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("__register_stdfiles"): register_stdfiles,
 		dict.SID("fclose"):              fclose,
+		dict.SID("fflush"):              fflush,
 		dict.SID("fgetc"):               fgetc,
 		dict.SID("fgets"):               fgets,
 		dict.SID("fopen"):               fopen,

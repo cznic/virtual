@@ -5,6 +5,8 @@
 package virtual
 
 import (
+	"fmt"
+	"os"
 	"syscall"
 )
 
@@ -24,6 +26,9 @@ func (c *cpu) fcntl() {
 	ap -= i32StackSz
 	arg := readPtr(ap)
 	r, _, err := syscall.Syscall(syscall.SYS_FCNTL, uintptr(fildes), uintptr(cmd), arg)
+	if strace {
+		fmt.Fprintf(os.Stderr, "fcntl(%v, %v, %#x) %v %v\n", fildes, cmdString(cmd), arg, r, err)
+	}
 	if err != 0 {
 		c.setErrno(err)
 	}
@@ -39,6 +44,9 @@ func (c *cpu) open() {
 	ap -= i32StackSz
 	mode := readU32(ap)
 	r, _, err := syscall.Syscall(syscall.SYS_OPEN, pathname, uintptr(flags), uintptr(mode))
+	if strace {
+		fmt.Fprintf(os.Stderr, "open(%q, %v, %#o) %v %v\n", GoString(pathname), modeString(flags), mode, r, err)
+	}
 	if err != 0 {
 		c.thread.setErrno(err)
 	}

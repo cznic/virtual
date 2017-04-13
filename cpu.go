@@ -55,6 +55,7 @@ type cpu struct {
 	stop    chan struct{}
 	thread  *thread
 	tls     uintptr
+	tlsp    *tls
 	ts      uintptr // Text segment
 }
 
@@ -220,7 +221,9 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		}
 
-		//fmt.Println(c.trace()) //TODO-
+		if trace {
+			fmt.Println(c.trace())
+		}
 		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
@@ -1728,7 +1731,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case lstat:
 			c.builtin(c.lstat)
 		case stat:
-			c.builtin(c.lstat)
+			c.builtin(c.stat)
 		case getcwd:
 			c.builtin(c.getcwd)
 		case getpid:
@@ -1752,7 +1755,13 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case write:
 			c.builtin(c.write)
 		case fsync:
-			c.builtin(c.write)
+			c.builtin(c.fsync)
+		case pthread_self:
+			c.builtin(c.pthreadSelf)
+		case pthread_equal:
+			c.builtin(c.pthreadEqual)
+		case pthread_mutex_trylock:
+			c.builtin(c.pthreadMutexTryLock)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

@@ -315,6 +315,7 @@ const (
 	fchown
 	fclose
 	fcntl
+	fflush
 	ffs
 	ffsl
 	ffsll
@@ -364,6 +365,7 @@ const (
 	pow
 	printf
 	pthread_create
+	pthread_equal
 	pthread_join
 	pthread_mutex_destroy
 	pthread_mutex_init
@@ -373,6 +375,7 @@ const (
 	pthread_mutexattr_destroy
 	pthread_mutexattr_init
 	pthread_mutexattr_settype
+	pthread_self
 	qsort
 	read
 	readlink
