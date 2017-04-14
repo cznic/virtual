@@ -7,6 +7,7 @@ package virtual
 import (
 	"bytes"
 	"errors"
+	"go/token"
 	"io/ioutil"
 	"math"
 	"os"
@@ -61,6 +62,7 @@ type cpu struct {
 
 func addPtr(p uintptr, v uintptr)         { *(*uintptr)(unsafe.Pointer(p)) += v }
 func popI32(p uintptr) (uintptr, int32)   { return p + i32StackSz, readI32(p) }
+func popI64(p uintptr) (uintptr, int64)   { return p + i64StackSz, readI64(p) }
 func popLong(p uintptr) (uintptr, int64)  { return p + longStackSz, readLong(p) }
 func popPtr(p uintptr) (uintptr, uintptr) { return p + ptrStackSz, readPtr(p) }
 func readC128(p uintptr) complex128       { return *(*complex128)(unsafe.Pointer(p)) }
@@ -185,7 +187,18 @@ func (c *cpu) stackTrace() (err error) {
 	return errors.New(string(buf.Bytes()))
 }
 
+var prev token.Position
+
 func (c *cpu) trace() string {
+	//pos := c.m.pcInfo(int(c.ip), c.m.lines).Position() //TODO-
+	//switch {
+	//default:
+	//	fallthrough
+	//case prev.Filename != pos.Filename || prev.Line != pos.Line:
+	//	prev = pos
+	//	return fmt.Sprintf("%v", c.m.pcInfo(int(c.ip), c.m.lines).Position()) //TODO-
+	//}
+	//return ""
 	h := c.ip + 1
 	for h < uintptr(len(c.code)) && c.code[h].Opcode == Ext {
 		h++
@@ -703,7 +716,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp -= ptrStackSz
 			writePtr(c.sp, c.bp)
 			c.bp = c.sp
-			c.sp += uintptr(op.N)
+			c.sp = (c.sp + uintptr(op.N)) &^ 0xf // Force 16-byte stack alignment.
 
 			// ...higher addresses
 			//
@@ -1708,8 +1721,8 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.printf)
 		case sprintf:
 			c.builtin(c.sprintf)
-		case fopen:
-			c.builtin(c.fopen)
+		case fopen64:
+			c.builtin(c.fopen64)
 		case fwrite:
 			c.builtin(c.fwrite)
 		case fclose:
@@ -1728,22 +1741,22 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.builtin(c.vprintf)
 		case free:
 			c.builtin(c.free)
-		case lstat:
-			c.builtin(c.lstat)
-		case stat:
-			c.builtin(c.stat)
+		case lstat64:
+			c.builtin(c.lstat64)
+		case stat64:
+			c.builtin(c.stat64)
 		case getcwd:
 			c.builtin(c.getcwd)
 		case getpid:
 			c.builtin(c.getpid)
-		case open:
-			c.builtin(c.open)
+		case open64:
+			c.builtin(c.open64)
 		case fcntl:
 			c.builtin(c.fcntl)
-		case fstat:
-			c.builtin(c.fstat)
-		case lseek:
-			c.builtin(c.lseek)
+		case fstat64:
+			c.builtin(c.fstat64)
+		case lseek64:
+			c.builtin(c.lseek64)
 		case read:
 			c.builtin(c.read)
 		case close_:

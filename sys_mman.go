@@ -6,7 +6,7 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("mmap"):   mmap_,
+		dict.SID("mmap64"): mmap64,
 		dict.SID("munmap"): munmap,
 	})
 }

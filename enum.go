@@ -322,14 +322,14 @@ const (
 	fgetc
 	fgets
 	floor
-	fopen
+	fopen64
 	fprintf
 	frameAddress
 	fread
 	free
-	fstat
+	fstat64
 	fsync
-	ftruncate
+	ftruncate64
 	fwrite
 	getcwd
 	getenv
@@ -344,8 +344,8 @@ const (
 	log
 	log10
 	longjmp
-	lseek
-	lstat
+	lseek64
+	lstat64
 	malloc
 	memcmp
 	memcpy
@@ -353,9 +353,9 @@ const (
 	mempcpy
 	memset
 	mkdir
-	mmap_
+	mmap64
 	munmap
-	open
+	open64
 	parity
 	parityl
 	parityll
@@ -389,7 +389,7 @@ const (
 	sleep
 	sprintf
 	sqrt
-	stat
+	stat64
 	register_stdfiles
 	strcat
 	strchr

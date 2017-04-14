@@ -83,8 +83,9 @@ type Binary struct {
 func newBinary() *Binary { return &Binary{} }
 
 type nfo struct {
-	off int
-	sz  int
+	align int
+	off   int
+	sz    int
 }
 
 type labelNfo struct {
@@ -779,12 +780,14 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 	for _, v := range f.Body {
 		switch x := v.(type) {
 		case *ir.VariableDeclaration:
-			variables = append(variables, nfo{sz: l.sizeof(x.TypeID)})
+			t := l.tc.MustType(x.TypeID)
+			variables = append(variables, nfo{align: l.model.Alignof(t), sz: l.sizeof(x.TypeID)})
 		}
 	}
 	off = 0
 	for i := range variables {
-		off -= roundup(variables[i].sz, l.stackAlign)
+		n := roundup(variables[i].sz, variables[i].align)
+		off -= roundup(n, l.stackAlign)
 		variables[i].off = off
 	}
 

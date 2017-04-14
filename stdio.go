@@ -26,7 +26,7 @@ func init() {
 		dict.SID("fflush"):              fflush,
 		dict.SID("fgetc"):               fgetc,
 		dict.SID("fgets"):               fgets,
-		dict.SID("fopen"):               fopen,
+		dict.SID("fopen64"):             fopen64,
 		dict.SID("fprintf"):             fprintf,
 		dict.SID("fread"):               fread,
 		dict.SID("fwrite"):              fwrite,
@@ -181,8 +181,8 @@ func (c *cpu) fgets() {
 
 }
 
-// FILE *fopen(const char *path, const char *mode);
-func (c *cpu) fopen() {
+// FILE *fopen64(const char *path, const char *mode);
+func (c *cpu) fopen64() {
 	sp, mode := popPtr(c.sp)
 	path := readPtr(sp)
 	p := GoString(path)

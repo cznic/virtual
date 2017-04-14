@@ -12,8 +12,9 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("fcntl"): fcntl,
-		dict.SID("open"):  open,
+		dict.SID("fcntl"):  fcntl,
+		dict.SID("open"):   open64,
+		dict.SID("open64"): open64,
 	})
 }
 
@@ -25,7 +26,7 @@ func (c *cpu) fcntl() {
 	cmd := readI32(ap)
 	ap -= i32StackSz
 	arg := readPtr(ap)
-	r, _, err := syscall.Syscall(syscall.SYS_FCNTL, uintptr(fildes), uintptr(cmd), arg)
+	r, _, err := syscall.Syscall(syscall.SYS_FCNTL64, uintptr(fildes), uintptr(cmd), arg)
 	if strace {
 		fmt.Fprintf(os.Stderr, "fcntl(%v, %v, %#x) %v %v\n", fildes, cmdString(cmd), arg, r, err)
 	}
@@ -35,8 +36,8 @@ func (c *cpu) fcntl() {
 	writeI32(c.rp, int32(r))
 }
 
-// int open(const char *pathname, int flags, ...);
-func (c *cpu) open() {
+// int open64(const char *pathname, int flags, ...);
+func (c *cpu) open64() {
 	ap := c.rp - ptrStackSz
 	pathname := readPtr(ap)
 	ap -= i32StackSz

@@ -16,22 +16,22 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("access"):    access,
-		dict.SID("close"):     close_,
-		dict.SID("fchown"):    fchown,
-		dict.SID("fsync"):     fsync,
-		dict.SID("ftruncate"): ftruncate,
-		dict.SID("getcwd"):    getcwd,
-		dict.SID("geteuid"):   geteuid,
-		dict.SID("getpid"):    getpid,
-		dict.SID("lseek"):     lseek,
-		dict.SID("read"):      read,
-		dict.SID("readlink"):  readlink,
-		dict.SID("rmdir"):     rmdir,
-		dict.SID("sleep"):     sleep,
-		dict.SID("sysconf"):   sysconf,
-		dict.SID("unlink"):    unlink,
-		dict.SID("write"):     write,
+		dict.SID("access"):      access,
+		dict.SID("close"):       close_,
+		dict.SID("fchown"):      fchown,
+		dict.SID("fsync"):       fsync,
+		dict.SID("ftruncate64"): ftruncate64,
+		dict.SID("getcwd"):      getcwd,
+		dict.SID("geteuid"):     geteuid,
+		dict.SID("getpid"):      getpid,
+		dict.SID("lseek64"):     lseek64,
+		dict.SID("read"):        read,
+		dict.SID("readlink"):    readlink,
+		dict.SID("rmdir"):       rmdir,
+		dict.SID("sleep"):       sleep,
+		dict.SID("sysconf"):     sysconf,
+		dict.SID("unlink"):      unlink,
+		dict.SID("write"):       write,
 	})
 }
 
@@ -93,10 +93,10 @@ func (c *cpu) getpid() {
 	writeI32(c.rp, int32(r))
 }
 
-// off_t lseek(int fildes, off_t offset, int whence);
-func (c *cpu) lseek() {
+// off_t lseek64(int fildes, off_t offset, int whence);
+func (c *cpu) lseek64() {
 	sp, whence := popI32(c.sp)
-	sp, offset := popLong(sp)
+	sp, offset := popI64(sp)
 	fildes := readI32(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_LSEEK, uintptr(fildes), uintptr(offset), uintptr(whence))
 	if strace {
