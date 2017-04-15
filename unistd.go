@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/cznic/ccir/libc"
+	"github.com/cznic/ccir/libc/unistd"
 )
 
 func init() {
@@ -142,14 +142,14 @@ func (c *cpu) write() {
 	sp, buf := popPtr(sp)
 	fd := readI32(sp)
 	switch fd {
-	case libc.Unistd_STDOUT_FILENO:
+	case unistd.XSTDOUT_FILENO:
 		n, err := c.m.stdout.Write((*[math.MaxInt32]byte)(unsafe.Pointer(buf))[:count])
 		if err != nil {
 			c.thread.setErrno(err)
 		}
 		writeLong(c.rp, int64(n))
 		return
-	case libc.Unistd_STDERR_FILENO:
+	case unistd.XSTDERR_FILENO:
 		n, err := c.m.stderr.Write((*[math.MaxInt32]byte)(unsafe.Pointer(buf))[:count])
 		if err != nil {
 			c.thread.setErrno(err)

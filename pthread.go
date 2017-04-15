@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/cznic/ccir/libc"
+	"github.com/cznic/ccir/libc/pthread"
 )
 
 func init() {
@@ -77,7 +77,7 @@ func (c *cpu) pthreadMutexDestroy() {
 // extern int pthread_mutex_init(pthread_mutex_t * __mutex, pthread_mutexattr_t * __mutexattr);
 func (c *cpu) pthreadMutexInit() {
 	sp, mutexattr := popPtr(c.sp)
-	attr := int32(libc.Pthread_PTHREAD_MUTEX_NORMAL)
+	attr := int32(pthread.XPTHREAD_MUTEX_NORMAL)
 	if mutexattr != 0 {
 		attr = readI32(mutexattr)
 	}
@@ -91,11 +91,11 @@ func (c *cpu) pthreadMutexLock() {
 	mu := mutexes.mu(readPtr(c.sp))
 	mu.outer.Lock()
 	switch mu.attr {
-	case libc.Pthread_PTHREAD_MUTEX_NORMAL:
+	case pthread.XPTHREAD_MUTEX_NORMAL:
 		mu.owner = threadID
 		mu.count = 1
 		mu.inner.Lock()
-	case libc.Pthread_PTHREAD_MUTEX_RECURSIVE:
+	case pthread.XPTHREAD_MUTEX_RECURSIVE:
 		switch mu.owner {
 		case 0:
 			mu.owner = threadID
@@ -119,7 +119,7 @@ func (c *cpu) pthreadMutexTryLock() {
 	mu := mutexes.mu(readPtr(c.sp))
 	mu.outer.Lock()
 	switch mu.attr {
-	case libc.Pthread_PTHREAD_MUTEX_NORMAL:
+	case pthread.XPTHREAD_MUTEX_NORMAL:
 		switch mu.owner {
 		case 0:
 			mu.owner = threadID
@@ -144,11 +144,11 @@ func (c *cpu) pthreadMutexUnlock() {
 	var r int32
 	mu.outer.Lock()
 	switch mu.attr {
-	case libc.Pthread_PTHREAD_MUTEX_NORMAL:
+	case pthread.XPTHREAD_MUTEX_NORMAL:
 		mu.owner = 0
 		mu.count = 0
 		mu.inner.Unlock()
-	case libc.Pthread_PTHREAD_MUTEX_RECURSIVE:
+	case pthread.XPTHREAD_MUTEX_RECURSIVE:
 		switch mu.owner {
 		case 0:
 			panic("TODO140")
