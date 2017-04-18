@@ -5,6 +5,8 @@
 package virtual
 
 import (
+	"fmt"
+	"os"
 	"sort"
 
 	"github.com/cznic/mathutil"
@@ -42,12 +44,20 @@ func (c *cpu) calloc() {
 	if hi == 0 || lo <= mathutil.MaxInt {
 		p = c.m.calloc(int(lo))
 	}
-
+	if strace {
+		fmt.Fprintf(os.Stderr, "calloc(%#x) %#x\n", size, p)
+	}
 	writePtr(c.rp, p)
 }
 
 // void free(void *ptr);
-func (c *cpu) free() { c.m.free(readPtr(c.rp - ptrStackSz)) }
+func (c *cpu) free() {
+	ptr := readPtr(c.sp)
+	if strace {
+		fmt.Fprintf(os.Stderr, "freep(%#x)\n", ptr)
+	}
+	c.m.free(ptr)
+}
 
 // void *malloc(size_t size);
 func (c *cpu) malloc() {
@@ -55,6 +65,9 @@ func (c *cpu) malloc() {
 	var p uintptr
 	if size <= mathutil.MaxInt {
 		p = c.m.malloc(int(size))
+	}
+	if strace {
+		fmt.Fprintf(os.Stderr, "malloc(%#x) %#x\n", size, p)
 	}
 	writePtr(c.rp, p)
 }
@@ -85,8 +98,7 @@ func (s *sorter) Less(i, j int) bool {
 	c.sp -= ptrStackSz
 	writePtr(c.sp, s.ptr(j))
 	// C callout
-	c.ip = s.compar
-	_, err := c.run(c.code)
+	_, err := c.run(s.compar)
 	if err != nil {
 		panic(err)
 	}
@@ -149,5 +161,9 @@ func (c *cpu) qsort() {
 func (c *cpu) realloc() {
 	sp, size := popLong(c.sp)
 	ptr := readPtr(sp)
-	writePtr(c.rp, c.m.realloc(ptr, int(size)))
+	r := c.m.realloc(ptr, int(size))
+	if strace {
+		fmt.Fprintf(os.Stderr, "realloc(%#x, %#x) %#x\n", ptr, size, r)
+	}
+	writePtr(c.rp, r)
 }

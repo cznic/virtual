@@ -29,7 +29,7 @@ cpu: clean
 	go tool pprof -lines *.test cpu.out
 
 edit:
-	@ 1>/dev/null 2>/dev/null gvim -p Makefile *.go
+	@ 1>/dev/null 2>/dev/null gvim -p Makefile all_test.go cpu.go etc.go ffi.go loader.go machine.go thread.go virtual.go
 
 editor: opcode_string.go
 	gofmt -l -s -w *.go

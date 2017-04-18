@@ -17,6 +17,7 @@ import (
 var (
 	idInt32P = ir.TypeID(dict.SID("*int32"))
 	idInt8P  = ir.TypeID(dict.SID("*int8"))
+	idStart  = ir.NameID(dict.SID("_start"))
 	idVoidP  = ir.TypeID(dict.SID("*struct{}"))
 )
 

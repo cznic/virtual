@@ -51,10 +51,10 @@ type cpu struct {
 	code    []Operation
 	ds      uintptr // Data segment
 	fpStack []uintptr
-	m       *machine
+	m       *Machine
 	rpStack []uintptr
 	stop    chan struct{}
-	thread  *thread
+	thread  *Thread
 	tls     uintptr
 	tlsp    *tls
 	ts      uintptr // Text segment
@@ -190,15 +190,14 @@ func (c *cpu) stackTrace() (err error) {
 var prev token.Position
 
 func (c *cpu) trace() string {
-	//pos := c.m.pcInfo(int(c.ip), c.m.lines).Position() //TODO-
-	//switch {
-	//default:
-	//	fallthrough
-	//case prev.Filename != pos.Filename || prev.Line != pos.Line:
-	//	prev = pos
-	//	return fmt.Sprintf("%v", c.m.pcInfo(int(c.ip), c.m.lines).Position()) //TODO-
+	pos := c.m.pcInfo(int(c.ip), c.m.lines).Position() //TODO-
+	//if prev.Filename == pos.Filename && prev.Line == pos.Line {
+	//	return ""
 	//}
-	//return ""
+
+	//prev = pos
+	//return fmt.Sprintf("%v\n", pos) //TODO-
+
 	h := c.ip + 1
 	for h < uintptr(len(c.code)) && c.code[h].Opcode == Ext {
 		h++
@@ -208,10 +207,12 @@ func (c *cpu) trace() string {
 	for i := range a {
 		a[i] = readPtr(c.sp + uintptr(i*ptrStackSz))
 	}
-	return fmt.Sprintf("%s\t%#x: %x; %v", s[:len(s)-1], c.sp, a, c.m.pcInfo(int(c.ip), c.m.lines).Position())
+	return fmt.Sprintf("%s\t%#x: %x; %v\n", s[:len(s)-1], c.sp, a, pos)
 }
 
-func (c *cpu) run(code []Operation) (int, error) {
+func (c *cpu) run(ip uintptr) (int, error) {
+	c.code = c.m.code
+	c.ip = ip
 	//fmt.Printf("%#v\n", c)
 	defer func() {
 		if err := recover(); err != nil {
@@ -224,7 +225,6 @@ func (c *cpu) run(code []Operation) (int, error) {
 		}
 	}()
 
-	c.code = code
 	for i := 0; ; i++ {
 		if i&1024 == 0 {
 			select {
@@ -235,9 +235,10 @@ func (c *cpu) run(code []Operation) (int, error) {
 		}
 
 		if trace {
-			fmt.Println(c.trace())
+			fmt.Print(c.trace())
+			os.Stdout.Sync()
 		}
-		op := code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
+		op := c.code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
 		c.ip++
 		switch op.Opcode {
 		case AP: // -> ptr
@@ -293,7 +294,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI64(c.sp, readI64(c.sp)&b)
 		case Argument: // -> val
 			off := op.N
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			sz := op.N
 			c.sp -= uintptr(roundup(sz, stackAlign))
@@ -567,7 +568,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writePtr(c.sp, c.ds+uintptr(op.N))
 		case DSN: // -> val
 			off := op.N
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			sz := op.N
 			c.sp -= uintptr(roundup(sz, stackAlign))
@@ -669,21 +670,21 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		case Field8:
 			v := readI8(c.sp + uintptr(op.N))
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			sz := op.N
 			c.sp += uintptr(sz) - i8StackSz
 			writeI8(c.sp, v)
 		case Field16:
 			v := readI16(c.sp + uintptr(op.N))
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			sz := op.N
 			c.sp += uintptr(sz) - i16StackSz
 			writeI16(c.sp, v)
 		case Field64:
 			v := readI64(c.sp + uintptr(op.N))
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			sz := op.N
 			c.sp += uintptr(sz) - i64StackSz
@@ -962,7 +963,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case Load: // addr -> (addr+n)
 			p := readPtr(c.sp)
 			off := op.N
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			sz := op.N
 			c.sp += ptrStackSz - uintptr(roundup(sz, stackAlign))
@@ -1117,7 +1118,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI32(p, v+int32(op.N))
 		case PostIncU32Bits: // adr -> (*adr)++
 			d := uint64(op.N)
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			bits := uint(op.N >> 16)
 			bitoff := uint(op.N) >> 8 & 0xff
@@ -1158,7 +1159,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		case PostIncU64Bits: // adr -> (*adr)++
 			d := uint64(op.N)
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			bits := uint(op.N >> 16)
 			bitoff := uint(op.N) >> 8 & 0xff
@@ -1240,7 +1241,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writeI64(p, v)
 		case PreIncU32Bits: // adr -> ++(*adr)
 			d := uint64(op.N)
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			bits := uint(op.N >> 16)
 			bitoff := uint(op.N) >> 8 & 0xff
@@ -1279,7 +1280,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			}
 		case PreIncU64Bits: // adr -> ++(*adr)
 			d := uint64(op.N)
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			bits := uint(op.N >> 16)
 			bitoff := uint(op.N) >> 8 & 0xff
@@ -1331,9 +1332,9 @@ func (c *cpu) run(code []Operation) (int, error) {
 			c.sp -= i32StackSz
 			writeI32(c.sp, int32(op.N))
 		case Push64:
-			c.push64(op.N, code[c.ip].N)
+			c.push64(op.N, c.code[c.ip].N)
 		case PushC128:
-			c.pushC128(op.N, code[c.ip].N)
+			c.pushC128(op.N, c.code[c.ip].N)
 		case PtrDiff: // p q -> p - q
 			q := readPtr(c.sp)
 			c.sp += ptrStackSz
@@ -1509,7 +1510,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 			writePtr(c.sp, c.ts+uintptr(op.N))
 		case Variable: // -> val
 			off := op.N
-			op = code[c.ip]
+			op = c.code[c.ip]
 			c.ip++
 			sz := op.N
 			c.sp -= uintptr(roundup(sz, stackAlign))
@@ -1552,7 +1553,7 @@ func (c *cpu) run(code []Operation) (int, error) {
 		case builtin:
 			var ip uintptr
 			c.sp, ip = popPtr(c.sp)
-			es, err := c.run(code)
+			es, err := c.run(c.ip)
 			if err != nil {
 				return es, err
 			}

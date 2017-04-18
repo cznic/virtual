@@ -6,6 +6,7 @@
 package virtual
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/cznic/xc"
@@ -18,31 +19,30 @@ var (
 	dict = xc.Dict
 )
 
-// Exec runs the program in b and returns its exit status or an error, if any.
-// It's the caller responsibility to ensure the binary was produced for this
-// architecture and platform.
+// New runs the program in b and returns its exit status or an error, if any.
+// It's the caller responsibility to ensure the binary was produced for the
+// correct architecture and platform.
 //
 // If a stack trace is produced on error, the PCInfo is interpreted relative to
-// tracePath and if a corresponding source file is available there the trace is
+// tracePath and if a corresponding source file is available the trace is
 // extended with the respective source code lines.
-func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int, tracePath string) (exitStatus int, err error) {
-	m, err := newMachine(b, heapSize, stdin, stdout, stderr, tracePath)
-	if err != nil {
-		return 0, err
+//
+// The returned machine is ready, if applicable, for calling individual
+// external functions. Its Close method must be called eventually to free any
+// resources it has acquired from the OS.
+func New(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int, tracePath string) (m *Machine, exitStatus int, err error) {
+	pc, ok := b.Sym[idStart]
+	if !ok {
+		return nil, -1, fmt.Errorf("missing symbol: %s", idStart)
 	}
 
-	m.lines = b.Lines
-	m.functions = b.Functions
+	if m, err = newMachine(b, heapSize, stdin, stdout, stderr, tracePath); err != nil {
+		return nil, -1, err
+	}
 
-	defer func() {
-		if e := m.close(); e != nil && err == nil {
-			err = e
-		}
-	}()
-
-	t, err := m.newThread(stackSize)
+	t, err := m.NewThread(stackSize)
 	if err != nil {
-		return 0, err
+		return nil, -1, err
 	}
 
 	argv := make([]uintptr, len(args)+1)
@@ -62,6 +62,22 @@ func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, h
 	writePtr(t.sp, pargv) // argv
 	t.sp -= ptrStackSz
 	writePtr(t.sp, 0xcafebabe) // return address, not used
-	t.cpu.ip = ffiProlog
-	return t.run(b.Code)
+	if exitStatus, err = t.run(uintptr(pc) + ffiProlog); err != nil {
+		return nil, exitStatus, err
+	}
+
+	return m, exitStatus, nil
+}
+
+// Exec is a convenience wrapper around New. It takes care of calling the
+// Close method of the Machine returned by New.
+func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int, tracePath string) (exitStatus int, err error) {
+	var m *Machine
+	m, exitStatus, err = New(b, args, stdin, stdout, stderr, heapSize, stackSize, tracePath)
+	if m != nil {
+		if e := m.Close(); e != nil && err == nil {
+			err = e
+		}
+	}
+	return exitStatus, err
 }

@@ -78,9 +78,14 @@ type Binary struct {
 	Lines      []PCInfo
 	TSRelative []byte // Bit vector of text segment-relative pointers in Data.
 	Text       []byte
+	Sym        map[ir.NameID]int // External function: Code index.
 }
 
-func newBinary() *Binary { return &Binary{} }
+func newBinary() *Binary {
+	return &Binary{
+		Sym: map[ir.NameID]int{},
+	}
+}
 
 type nfo struct {
 	align int
@@ -2274,10 +2279,6 @@ func (l *loader) load() error {
 		case *ir.DataDefinition:
 			if x.Value != nil {
 				l.m[i] = ds
-				//TODO- fmt.Println(x.Position) //TODO-
-				//TODO- if a, b := l.size(x.Value, l.tc.MustType(x.TypeID)), l.sizeof(x.TypeID); a != b {
-				//TODO- 	fmt.Printf("\tsize %v, sizeof %v\tXXX\n", a, b) //TODO-
-				//TODO- }
 				ds += roundup(l.size(x.Value, l.tc.MustType(x.TypeID)), mallocAlign)
 			}
 		}
@@ -2296,6 +2297,9 @@ func (l *loader) load() error {
 	for i, v := range l.objects {
 		switch x := v.(type) {
 		case *ir.FunctionDefinition:
+			if x.Linkage == ir.ExternalLinkage {
+				l.out.Sym[x.NameID] = len(l.out.Code) // FFI address.
+			}
 			if op, ok := builtins[x.NameID]; ok && len(x.Body) == 1 {
 				if _, ok := x.Body[0].(*ir.Panic); ok {
 					l.m[i] = len(l.out.Code)

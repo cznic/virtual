@@ -8,7 +8,7 @@ package virtual
 
 import (
 	"fmt"
-	"github.com/cznic/ccir/libc"
+	fcntl2 "github.com/cznic/ccir/libc/fcntl"
 	"strings"
 )
 
@@ -16,25 +16,25 @@ const strace = true
 
 func cmdString(cmd int32) string {
 	switch cmd {
-	case libc.Fcntl_F_DUPFD:
+	case fcntl2.XF_DUPFD:
 		return "F_DUPFD"
-	case libc.Fcntl_F_GETFD:
+	case fcntl2.XF_GETFD:
 		return "F_GETFD"
-	case libc.Fcntl_F_GETFL:
+	case fcntl2.XF_GETFL:
 		return "F_GETFL"
-	case libc.Fcntl_F_GETLK:
+	case fcntl2.XF_GETLK:
 		return "F_GETLK"
-	case libc.Fcntl_F_GETOWN:
+	case fcntl2.XF_GETOWN:
 		return "F_GETOWN"
-	case libc.Fcntl_F_SETFD:
+	case fcntl2.XF_SETFD:
 		return "F_SETFD"
-	case libc.Fcntl_F_SETFL:
+	case fcntl2.XF_SETFL:
 		return "F_SETFL"
-	case libc.Fcntl_F_SETLK:
+	case fcntl2.XF_SETLK:
 		return "F_SETLK"
-	case libc.Fcntl_F_SETLKW:
+	case fcntl2.XF_SETLKW:
 		return "F_SETLKW"
-	case libc.Fcntl_F_SETOWN:
+	case fcntl2.XF_SETOWN:
 		return "F_SETOWN"
 	default:
 		return fmt.Sprintf("%#x", cmd)
@@ -51,15 +51,15 @@ func modeString(flag int32) string {
 		int32
 		string
 	}{
-		{libc.Fcntl_O_APPEND, "O_APPEND"},
-		{libc.Fcntl_O_CREAT, "O_CREAT"},
-		{libc.Fcntl_O_DSYNC, "O_DSYNC"},
-		{libc.Fcntl_O_EXCL, "O_EXCL"},
-		{libc.Fcntl_O_NOCTTY, "O_NOCTTY"},
-		{libc.Fcntl_O_NONBLOCK, "O_NONBLOCK"},
-		{libc.Fcntl_O_RDONLY, "O_RDONLY"},
-		{libc.Fcntl_O_RDWR, "O_RDWR"},
-		{libc.Fcntl_O_WRONLY, "O_WRONLY"},
+		{fcntl2.XO_APPEND, "O_APPEND"},
+		{fcntl2.XO_CREAT, "O_CREAT"},
+		{fcntl2.XO_DSYNC, "O_DSYNC"},
+		{fcntl2.XO_EXCL, "O_EXCL"},
+		{fcntl2.XO_NOCTTY, "O_NOCTTY"},
+		{fcntl2.XO_NONBLOCK, "O_NONBLOCK"},
+		{fcntl2.XO_RDONLY, "O_RDONLY"},
+		{fcntl2.XO_RDWR, "O_RDWR"},
+		{fcntl2.XO_WRONLY, "O_WRONLY"},
 	} {
 		if flag&v.int32 != 0 {
 			a = append(a, v.string)

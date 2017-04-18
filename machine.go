@@ -75,12 +75,14 @@ func GoString(s uintptr) string {
 	}
 }
 
-type machine struct {
+// Machine represents the state of the VM memory and threads.
+type Machine struct {
+	DS        uintptr
+	DSMem     mmap.MMap // Data segment.
 	brk       uintptr
 	bss       uintptr
 	bssSize   int
-	ds        uintptr
-	dsMem     mmap.MMap
+	code      []Operation
 	functions []PCInfo
 	lines     []PCInfo
 	stderr    io.Writer
@@ -90,7 +92,7 @@ type machine struct {
 	stopMu    sync.Mutex
 	stopped   bool
 	threadID  uintptr
-	threads   []*thread
+	Threads   []*Thread
 	threadsMu sync.Mutex
 	tracePath string
 	ts        uintptr
@@ -98,7 +100,7 @@ type machine struct {
 	tsMem     mmap.MMap
 }
 
-func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writer, tracePath string) (*machine, error) {
+func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writer, tracePath string) (*Machine, error) {
 	var (
 		bssSize      int
 		data, text   []byte
@@ -170,12 +172,24 @@ func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writ
 		}
 	}
 
-	return &machine{
+	var lines, functions []PCInfo
+	if b != nil {
+		lines = b.Lines
+		functions = b.Functions
+	}
+	var code []Operation
+	if b != nil {
+		code = b.Code
+	}
+	return &Machine{
+		DS:        ds,
+		DSMem:     dsMem,
 		brk:       ds + uintptr(brk),
 		bss:       ds + uintptr(dsSize),
 		bssSize:   bssSize,
-		ds:        ds,
-		dsMem:     dsMem,
+		code:      code,
+		functions: functions,
+		lines:     lines,
 		stderr:    stderr,
 		stdin:     stdin,
 		stdout:    stdout,
@@ -187,17 +201,21 @@ func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writ
 	}, nil
 }
 
-func (m *machine) CString(s string) uintptr {
+// CString allocates a C string initialized from s.
+func (m *Machine) CString(s string) uintptr {
+	n := len(s)
 	p := m.malloc(len(s) + 1)
-	copy(m.dsMem[p-m.ds:], s)
-	m.dsMem[p-m.ds+uintptr(len(s))+1] = 0
+	i := p - m.DS
+	copy(m.DSMem[i:], s)
+	m.DSMem[i+uintptr(n)] = 0
 	return p
 }
 
-func (m *machine) close() (err error) {
+// Close frees resources acquired from the OS by m.
+func (m *Machine) Close() (err error) {
 	m.Kill()
-	if m.dsMem != nil {
-		if e := m.dsMem.Unmap(); e != nil && err == nil {
+	if m.DSMem != nil {
+		if e := m.DSMem.Unmap(); e != nil && err == nil {
 			err = e
 		}
 	}
@@ -216,7 +234,7 @@ func (m *machine) close() (err error) {
 		}
 	}
 	m.threadsMu.Lock()
-	for _, v := range m.threads {
+	for _, v := range m.Threads {
 		if e := v.close(); e != nil && err == nil {
 			err = e
 		}
@@ -225,7 +243,7 @@ func (m *machine) close() (err error) {
 	return err
 }
 
-func (m *machine) pcInfo(pc int, infos []PCInfo) *PCInfo {
+func (m *Machine) pcInfo(pc int, infos []PCInfo) *PCInfo {
 	if i := sort.Search(len(infos), func(i int) bool { return infos[i].PC >= pc }); len(infos) != 0 && i <= len(infos) {
 		switch {
 		case i == len(infos):
@@ -243,7 +261,7 @@ func (m *machine) pcInfo(pc int, infos []PCInfo) *PCInfo {
 	return &PCInfo{}
 }
 
-func (m *machine) Kill() {
+func (m *Machine) Kill() {
 	m.stopMu.Lock()
 	if !m.stopped {
 		close(m.stop)
@@ -252,10 +270,10 @@ func (m *machine) Kill() {
 	m.stopMu.Unlock()
 }
 
-func (m *machine) free(p uintptr) { //TODO
+func (m *Machine) free(p uintptr) { //TODO
 }
 
-func (m *machine) calloc(n int) uintptr {
+func (m *Machine) calloc(n int) uintptr {
 	p := m.malloc(n)
 	if p != 0 {
 		for p := p; n != 0; n-- {
@@ -266,10 +284,10 @@ func (m *machine) calloc(n int) uintptr {
 	return p
 }
 
-func (m *machine) malloc(n int) uintptr { //TODO real malloc
+func (m *Machine) malloc(n int) uintptr { //TODO real malloc
 	if n != 0 {
 		p := m.brk
-		if m.sbrk(n)-m.ds < uintptr(len(m.dsMem)) {
+		if m.sbrk(n)-m.DS < uintptr(len(m.DSMem)) {
 			return p
 		}
 	}
@@ -277,7 +295,7 @@ func (m *machine) malloc(n int) uintptr { //TODO real malloc
 	return 0
 }
 
-func (m *machine) realloc(p uintptr, n int) uintptr { //TODO real realloc
+func (m *Machine) realloc(p uintptr, n int) uintptr { //TODO real realloc
 	q := m.malloc(n)
 	if q == 0 {
 		return 0
@@ -287,7 +305,10 @@ func (m *machine) realloc(p uintptr, n int) uintptr { //TODO real realloc
 	return q
 }
 
-func (m *machine) newThread(stackSize int) (*thread, error) {
+// NewThread returns a newly created Thread or an error, if any. Its Close
+// method must be called eventually to free any resources it has acquired from
+// the OS.
+func (m *Machine) NewThread(stackSize int) (*Thread, error) {
 	stackSize = roundup(stackSize, mmapPage)
 	stackMem, err := mmap.MapRegion(nil, stackSize, mmap.RDWR, mmap.ANON, 0)
 	if err != nil {
@@ -295,13 +316,13 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 	}
 
 	ss := uintptr(unsafe.Pointer(&stackMem[0]))
-	t := &thread{
+	t := &Thread{
 		cpu: cpu{
 			jmpBuf: jmpBuf{
 				bp: 0xdeadbeef,
 				sp: ss + uintptr(stackSize) - tlsStackSize,
 			},
-			ds:   m.ds,
+			ds:   m.DS,
 			m:    m,
 			stop: m.stop,
 			ts:   m.ts,
@@ -315,25 +336,12 @@ func (m *machine) newThread(stackSize int) (*thread, error) {
 	t.setErrno(0)
 	t.thread = t
 	m.threadsMu.Lock()
-	m.threads = append(m.threads, t)
+	m.Threads = append(m.Threads, t)
 	m.threadsMu.Unlock()
 	return t, nil
 }
 
-func (m *machine) sbrk(n int) uintptr {
+func (m *Machine) sbrk(n int) uintptr {
 	m.brk += uintptr(roundup(n, mallocAlign))
 	return m.brk
-}
-
-type thread struct {
-	cpu
-	ss       uintptr // Stack segment
-	stackMem mmap.MMap
-}
-
-func (t *thread) close() error { return t.stackMem.Unmap() }
-
-type tls struct {
-	errno    int32
-	threadID uintptr
 }
