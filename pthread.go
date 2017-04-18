@@ -6,6 +6,7 @@ package virtual
 
 import (
 	"fmt"
+	"os"
 	"sync"
 
 	"github.com/cznic/ccir/libc/pthread"
@@ -59,19 +60,28 @@ var (
 // extern int pthread_equal(pthread_t __thread1, pthread_t __thread2);
 func (c *cpu) pthreadEqual() {
 	sp, thread2 := popLong(c.sp)
-	switch {
-	case readLong(sp) == thread2:
-		writeI32(c.rp, 1)
-	default:
-		writeI32(c.rp, 0)
+	thread1 := readLong(sp)
+	var r int32
+	if thread1 == thread2 {
+		r = 1
+	}
+	writeI32(c.rp, r)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_equal(%v, %v) %v\n", thread1, thread2, r)
 	}
 }
 
 // extern int pthread_mutex_destroy(pthread_mutex_t * __mutex);
 func (c *cpu) pthreadMutexDestroy() {
+	mutex := readPtr(c.sp)
 	mutexes.Lock()
-	delete(mutexes.m, readPtr(c.sp))
+	delete(mutexes.m, mutex)
 	mutexes.Unlock()
+	var r int32
+	writeI32(c.rp, r)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_mutex_destroy(%#x) %v\n", mutex, r)
+	}
 }
 
 // extern int pthread_mutex_init(pthread_mutex_t * __mutex, pthread_mutexattr_t * __mutexattr);
@@ -81,14 +91,21 @@ func (c *cpu) pthreadMutexInit() {
 	if mutexattr != 0 {
 		attr = readI32(mutexattr)
 	}
-	mutexes.mu(readPtr(sp)).attr = attr
-	writeI32(c.rp, 0)
+	mutex := readPtr(sp)
+	mutexes.mu(mutex).attr = attr
+	var r int32
+	writeI32(c.rp, r)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_mutex_init(%#x, %#x) %v\n", mutex, mutexattr, r)
+	}
 }
 
 // extern int pthread_mutex_lock(pthread_mutex_t * __mutex);
 func (c *cpu) pthreadMutexLock() {
 	threadID := c.tlsp.threadID
-	mu := mutexes.mu(readPtr(c.sp))
+	mutex := readPtr(c.sp)
+	mu := mutexes.mu(mutex)
+	var r int32
 	mu.outer.Lock()
 	switch mu.attr {
 	case pthread.XPTHREAD_MUTEX_NORMAL:
@@ -110,13 +127,18 @@ func (c *cpu) pthreadMutexLock() {
 		panic(fmt.Errorf("attr %#x", mu.attr))
 	}
 	mu.outer.Unlock()
-	writeI32(c.rp, 0)
+	writeI32(c.rp, r)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_mutex_lock(%#x [thread id %v]) %v\n", mutex, threadID, r)
+	}
 }
 
 // int pthread_mutex_trylock(pthread_mutex_t *mutex);
 func (c *cpu) pthreadMutexTryLock() {
 	threadID := c.tlsp.threadID
-	mu := mutexes.mu(readPtr(c.sp))
+	mutex := readPtr(c.sp)
+	mu := mutexes.mu(mutex)
+	var r int32
 	mu.outer.Lock()
 	switch mu.attr {
 	case pthread.XPTHREAD_MUTEX_NORMAL:
@@ -134,12 +156,16 @@ func (c *cpu) pthreadMutexTryLock() {
 		panic(fmt.Errorf("attr %#x", mu.attr))
 	}
 	mu.outer.Unlock()
-	writeI32(c.rp, 0)
+	writeI32(c.rp, r)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_mutex_trylock(%#x [thread id %v]) %v\n", mutex, threadID, r)
+	}
 }
 
 // extern int pthread_mutex_unlock(pthread_mutex_t * __mutex);
 func (c *cpu) pthreadMutexUnlock() {
 	threadID := c.tlsp.threadID
+	mutex := readPtr(c.sp)
 	mu := mutexes.mu(readPtr(c.sp))
 	var r int32
 	mu.outer.Lock()
@@ -168,26 +194,50 @@ func (c *cpu) pthreadMutexUnlock() {
 	}
 	mu.outer.Unlock()
 	writeI32(c.rp, r)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_mutex_unlock(%#x [thread id %v]) %v\n", mutex, threadID, r)
+	}
 }
 
 // extern int pthread_mutexattr_destroy(pthread_mutexattr_t * __attr);
 func (c *cpu) pthreadMutexAttrDestroy() {
-	writeI32(readPtr(c.sp), -1)
-	writeI32(c.rp, 0)
+	var r int32
+	attr := readPtr(c.sp)
+	writeI32(attr, -1)
+	writeI32(c.rp, r)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_mutexattr_destroy(%#x) %v\n", attr, r)
+	}
 }
 
 // extern int pthread_mutexattr_init(pthread_mutexattr_t * __attr);
 func (c *cpu) pthreadMutexAttrInit() {
-	writeI32(readPtr(c.sp), 0)
-	writeI32(c.rp, 0)
+	var r int32
+	attr := readPtr(c.sp)
+	writeI32(attr, 0)
+	writeI32(c.rp, r)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_mutexattr_init(%#x) %v\n", attr, r)
+	}
 }
 
 // extern int pthread_mutexattr_settype(pthread_mutexattr_t * __attr, int __kind);
 func (c *cpu) pthreadMutexAttrSetType() {
+	var r int32
 	sp, kind := popI32(c.sp)
-	writeI32(readPtr(sp), kind)
-	writeI32(c.rp, 0)
+	attr := readPtr(sp)
+	writeI32(attr, kind)
+	writeI32(c.rp, r)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_mutexattr_settype(%#x, %v) %v\n", attr, kind, r)
+	}
 }
 
 // pthread_t pthread_self(void);
-func (c *cpu) pthreadSelf() { writeULong(c.rp, uint64(c.tlsp.threadID)) }
+func (c *cpu) pthreadSelf() {
+	threadID := uint64(c.tlsp.threadID)
+	writeULong(c.rp, threadID)
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_self() %v\n", threadID)
+	}
+}

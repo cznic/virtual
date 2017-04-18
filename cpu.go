@@ -61,6 +61,7 @@ type cpu struct {
 }
 
 func addPtr(p uintptr, v uintptr)         { *(*uintptr)(unsafe.Pointer(p)) += v }
+func popF64(p uintptr) (uintptr, float64) { return p + f64StackSz, readF64(p) }
 func popI32(p uintptr) (uintptr, int32)   { return p + i32StackSz, readI32(p) }
 func popI64(p uintptr) (uintptr, int64)   { return p + i64StackSz, readI64(p) }
 func popLong(p uintptr) (uintptr, int64)  { return p + longStackSz, readLong(p) }
@@ -191,12 +192,12 @@ var prev token.Position
 
 func (c *cpu) trace() string {
 	pos := c.m.pcInfo(int(c.ip), c.m.lines).Position() //TODO-
-	//if prev.Filename == pos.Filename && prev.Line == pos.Line {
-	//	return ""
-	//}
+	if prev.Filename == pos.Filename && prev.Line == pos.Line {
+		return ""
+	}
 
-	//prev = pos
-	//return fmt.Sprintf("%v\n", pos) //TODO-
+	prev = pos
+	return fmt.Sprintf("%v\n", pos) //TODO-
 
 	h := c.ip + 1
 	for h < uintptr(len(c.code)) && c.code[h].Opcode == Ext {
@@ -1776,6 +1777,8 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.pthreadEqual)
 		case pthread_mutex_trylock:
 			c.builtin(c.pthreadMutexTryLock)
+		case gettimeofday:
+			c.builtin(c.gettimeofday)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

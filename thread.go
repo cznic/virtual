@@ -11,6 +11,8 @@ import (
 
 var (
 	_ FFIArgument = Int32(0)
+	_ FFIArgument = Int64(0)
+	_ FFIResult   = Float64Result{}
 	_ FFIResult   = Int32Result{}
 	_ FFIResult   = Int64Result{}
 	_ FFIResult   = PtrResult{}
@@ -29,6 +31,11 @@ type Int32 int32
 
 func (Int32) arg() {}
 
+// Int64 is an FFI int64 argument.
+type Int64 int64
+
+func (Int64) arg() {}
+
 // Ptr is an FFI pointer argument.
 type Ptr uintptr
 
@@ -43,6 +50,11 @@ func (Int32Result) result() {}
 type Int64Result struct{ Value *int64 }
 
 func (Int64Result) result() {}
+
+// Float64Result is an FFI float64 result.
+type Float64Result struct{ Value *float64 }
+
+func (Float64Result) result() {}
 
 // PtrResult is an FFI pointer result.
 type PtrResult struct{ Value *uintptr }
@@ -104,6 +116,8 @@ func (t *Thread) FFI(fn int, out []FFIResult, arg ...FFIArgument) (int, error) {
 			t.sp -= i32StackSz
 		case Int64Result:
 			t.sp -= i64StackSz
+		case Float64Result:
+			t.sp -= f64StackSz
 		case PtrResult:
 			t.sp -= ptrStackSz
 		default:
@@ -119,6 +133,9 @@ func (t *Thread) FFI(fn int, out []FFIResult, arg ...FFIArgument) (int, error) {
 		case Int32:
 			t.sp -= i32StackSz
 			writeI32(t.sp, int32(x))
+		case Int64:
+			t.sp -= i64StackSz
+			writeI64(t.sp, int64(x))
 		case Ptr:
 			t.sp -= ptrStackSz
 			writePtr(t.sp, uintptr(x))
@@ -136,6 +153,10 @@ func (t *Thread) FFI(fn int, out []FFIResult, arg ...FFIArgument) (int, error) {
 		case Int64Result:
 			if p := x.Value; p != nil {
 				r, *p = popI64(r)
+			}
+		case Float64Result:
+			if p := x.Value; p != nil {
+				r, *p = popF64(r)
 			}
 		case PtrResult:
 			if p := x.Value; p != nil {

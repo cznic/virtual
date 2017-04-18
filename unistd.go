@@ -128,7 +128,7 @@ func (c *cpu) unlink() {
 	path := readPtr(c.sp)
 	r, _, err := syscall.Syscall(syscall.SYS_UNLINK, path, 0, 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "unlink(%v) %v %v\n", GoString(path), r, err)
+		fmt.Fprintf(os.Stderr, "unlink(%q) %v %v\n", GoString(path), r, err)
 	}
 	if err != 0 {
 		c.setErrno(err)
