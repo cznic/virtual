@@ -109,6 +109,7 @@ func (t *Thread) FFI(fn int, out []FFIResult, arg ...FFIArgument) (int, error) {
 	rpStack := t.rpStack
 	rp := t.rp
 	sp := t.sp
+
 	// Alloc result(s)
 	for _, v := range out {
 		switch x := v.(type) {
@@ -144,6 +145,13 @@ func (t *Thread) FFI(fn int, out []FFIResult, arg ...FFIArgument) (int, error) {
 		}
 	}
 	s, err := t.run(uintptr(fn))
+	if err != nil {
+		t.rpStack = rpStack
+		t.rp = rp
+		t.sp = sp
+		return s, err
+	}
+
 	for _, v := range out {
 		switch x := v.(type) {
 		case Int32Result:
