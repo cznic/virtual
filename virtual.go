@@ -3,6 +3,14 @@
 // license that can be found in the LICENSE file.
 
 // Package virtual implements a machine that isn't. (Work In Progress)
+//
+// For supported platforms and architectures please see [0].
+//
+// Links
+//
+// Referenced from elsewhere
+//
+//  [0]: https://github.com/cznic/ccir
 package virtual
 
 import (

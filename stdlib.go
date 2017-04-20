@@ -137,6 +137,17 @@ func (s *sorter) Swap(i, j int) {
 	}
 }
 
+// char *getenv(const char *name);
+func (c *cpu) getenv() {
+	name := GoString(readPtr(c.sp))
+	v := os.Getenv(name)
+	var p uintptr
+	if v != "" {
+		p = c.m.CString(v) //TODO memory leak
+	}
+	writePtr(c.rp, p)
+}
+
 // void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *));
 func (c *cpu) qsort() {
 	sp, compar := popPtr(c.sp)

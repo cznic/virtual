@@ -1781,6 +1781,16 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.gettimeofday)
 		case ftruncate64:
 			c.builtin(c.ftruncate64)
+		case getenv:
+			c.builtin(c.getenv)
+		case access:
+			c.builtin(c.access)
+		case mmap64:
+			c.builtin(c.mmap64)
+		case sysconf:
+			c.builtin(c.sysconf)
+		case munmap:
+			c.builtin(c.munmap)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

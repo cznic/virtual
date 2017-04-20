@@ -35,6 +35,20 @@ func init() {
 	})
 }
 
+// int access(const char *path, int amode);
+func (c *cpu) access() {
+	sp, amode := popI32(c.sp)
+	path := readPtr(sp)
+	r, _, err := syscall.Syscall(syscall.SYS_ACCESS, path, uintptr(amode), 0)
+	if strace {
+		fmt.Fprintf(os.Stderr, "access(%q) %v %v\n", GoString(path), r, err)
+	}
+	if err != 0 {
+		c.setErrno(err)
+	}
+	writeI32(c.rp, int32(r))
+}
+
 // int close(int fd);
 func (c *cpu) close() {
 	fd := readI32(c.sp)
@@ -135,6 +149,16 @@ func (c *cpu) read() { //TODO stdin
 		c.thread.setErrno(err)
 	}
 	writeLong(c.rp, int64(r))
+}
+
+// long sysconf(int name);
+func (c *cpu) sysconf() {
+	switch n := readI32(c.sp); n {
+	case unistd.X_SC_PAGESIZE:
+		writeLong(c.rp, int64(os.Getpagesize()))
+	default:
+		panic(fmt.Errorf("%v(%#x)", n, n))
+	}
 }
 
 // int unlink(const char *path);
