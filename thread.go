@@ -10,6 +10,7 @@ import (
 )
 
 var (
+	_ FFIArgument = Float64(0)
 	_ FFIArgument = Int32(0)
 	_ FFIArgument = Int64(0)
 	_ FFIResult   = Float64Result{}
@@ -26,17 +27,22 @@ type FFIResult interface {
 	result()
 }
 
-// Int32 is an FFI int32 argument.
+// Float64 is an float64 FFI argument.
+type Float64 int64
+
+func (Float64) arg() {}
+
+// Int32 is an int32 FFI argument.
 type Int32 int32
 
 func (Int32) arg() {}
 
-// Int64 is an FFI int64 argument.
+// Int64 is an int64 FFI argument.
 type Int64 int64
 
 func (Int64) arg() {}
 
-// Ptr is an FFI pointer argument.
+// Ptr is a pointer FFI argument.
 type Ptr uintptr
 
 func (Ptr) arg() {}
@@ -90,22 +96,24 @@ func (t *Thread) Close() error {
 	return t.stackMem.Unmap()
 }
 
-// FFI0 executes a void function fn using arg.  The number and types of arg
-// items must match the number and types of the function arguments.
-func (t *Thread) FFI0(fn int, arg ...FFIArgument) (int, error) {
-	return t.FFI(fn, nil, arg...)
+// FFI0 executes a void function fn using 'in' as arguments.  The number and
+// types of arguments must match the number and types of the function
+// arguments. Variadic functions are supported.
+func (t *Thread) FFI0(fn int, in ...FFIArgument) (int, error) {
+	return t.FFI(fn, nil, in...)
 }
 
-// FFI1 executes function fn, having one result, using arg.  The number and
-// types of arg items must match the number and types of the function
-// arguments.
-func (t *Thread) FFI1(fn int, out FFIResult, arg ...FFIArgument) (int, error) {
-	return t.FFI(fn, []FFIResult{out}, arg...)
+// FFI1 executes function fn, having one result, using 'in' as arguments.  The
+// number and types of 'in' items must match the number and types of the
+// function arguments. Variadic functions are supported.
+func (t *Thread) FFI1(fn int, out FFIResult, in ...FFIArgument) (int, error) {
+	return t.FFI(fn, []FFIResult{out}, in...)
 }
 
-// FFI executes function fn using arg.  The number and types of out and arg
-// items must match the number and types of the function results and arguments.
-func (t *Thread) FFI(fn int, out []FFIResult, arg ...FFIArgument) (int, error) {
+// FFI executes function fn using 'in' as arguments.  The number and types  of
+// 'out' and 'in' items must match the number and types of the function results
+// and arguments. Variadic functions are supported.
+func (t *Thread) FFI(fn int, out []FFIResult, in ...FFIArgument) (int, error) {
 	rpStack := t.rpStack
 	rp := t.rp
 	sp := t.sp
@@ -129,8 +137,11 @@ func (t *Thread) FFI(fn int, out []FFIResult, arg ...FFIArgument) (int, error) {
 	t.rpStack = append(t.rpStack, t.rp)
 	t.rp = t.sp
 	r := t.rp
-	for _, v := range arg {
+	for _, v := range in {
 		switch x := v.(type) {
+		case Float64:
+			t.sp -= f64StackSz
+			writeF64(t.sp, float64(x))
 		case Int32:
 			t.sp -= i32StackSz
 			writeI32(t.sp, int32(x))

@@ -1779,6 +1779,8 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.pthreadMutexTryLock)
 		case gettimeofday:
 			c.builtin(c.gettimeofday)
+		case ftruncate64:
+			c.builtin(c.ftruncate64)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())

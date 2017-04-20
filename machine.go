@@ -61,13 +61,17 @@ func movemem(dst, src uintptr, n int) int {
 	return copy((*[math.MaxInt32]byte)(unsafe.Pointer(dst))[:n], (*[math.MaxInt32]byte)(unsafe.Pointer(src))[:n])
 }
 
-// GoString returns a string from a C char* s.
-func GoString(s uintptr) string {
+// GoBytes returns a []byte copied from a C char* null terminated string s.
+func GoBytes(s uintptr) []byte {
+	if s == 0 {
+		return nil
+	}
+
 	var b buffer.Bytes
 	for {
 		ch := readU8(s)
 		if ch == 0 {
-			return string(b.Bytes())
+			return b.Bytes()
 		}
 
 		b.WriteByte(ch)
@@ -75,14 +79,73 @@ func GoString(s uintptr) string {
 	}
 }
 
+// GoString returns a string from a C char* null terminated string s.
+func GoString(s uintptr) string {
+	if s == 0 {
+		return ""
+	}
+
+	var b buffer.Bytes
+	for {
+		ch := readU8(s)
+		if ch == 0 {
+			r := string(b.Bytes())
+			b.Close()
+			return r
+		}
+
+		b.WriteByte(ch)
+		s++
+	}
+}
+
+// GoBytesLen returns a []byte copied from a C char* string s having length len bytes.
+func GoBytesLen(s uintptr, len int) []byte {
+	var b buffer.Bytes
+	for ; len != 0; len-- {
+		b.WriteByte(readU8(s))
+		s++
+	}
+	return b.Bytes()
+}
+
+// GoStringLen returns a string from a C char* string s having length len bytes.
+func GoStringLen(s uintptr, len int) string {
+	var b buffer.Bytes
+	for ; len != 0; len-- {
+		b.WriteByte(readU8(s))
+		s++
+	}
+	r := string(b.Bytes())
+	b.Close()
+	return r
+}
+
+// CopyBytes copies src to dest, optionally adding a zero byte at the end.
+func CopyBytes(dst uintptr, src []byte, addNull bool) {
+	copy((*[math.MaxInt32]byte)(unsafe.Pointer(dst))[:len(src)], src)
+	if addNull {
+		writeU8(dst+uintptr(len(src)), 0)
+	}
+}
+
+// CopyString copies src to dest, optionally adding a zero byte at the end.
+func CopyString(dst uintptr, src string, addNull bool) {
+	copy((*[math.MaxInt32]byte)(unsafe.Pointer(dst))[:len(src)], src)
+	if addNull {
+		writeU8(dst+uintptr(len(src)), 0)
+	}
+}
+
 // Machine represents the state of the VM memory and threads.
 type Machine struct {
-	DS        uintptr
-	DSMem     mmap.MMap // Data segment.
+	Threads   []*Thread
 	brk       uintptr
 	bss       uintptr
 	bssSize   int
 	code      []Operation
+	ds        uintptr
+	dsMem     mmap.MMap
 	functions []PCInfo
 	lines     []PCInfo
 	stderr    io.Writer
@@ -92,7 +155,6 @@ type Machine struct {
 	stopMu    sync.Mutex
 	stopped   bool
 	threadID  uintptr
-	Threads   []*Thread
 	threadsMu sync.Mutex
 	tracePath string
 	ts        uintptr
@@ -182,12 +244,12 @@ func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writ
 		code = b.Code
 	}
 	return &Machine{
-		DS:        ds,
-		DSMem:     dsMem,
 		brk:       ds + uintptr(brk),
 		bss:       ds + uintptr(dsSize),
 		bssSize:   bssSize,
 		code:      code,
+		ds:        ds,
+		dsMem:     dsMem,
 		functions: functions,
 		lines:     lines,
 		stderr:    stderr,
@@ -205,17 +267,17 @@ func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writ
 func (m *Machine) CString(s string) uintptr {
 	n := len(s)
 	p := m.malloc(len(s) + 1)
-	i := p - m.DS
-	copy(m.DSMem[i:], s)
-	m.DSMem[i+uintptr(n)] = 0
+	i := p - m.ds
+	copy(m.dsMem[i:], s)
+	m.dsMem[i+uintptr(n)] = 0
 	return p
 }
 
 // Close frees resources acquired from the OS by m.
 func (m *Machine) Close() (err error) {
 	m.Kill()
-	if m.DSMem != nil {
-		if e := m.DSMem.Unmap(); e != nil && err == nil {
+	if m.dsMem != nil {
+		if e := m.dsMem.Unmap(); e != nil && err == nil {
 			err = e
 		}
 	}
@@ -287,7 +349,7 @@ func (m *Machine) calloc(n int) uintptr {
 func (m *Machine) malloc(n int) uintptr { //TODO real malloc
 	if n != 0 {
 		p := m.brk
-		if m.sbrk(n)-m.DS < uintptr(len(m.DSMem)) {
+		if m.sbrk(n)-m.ds < uintptr(len(m.dsMem)) {
 			return p
 		}
 	}
@@ -322,7 +384,7 @@ func (m *Machine) NewThread(stackSize int) (*Thread, error) {
 				bp: 0xdeadbeef,
 				sp: ss + uintptr(stackSize) - tlsStackSize,
 			},
-			ds:   m.DS,
+			ds:   m.ds,
 			m:    m,
 			stop: m.stop,
 			ts:   m.ts,

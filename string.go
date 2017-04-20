@@ -30,7 +30,9 @@ func (c *cpu) memcmp() {
 	var ch1, ch2 byte
 	for n != 0 {
 		ch1 = readU8(s1)
+		s1++
 		ch2 = readU8(s2)
+		s2++
 		if ch1 != ch2 {
 			break
 		}

@@ -61,6 +61,20 @@ func (c *cpu) fsync() {
 	writeI32(c.rp, int32(r))
 }
 
+// int ftruncate(int fildes, off_t length);
+func (c *cpu) ftruncate64() {
+	sp, length := popI64(c.sp)
+	fildes := readI32(sp)
+	r, _, err := syscall.Syscall(syscall.SYS_FTRUNCATE, uintptr(fildes), uintptr(length), 0)
+	if strace {
+		fmt.Fprintf(os.Stderr, "ftruncate(%#x, %#x) %v %v %q\n", fildes, length, r, err)
+	}
+	if err != 0 {
+		c.setErrno(err)
+	}
+	writePtr(c.rp, r)
+}
+
 // char *getcwd(char *buf, size_t size);
 func (c *cpu) getcwd() {
 	sp, size := popLong(c.sp)
