@@ -239,7 +239,7 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			fmt.Print(c.trace())
 			os.Stdout.Sync()
 		}
-		op := c.code[c.ip] //TODO bench op := *(*Operation)(unsafe.Address(&code[c.ip]))
+		op := c.code[c.ip]
 		c.ip++
 		switch op.Opcode {
 		case AP: // -> ptr
