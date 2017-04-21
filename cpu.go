@@ -227,7 +227,7 @@ func (c *cpu) run(ip uintptr) (int, error) {
 	}()
 
 	for i := 0; ; i++ {
-		if i&1024 == 0 {
+		if i%1024 == 0 {
 			select {
 			case <-c.m.stop:
 				return -1, KillError{}
