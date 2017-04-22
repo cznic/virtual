@@ -27,6 +27,7 @@ func init() {
 		dict.SID("fflush"):              fflush,
 		dict.SID("fgetc"):               fgetc,
 		dict.SID("fgets"):               fgets,
+		dict.SID("fopen"):               fopen64,
 		dict.SID("fopen64"):             fopen64,
 		dict.SID("fprintf"):             fprintf,
 		dict.SID("fread"):               fread,
