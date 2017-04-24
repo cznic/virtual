@@ -139,27 +139,31 @@ func CopyString(dst uintptr, src string, addNull bool) {
 
 // Machine represents the state of the VM memory and threads.
 type Machine struct {
-	Threads   []*Thread
-	brk       uintptr
-	bss       uintptr
-	bssSize   int
-	code      []Operation
-	ds        uintptr
-	dsMem     mmap.MMap
-	functions []PCInfo
-	lines     []PCInfo
-	stderr    io.Writer
-	stdin     io.Reader
-	stdout    io.Writer
-	stop      chan struct{}
-	stopMu    sync.Mutex
-	stopped   bool
-	threadID  uintptr
-	threadsMu sync.Mutex
-	tracePath string
-	ts        uintptr
-	tsFile    *os.File
-	tsMem     mmap.MMap
+	ProfileFunctions    map[PCInfo]int
+	ProfileInstructions map[Opcode]int
+	ProfileLines        map[PCInfo]int
+	ProfileRate         int       // N: Sample every Nth instruction.
+	Threads             []*Thread //TODO Unexport?
+	brk                 uintptr
+	bss                 uintptr
+	bssSize             int
+	code                []Operation
+	ds                  uintptr
+	dsMem               mmap.MMap
+	functions           []PCInfo
+	lines               []PCInfo
+	stderr              io.Writer
+	stdin               io.Reader
+	stdout              io.Writer
+	stop                chan struct{}
+	stopMu              sync.Mutex
+	stopped             bool
+	threadID            uintptr
+	threadsMu           sync.Mutex
+	tracePath           string
+	ts                  uintptr
+	tsFile              *os.File
+	tsMem               mmap.MMap
 }
 
 func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writer, tracePath string) (*Machine, error) {

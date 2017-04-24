@@ -240,6 +240,23 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			os.Stdout.Sync()
 		}
 		op := c.code[c.ip]
+		if profile {
+			if c.m.ProfileRate == 0 || i%c.m.ProfileRate == 0 {
+				if c.m.ProfileFunctions != nil {
+					nfo := *c.m.pcInfo(int(c.ip), c.m.functions)
+					nfo.PC = 0
+					c.m.ProfileFunctions[nfo]++
+				}
+				if c.m.ProfileLines != nil {
+					nfo := *c.m.pcInfo(int(c.ip), c.m.lines)
+					nfo.PC = 0
+					c.m.ProfileLines[nfo]++
+				}
+				if c.m.ProfileInstructions != nil {
+					c.m.ProfileInstructions[op.Opcode]++
+				}
+			}
+		}
 		c.ip++
 		switch op.Opcode {
 		case AP: // -> ptr
