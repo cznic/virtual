@@ -418,7 +418,8 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 // int printf(const char *format, ...);
 func (c *cpu) printf() {
 	ap := c.rp - ptrStackSz
-	writeI32(c.rp, goFprintf(c.m.stdout, readPtr(ap), ap))
+	//DEBUG only: replace c.m.stdout with os.Stdout (for debug purposes)
+	writeI32(c.rp, goFprintf(os.Stdout, readPtr(ap), ap))
 }
 
 // int sprintf(char *str, const char *format, ...);

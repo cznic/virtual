@@ -1814,22 +1814,34 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.CloseHandle)
 		case DeleteCriticalSection:
 			c.builtin(c.DeleteCriticalSection)
+		case DeleteFileW:
+			c.builtin(c.DeleteFileW)
 		case EnterCriticalSection:
 			c.builtin(c.EnterCriticalSection)
+		case FlushFileBuffers:
+			c.builtin(c.FlushFileBuffers)
 		case FormatMessageW:
 			c.builtin(c.FormatMessageW)
 		case GetCurrentProcessId:
 			c.builtin(c.GetCurrentProcessId)
 		case GetCurrentThreadId:
 			c.builtin(c.GetCurrentThreadId)
-		case GetFullPathNameW:
-			c.builtin(c.GetFullPathNameW)
 		case GetFileAttributesExW:
 			c.builtin(c.GetFileAttributesExW)
+		case GetFileAttributesW:
+			c.builtin(c.GetFileAttributesW)
+		case GetFileSize:
+			c.builtin(c.GetFileSize)
+		case GetFullPathNameW:
+			c.builtin(c.GetFullPathNameW)
 		case GetLastError:
 			c.builtin(c.GetLastError)
 		case GetSystemInfo:
 			c.builtin(c.GetSystemInfo)
+		case GetSystemTime:
+			c.builtin(c.GetSystemTime)
+		case GetTickCount:
+			c.builtin(c.GetTickCount)
 		case GetVersionExA:
 			c.builtin(c.GetVersionExA)
 		case InitializeCriticalSection:
@@ -1840,12 +1852,20 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.LeaveCriticalSection)
 		case LocalFree:
 			c.builtin(c.LocalFree)
+		case LockFileEx:
+			c.builtin(c.LockFileEx)
 		case MultiByteToWideChar:
 			c.builtin(c.MultiByteToWideChar)
 		case ReadFile:
 			c.builtin(c.ReadFile)
+		case UnlockFileEx:
+			c.builtin(c.UnlockFileEx)
+		case QueryPerformanceCounter:
+			c.builtin(c.QueryPerformanceCounter)
 		case WideCharToMultiByte:
 			c.builtin(c.WideCharToMultiByte)
+		case WriteFile:
+			c.builtin(c.WriteFile)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())
