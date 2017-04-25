@@ -15,12 +15,10 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/cznic/internal/buffer"
-)
-
-import (
 	"fmt"
 	"unsafe"
+
+	"github.com/cznic/internal/buffer"
 )
 
 var (
@@ -1808,6 +1806,46 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.sysconf)
 		case munmap:
 			c.builtin(c.munmap)
+
+		// windows
+		case CreateFileW:
+			c.builtin(c.CreateFileW)
+		case CloseHandle:
+			c.builtin(c.CloseHandle)
+		case DeleteCriticalSection:
+			c.builtin(c.DeleteCriticalSection)
+		case EnterCriticalSection:
+			c.builtin(c.EnterCriticalSection)
+		case FormatMessageW:
+			c.builtin(c.FormatMessageW)
+		case GetCurrentProcessId:
+			c.builtin(c.GetCurrentProcessId)
+		case GetCurrentThreadId:
+			c.builtin(c.GetCurrentThreadId)
+		case GetFullPathNameW:
+			c.builtin(c.GetFullPathNameW)
+		case GetFileAttributesExW:
+			c.builtin(c.GetFileAttributesExW)
+		case GetLastError:
+			c.builtin(c.GetLastError)
+		case GetSystemInfo:
+			c.builtin(c.GetSystemInfo)
+		case GetVersionExA:
+			c.builtin(c.GetVersionExA)
+		case InitializeCriticalSection:
+			c.builtin(c.InitializeCriticalSection)
+		case InterlockedCompareExchange:
+			c.builtin(c.InterlockedCompareExchange)
+		case LeaveCriticalSection:
+			c.builtin(c.LeaveCriticalSection)
+		case LocalFree:
+			c.builtin(c.LocalFree)
+		case MultiByteToWideChar:
+			c.builtin(c.MultiByteToWideChar)
+		case ReadFile:
+			c.builtin(c.ReadFile)
+		case WideCharToMultiByte:
+			c.builtin(c.WideCharToMultiByte)
 
 		default:
 			return -1, fmt.Errorf("instruction trap: %v\n%s", op, c.stackTrace())
