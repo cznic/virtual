@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"github.com/cznic/internal/buffer"
@@ -34,143 +35,162 @@ func roundup(n, m int) int { return (n + m - 1) &^ (m - 1) }
 func roundupULong(n, m uint64) uint64 { return (n + m - 1) &^ (m - 1) }
 
 // DumpCode outputs code to w, assuming it is located at start.
-func DumpCode(w io.Writer, code []Operation, start int) error {
-	return dumpCode(w, code, 0)
+func DumpCode(w io.Writer, code []Operation, start int, funcs, lines []PCInfo) error {
+	return dumpCode(w, code, 0, funcs, lines)
 }
 
 // DumpCodeStr is like DumpCode but it returns a buffer.Bytes instead. Recycle
 // the result using its Close method.
-func DumpCodeStr(code []Operation, start int) buffer.Bytes {
+func DumpCodeStr(code []Operation, start int, funcs, lines []PCInfo) buffer.Bytes {
 	var buf buffer.Bytes
-	dumpCode(&buf, code, start)
+	dumpCode(&buf, code, start, funcs, lines)
 	s := bytes.Replace(buf.Bytes(), []byte("\n\n"), []byte("\n"), -1)
 	buf.Close()
 	buf.Write(s)
 	return buf
 }
 
-func dumpCodeStr(code []Operation, start int) []byte {
+func dumpCodeStr(code []Operation, start int, funcs, lines []PCInfo) []byte {
 	var buf buffer.Bytes
-	dumpCode(&buf, code, start)
+	dumpCode(&buf, code, start, funcs, lines)
 	return bytes.Replace(buf.Bytes(), []byte("\n\n"), []byte("\n"), -1)
 }
 
-func dumpCode(w io.Writer, code []Operation, start int) error {
+func pcInfo(pc int, infos []PCInfo) *PCInfo {
+	if i := sort.Search(len(infos), func(i int) bool { return infos[i].PC >= pc }); len(infos) != 0 && i <= len(infos) {
+		switch {
+		case i == len(infos):
+			return &infos[i-1]
+		default:
+			if pc == infos[i].PC {
+				return &infos[i]
+			}
+
+			if i > 0 {
+				return &infos[i-1]
+			}
+		}
+	}
+	return &PCInfo{}
+}
+
+func dumpCode(w io.Writer, code []Operation, start int, funcs, lines []PCInfo) error {
 	const width = 15
 	for i, op := range code {
+		pos := pcInfo(start+i, lines).Position()
 		lo := strings.ToLower(op.Opcode.String())
 		switch op.Opcode {
 		case AP:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sap\n", start+i, width, "push"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sap\t; %v\n", start+i, width, "push", pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sap%+#x\n", start+i, width, "push", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sap%+#x\t; %v\n", start+i, width, "push", op.N, pos); err != nil {
 					return err
 				}
 			}
 		case AddSP:
 			switch {
 			case op.N > 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*ssp, %#x\n", start+i, width, "add", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*ssp, %#x\t; %v\n", start+i, width, "add", op.N, pos); err != nil {
 					return err
 				}
 			case op.N < 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*ssp, %#x\n", start+i, width, "sub", -op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*ssp, %#x\t; %v\n", start+i, width, "sub", -op.N, pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*ssp, %#x\t//TODO optimize\n", start+i, width, "add", op.N); err != nil { //TODOOK
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*ssp, %#x\t//TODO optimize\t; %v\n", start+i, width, "add", op.N, pos); err != nil { //TODOOK
 					return err
 				}
 			}
 		case BP:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sbp\n", start+i, width, "push"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sbp\t; %v\n", start+i, width, "push", pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sbp%+#x\n", start+i, width, "push", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sbp%+#x\t; %v\n", start+i, width, "push", op.N, pos); err != nil {
 					return err
 				}
 			}
 		case DS:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sds\n", start+i, width, "push"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sds\t; %v\n", start+i, width, "push", pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sds%+#x\n", start+i, width, "push", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sds%+#x\t; %v\n", start+i, width, "push", op.N, pos); err != nil {
 					return err
 				}
 			}
 		case DSN:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\t; %v\n", start+i, width, "push", pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\t; %v\n", start+i, width, "push", op.N, pos); err != nil {
 					return err
 				}
 			}
 		case DSI8:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push8"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\t; %v\n", start+i, width, "push8", pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push8", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\t; %v\n", start+i, width, "push8", op.N, pos); err != nil {
 					return err
 				}
 			}
 		case DSI16:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push16"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\t; %v\n", start+i, width, "push16", pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push16", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\t; %v\n", start+i, width, "push16", op.N, pos); err != nil {
 					return err
 				}
 			}
 		case DSI32:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push32"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\t; %v\n", start+i, width, "push32", pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push32", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\t; %v\n", start+i, width, "push32", op.N, pos); err != nil {
 					return err
 				}
 			}
 		case DSI64:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "push64"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\t; %v\n", start+i, width, "push64", pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "push64", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\t; %v\n", start+i, width, "push64", op.N, pos); err != nil {
 					return err
 				}
 			}
 		case DSC128:
 			switch {
 			case op.N == 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\n", start+i, width, "pushc128"); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds)\t; %v\n", start+i, width, "pushc128", pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\n", start+i, width, "pushc128", op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ds%+#x)\t; %v\n", start+i, width, "pushc128", op.N, pos); err != nil {
 					return err
 				}
 			}
@@ -239,22 +259,22 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			StoreBits8,
 			StrNCopy:
 
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n", start+i, width, lo, uint(op.N)); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\t; %v\n", start+i, width, lo, uint(op.N), pos); err != nil {
 				return err
 			}
 		case Label:
 			switch {
 			case op.N < 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t%v:\n", start+i, ir.NameID(-op.N)); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t%v:\t; %v\n", start+i, ir.NameID(-op.N), pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t%v:\n", start+i, op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t%v:\t; %v\n", start+i, op.N, pos); err != nil {
 					return err
 				}
 			}
 		case JmpP:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(sp)\n\n", start+i, width, "jmp"); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(sp)\t; %v\n\n", start+i, width, "jmp", pos); err != nil {
 				return err
 			}
 		case // no N
@@ -428,88 +448,89 @@ func dumpCode(w io.Writer, code []Operation, start int) error {
 			Zero32,
 			Zero64:
 
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n", start+i, width, lo, pos); err != nil {
 				return err
 			}
 		case Argument:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\t; %v\n", start+i, width, "push", op.N, pos); err != nil {
 				return err
 			}
 		case Argument8:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push8", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\t; %v\n", start+i, width, "push8", op.N, pos); err != nil {
 				return err
 			}
 		case Argument16:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push16", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\t; %v\n", start+i, width, "push16", op.N, pos); err != nil {
 				return err
 			}
 		case Argument32:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push32", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\t; %v\n", start+i, width, "push32", op.N, pos); err != nil {
 				return err
 			}
 		case Argument64:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\n", start+i, width, "push64", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(ap%+#x)\t; %v\n", start+i, width, "push64", op.N, pos); err != nil {
 				return err
 			}
 		case builtin:
 			if i != 0 {
 				fmt.Fprintln(w)
 			}
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, lo); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n", start+i, width, lo, pos); err != nil {
 				return err
 			}
 		case exit, abort:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n\n\n", start+i, width, "#"+lo); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n\n\n", start+i, width, "#"+lo, pos); err != nil {
 				return err
 			}
 		case FFIReturn, Return:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n\n\n", start+i, width, lo); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n\n\n", start+i, width, lo, pos); err != nil {
 				return err
 			}
 		case Jmp, Jz, Jnz:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\n\n\n", start+i, width, lo, uint(op.N)); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\t; %v\n\n\n", start+i, width, lo, uint(op.N), pos); err != nil {
 				return err
 			}
 		case Func:
 			if i != 0 {
 				fmt.Fprintln(w)
 			}
+			fmt.Fprintf(w, "# %v\n", pcInfo(start+i, funcs).Name)
 			switch {
 			case op.N != 0:
-				if _, err := fmt.Fprintf(w, "%#05x\t%s\t%-*s[%#x]byte\n", start+i, lo, width, "variables", -op.N); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t%s\t%-*s[%#x]byte\t; %v\n", start+i, lo, width, "variables", -op.N, pos); err != nil {
 					return err
 				}
 			default:
-				if _, err := fmt.Fprintf(w, "%#05x\t%s\n", start+i, lo); err != nil {
+				if _, err := fmt.Fprintf(w, "%#05x\t%s\t; %v\n", start+i, lo, pos); err != nil {
 					return err
 				}
 			}
 		case Text:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sts%+#x\n", start+i, width, "push", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sts%+#x\t; %v\n", start+i, width, "push", op.N, pos); err != nil {
 				return err
 			}
 		case Variable8:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push8", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\t; %v\n", start+i, width, "push8", op.N, pos); err != nil {
 				return err
 			}
 		case Variable16:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push16", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\t; %v\n", start+i, width, "push16", op.N, pos); err != nil {
 				return err
 			}
 		case Variable32:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push32", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\t; %v\n", start+i, width, "push32", op.N, pos); err != nil {
 				return err
 			}
 		case Variable64:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push64", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\t; %v\n", start+i, width, "push64", op.N, pos); err != nil {
 				return err
 			}
 		case Variable:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\n", start+i, width, "push", op.N); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s(bp%+#x)\t; %v\n", start+i, width, "push", op.N, pos); err != nil {
 				return err
 			}
 		default:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\n", start+i, width, "#"+lo); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n", start+i, width, "#"+lo, pos); err != nil {
 				return err
 			}
 		}

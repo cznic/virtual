@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
-	"sort"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -309,23 +308,7 @@ func (m *Machine) Close() (err error) {
 	return err
 }
 
-func (m *Machine) pcInfo(pc int, infos []PCInfo) *PCInfo {
-	if i := sort.Search(len(infos), func(i int) bool { return infos[i].PC >= pc }); len(infos) != 0 && i <= len(infos) {
-		switch {
-		case i == len(infos):
-			return &infos[i-1]
-		default:
-			if pc == infos[i].PC {
-				return &infos[i]
-			}
-
-			if i > 0 {
-				return &infos[i-1]
-			}
-		}
-	}
-	return &PCInfo{}
-}
+func (m *Machine) pcInfo(pc int, infos []PCInfo) *PCInfo { return pcInfo(pc, infos) }
 
 func (m *Machine) Kill() {
 	m.stopMu.Lock()

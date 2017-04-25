@@ -149,7 +149,7 @@ func (c *cpu) stackTrace() (err error) {
 			}
 			fmt.Fprintf(&buf, ")\n")
 			fmt.Fprintf(&buf, "\t%s\t", li.Position())
-			dumpCode(&lbuf, c.code[ip:ip+1], int(ip))
+			dumpCode(&lbuf, c.code[ip:ip+1], int(ip), nil, nil)
 			b := lbuf.Bytes()
 			buf.Write(b[:len(b)-1])
 			lbuf.Reset()
@@ -170,7 +170,7 @@ func (c *cpu) stackTrace() (err error) {
 			}
 			buf.WriteByte('\n')
 		default:
-			dumpCode(&buf, c.code[ip:ip+1], int(ip))
+			dumpCode(&buf, c.code[ip:ip+1], int(ip), nil, nil)
 		}
 		sp = bp
 		bp = readPtr(sp)
@@ -201,7 +201,7 @@ func (c *cpu) trace() string {
 	for h < uintptr(len(c.code)) && c.code[h].Opcode == Ext {
 		h++
 	}
-	s := dumpCodeStr(c.code[c.ip:h], int(c.ip))
+	s := dumpCodeStr(c.code[c.ip:h], int(c.ip), c.m.functions, c.m.lines)
 	a := make([]uintptr, 5)
 	for i := range a {
 		a[i] = readPtr(c.sp + uintptr(i*ptrStackSz))
