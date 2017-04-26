@@ -8,6 +8,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,6 +20,7 @@ import (
 type CallbackFunc func(wr io.Writer, tyMap map[string]Type, comment, ret, name, rawArgs string)
 
 var compiledFuncs []string = []string{}
+var dumpCpuMap = flag.Bool("dump-ops", false, "Generate the opcode map for the switch/case in op.go")
 
 func fileHeader(wr io.Writer, tag string, imports []string) error {
 	_, err := fmt.Fprintf(wr, `// Copyright 2017 The Virtual Authors. All rights reserved.
@@ -261,6 +263,8 @@ func main() {
 	var out bytes.Buffer
 	var buf bytes.Buffer
 
+	flag.Parse()
+
 	if err := fileHeader(&buf, "windows", []string{"fmt", "syscall", "os"}); err != nil {
 		log.Fatal("Cannot write file header: ", err)
 	}
@@ -274,6 +278,9 @@ func main() {
 	for _, fn := range compiledFuncs {
 		if _, err := fmt.Fprintf(&buf, "\tproc%-30s = modkernel32.NewProc(\"%s\")\n", fn, fn); err != nil {
 			log.Fatal("cannot write sid mapping: ", err)
+		}
+		if *dumpCpuMap {
+			fmt.Printf("\t\tcase %s:\n\t\t\tc.builtin(c.%s)\n", fn, fn)
 		}
 	}
 

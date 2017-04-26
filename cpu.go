@@ -1808,60 +1808,142 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.munmap)
 
 		// windows
+		case AreFileApisANSI:
+			c.builtin(c.AreFileApisANSI)
+		case CreateFileA:
+			c.builtin(c.CreateFileA)
 		case CreateFileW:
 			c.builtin(c.CreateFileW)
+		case CreateFileMappingA:
+			c.builtin(c.CreateFileMappingA)
+		case CreateFileMappingW:
+			c.builtin(c.CreateFileMappingW)
+		case CreateMutexW:
+			c.builtin(c.CreateMutexW)
 		case CloseHandle:
 			c.builtin(c.CloseHandle)
 		case DeleteCriticalSection:
 			c.builtin(c.DeleteCriticalSection)
+		case DeleteFileA:
+			c.builtin(c.DeleteFileA)
 		case DeleteFileW:
 			c.builtin(c.DeleteFileW)
 		case EnterCriticalSection:
 			c.builtin(c.EnterCriticalSection)
 		case FlushFileBuffers:
 			c.builtin(c.FlushFileBuffers)
+		case FlushViewOfFile:
+			c.builtin(c.FlushViewOfFile)
+		case FormatMessageA:
+			c.builtin(c.FormatMessageA)
 		case FormatMessageW:
 			c.builtin(c.FormatMessageW)
+		case FreeLibrary:
+			c.builtin(c.FreeLibrary)
 		case GetCurrentProcessId:
 			c.builtin(c.GetCurrentProcessId)
 		case GetCurrentThreadId:
 			c.builtin(c.GetCurrentThreadId)
+		case GetDiskFreeSpaceA:
+			c.builtin(c.GetDiskFreeSpaceA)
+		case GetDiskFreeSpaceW:
+			c.builtin(c.GetDiskFreeSpaceW)
 		case GetFileAttributesExW:
 			c.builtin(c.GetFileAttributesExW)
+		case GetFileAttributesA:
+			c.builtin(c.GetFileAttributesA)
 		case GetFileAttributesW:
 			c.builtin(c.GetFileAttributesW)
 		case GetFileSize:
 			c.builtin(c.GetFileSize)
+		case GetFullPathNameA:
+			c.builtin(c.GetFullPathNameA)
 		case GetFullPathNameW:
 			c.builtin(c.GetFullPathNameW)
 		case GetLastError:
 			c.builtin(c.GetLastError)
+		case GetProcAddress:
+			c.builtin(c.GetProcAddress)
+		case GetProcessHeap:
+			c.builtin(c.GetProcessHeap)
 		case GetSystemInfo:
 			c.builtin(c.GetSystemInfo)
 		case GetSystemTime:
 			c.builtin(c.GetSystemTime)
+		case GetSystemTimeAsFileTime:
+			c.builtin(c.GetSystemTimeAsFileTime)
+		case GetTempPathA:
+			c.builtin(c.GetTempPathA)
+		case GetTempPathW:
+			c.builtin(c.GetTempPathW)
 		case GetTickCount:
 			c.builtin(c.GetTickCount)
 		case GetVersionExA:
 			c.builtin(c.GetVersionExA)
+		case GetVersionExW:
+			c.builtin(c.GetVersionExW)
+		case HeapAlloc:
+			c.builtin(c.HeapAlloc)
+		case HeapCompact:
+			c.builtin(c.HeapCompact)
+		case HeapCreate:
+			c.builtin(c.HeapCreate)
+		case HeapDestroy:
+			c.builtin(c.HeapDestroy)
+		case HeapFree:
+			c.builtin(c.HeapFree)
+		case HeapReAlloc:
+			c.builtin(c.HeapReAlloc)
+		case HeapSize:
+			c.builtin(c.HeapSize)
+		case HeapValidate:
+			c.builtin(c.HeapValidate)
 		case InitializeCriticalSection:
 			c.builtin(c.InitializeCriticalSection)
 		case InterlockedCompareExchange:
 			c.builtin(c.InterlockedCompareExchange)
 		case LeaveCriticalSection:
 			c.builtin(c.LeaveCriticalSection)
+		case LoadLibraryA:
+			c.builtin(c.LoadLibraryA)
+		case LoadLibraryW:
+			c.builtin(c.LoadLibraryW)
 		case LocalFree:
 			c.builtin(c.LocalFree)
+		case LockFile:
+			c.builtin(c.LockFile)
 		case LockFileEx:
 			c.builtin(c.LockFileEx)
+		case MapViewOfFile:
+			c.builtin(c.MapViewOfFile)
 		case MultiByteToWideChar:
 			c.builtin(c.MultiByteToWideChar)
-		case ReadFile:
-			c.builtin(c.ReadFile)
-		case UnlockFileEx:
-			c.builtin(c.UnlockFileEx)
+		case OutputDebugStringA:
+			c.builtin(c.OutputDebugStringA)
+		case OutputDebugStringW:
+			c.builtin(c.OutputDebugStringW)
 		case QueryPerformanceCounter:
 			c.builtin(c.QueryPerformanceCounter)
+		case ReadFile:
+			c.builtin(c.ReadFile)
+		case SetEndOfFile:
+			c.builtin(c.SetEndOfFile)
+		case SetFilePointer:
+			c.builtin(c.SetFilePointer)
+		case Sleep:
+			c.builtin(c.Sleep)
+		case SystemTimeToFileTime:
+			c.builtin(c.SystemTimeToFileTime)
+		case UnlockFile:
+			c.builtin(c.UnlockFile)
+		case UnlockFileEx:
+			c.builtin(c.UnlockFileEx)
+		case UnmapViewOfFile:
+			c.builtin(c.UnmapViewOfFile)
+		case WaitForSingleObject:
+			c.builtin(c.WaitForSingleObject)
+		case WaitForSingleObjectEx:
+			c.builtin(c.WaitForSingleObjectEx)
 		case WideCharToMultiByte:
 			c.builtin(c.WideCharToMultiByte)
 		case WriteFile:
