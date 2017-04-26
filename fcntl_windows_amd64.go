@@ -32,5 +32,6 @@ func (c *cpu) open64() {
 	if err != nil {
 		c.thread.setErrno(err)
 	}
+	panic("TODO")
 	writeI32(c.rp, int32(h))
 }
