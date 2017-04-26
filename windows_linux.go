@@ -12,6 +12,10 @@ func (c *cpu) InterlockedCompareExchange() {
 	winStub("InterlockedCompareExchange")
 }
 
+func (c *cpu) GetCurrentThreadId() {
+	winStub("GetCurrentThreadId")
+}
+
 func (c *cpu) GetLastError() {
 	winStub("GetLastError")
 }

@@ -85,10 +85,6 @@ func (c *cpu) FreeLibrary() {
 func (c *cpu) GetCurrentProcessId() {
 	winStub("GetCurrentProcessId")
 }
-// //sys: DWORD    GetCurrentThreadId(); 
-func (c *cpu) GetCurrentThreadId() {
-	winStub("GetCurrentThreadId")
-}
 // //sys: BOOL   	GetDiskFreeSpaceA(LPCTSTR lpRootPathName, LPDWORD lpSectorsPerCluster, LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters, LPDWORD lpTotalNumberOfClusters); 
 func (c *cpu) GetDiskFreeSpaceA() {
 	winStub("GetDiskFreeSpaceA")

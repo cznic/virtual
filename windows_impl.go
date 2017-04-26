@@ -34,7 +34,6 @@ var (
 	procFormatMessageW                 = modkernel32.NewProc("FormatMessageW")
 	procFreeLibrary                    = modkernel32.NewProc("FreeLibrary")
 	procGetCurrentProcessId            = modkernel32.NewProc("GetCurrentProcessId")
-	procGetCurrentThreadId             = modkernel32.NewProc("GetCurrentThreadId")
 	procGetDiskFreeSpaceA              = modkernel32.NewProc("GetDiskFreeSpaceA")
 	procGetDiskFreeSpaceW              = modkernel32.NewProc("GetDiskFreeSpaceW")
 	procGetFileAttributesExW           = modkernel32.NewProc("GetFileAttributesExW")
@@ -106,7 +105,6 @@ func init() {
 		dict.SID("FormatMessageW"): FormatMessageW,
 		dict.SID("FreeLibrary"): FreeLibrary,
 		dict.SID("GetCurrentProcessId"): GetCurrentProcessId,
-		dict.SID("GetCurrentThreadId"): GetCurrentThreadId,
 		dict.SID("GetDiskFreeSpaceA"): GetDiskFreeSpaceA,
 		dict.SID("GetDiskFreeSpaceW"): GetDiskFreeSpaceW,
 		dict.SID("GetFileAttributesExW"): GetFileAttributesExW,
@@ -557,21 +555,6 @@ func (c *cpu) GetCurrentProcessId() {
 		0);
 	if strace {
 		fmt.Fprintf(os.Stderr, "GetCurrentProcessId() %#x %v\n", ret, err)
-	}
-	if err != 0 {
-		c.setErrno(err)
-	}
-	writeI32(c.rp, int32(ret))
-}
-
-// //sys: DWORD    GetCurrentThreadId(); 
-func (c *cpu) GetCurrentThreadId() {
-
-	ret, _, err := syscall.Syscall(procGetCurrentThreadId.Addr(), 0, 0, 
-		0, 
-		0);
-	if strace {
-		fmt.Fprintf(os.Stderr, "GetCurrentThreadId() %#x %v\n", ret, err)
 	}
 	if err != 0 {
 		c.setErrno(err)

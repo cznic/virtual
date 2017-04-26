@@ -10,7 +10,6 @@ package virtual
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"syscall"
 	"unsafe"
@@ -22,13 +21,14 @@ func init() {
 		dict.SID("_beginthreadex"):              _beginthreadex,
 		dict.SID("_endthreadex"):                _endthreadex,
 		dict.SID("_msize"):                      _msize,
+		dict.SID("GetCurrentThreadId"):          GetCurrentThreadId,
 		dict.SID("GetLastError"):                GetLastError,
 	})
 }
 
 // TODO: use some generic wchar_16 stuff?
 func GoUTF16String(s uintptr) string {
-	ptr := (*[math.MaxInt32]uint16)(unsafe.Pointer(s))
+	ptr := (*[1 << 20]uint16)(unsafe.Pointer(s))
 	return syscall.UTF16ToString(ptr[:])
 }
 
@@ -36,6 +36,11 @@ func GoUTF16String(s uintptr) string {
 func (c *cpu) GetLastError() {
 	writeI32(c.rp, c.tlsp.errno)
 	c.setErrno(0)
+}
+
+// DWORD WINAPI GetCurrentThreadId(void);
+func (c *cpu) GetCurrentThreadId() {
+	writeU32(c.rp, uint32(c.tlsp.threadID))
 }
 
 // LONG __cdecl InterlockedCompareExchange(_Inout_ LONG volatile *Destination,_In_ LONG Exchange,_In_ LONG Comparand);
@@ -84,7 +89,6 @@ func (c *cpu) InterlockedCompareExchange() {
 //sys: DWORD  	FormatMessageW(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId, LPTSTR lpBuffer, DWORD nSize, va_list* Arguments);
 //sys: BOOL   	FreeLibrary(HMODULE hModule);
 //sys: DWORD  	GetCurrentProcessId();
-//sys: DWORD    GetCurrentThreadId();
 //sys: BOOL   	GetDiskFreeSpaceA(LPCTSTR lpRootPathName, LPDWORD lpSectorsPerCluster, LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters, LPDWORD lpTotalNumberOfClusters);
 //sys: BOOL   	GetDiskFreeSpaceW(LPCTSTR lpRootPathName, LPDWORD lpSectorsPerCluster, LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters, LPDWORD lpTotalNumberOfClusters);
 //sys: BOOL   	GetFileAttributesExW(LPCTSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation);
