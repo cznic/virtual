@@ -27,11 +27,13 @@ func (c *cpu) open64() {
 	mode := readU32(ap)
 
 	path := GoString(pathname)
-	// TODO: unsure if we need to do some mapping here: h is Handle which is uintptr which might be >= i32
+
 	h, err := syscall.Open(path, int(flags), mode)
 	if err != nil {
 		c.thread.setErrno(err)
 	}
-	panic("TODO")
+	// For compatibility reasons a HANDLE (atleast for file types) is always 32-bits
+	// so this truncating from uintptr -> int32 is safe.
+	// https://msdn.microsoft.com/en-us/library/windows/desktop/aa384203%28v=vs.85%29.aspx
 	writeI32(c.rp, int32(h))
 }

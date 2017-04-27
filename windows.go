@@ -11,6 +11,7 @@ package virtual
 import (
 	"fmt"
 	"os"
+	"sync/atomic"
 	"syscall"
 	"unsafe"
 )
@@ -26,7 +27,9 @@ func init() {
 	})
 }
 
-// TODO: use some generic wchar_16 stuff?
+// TODO: implement a generic wide string variant of this
+// GoUTF16String converts a wide string to a GOString using
+// windows-specific implementations in go's syscall package
 func GoUTF16String(s uintptr) string {
 	ptr := (*[1 << 20]uint16)(unsafe.Pointer(s))
 	return syscall.UTF16ToString(ptr[:])
@@ -44,6 +47,7 @@ func (c *cpu) GetCurrentThreadId() {
 }
 
 // LONG __cdecl InterlockedCompareExchange(_Inout_ LONG volatile *Destination,_In_ LONG Exchange,_In_ LONG Comparand);
+// TODO: figure out if we can bypass a minor race (see below for an explanation)
 func (c *cpu) InterlockedCompareExchange() {
 	// TODO: memory barrier: https://msdn.microsoft.com/de-de/library/windows/desktop/ms683560(v=vs.85).aspx
 	sp, comparand := popI32(c.sp)
@@ -54,12 +58,19 @@ func (c *cpu) InterlockedCompareExchange() {
 		fmt.Fprintf(os.Stderr, "InterlockedCompareExchange(%#x, %#x, %#x)\n", comparand, exchange, dest)
 	}
 
-	// TODO: currently we don't seem to support multiple threads, so we don't need to ensure
-	// atomicity here
-
-	initial := readI32(dest)
-	if initial == comparand {
-		writeI32(dest, exchange)
+	initial := comparand
+	if !atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(dest)), comparand, exchange) {
+		initial := readI32(dest)
+		if initial == comparand {
+			// we cannot prevent all cases of races using this implementation, since we have to
+			// return the initial value since CompareAndSwapInt32 doesn't return that we have
+			// to do a separate read, which is subject to race. such a race did occur here.
+			// the caller will compare the return value against initial, which since we didn't
+			// swap it has to be different. that's what we enforce here
+			// NOTE: this case should only hapen very unlikely and won't have any sideffects
+			fmt.Fprintln(os.Stderr, "InterlockedCompareExchange: caught race")
+			initial = comparand + 1
+		}
 	}
 	writeI32(c.rp, initial)
 }
