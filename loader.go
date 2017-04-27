@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go/token"
 	"math"
+	"unicode/utf16"
 	"unsafe"
 
 	"github.com/cznic/internal/buffer"
@@ -355,6 +356,11 @@ func (l *loader) loadDataDefinition(d *ir.DataDefinition, off int, v ir.Value) {
 			switch typ := l.tc.MustType(t); typ.Kind() {
 			case ir.Array:
 				switch typ := typ.(*ir.ArrayType).Item; typ.Kind() {
+				// in use for e.g. windows wide strings
+				case ir.Uint16:
+					for i, v := range utf16.Encode(x.Value) {
+						*(*uint16)(unsafe.Pointer(&l.out.Data[off+2*i])) = v
+					}
 				case ir.Int32:
 					for i, v := range x.Value {
 						*(*rune)(unsafe.Pointer(&l.out.Data[off+4*i])) = v
