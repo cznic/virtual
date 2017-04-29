@@ -248,18 +248,20 @@ const (
 	Store16
 	Store32
 	Store64
-	StoreC128
 	Store8
 	StoreBits16 // N
 	StoreBits32 // N
 	StoreBits64 // N
 	StoreBits8  // N
-	StrNCopy    // N
+	StoreC128
+	StrNCopy // N
 	SubF32
 	SubF64
 	SubI32
 	SubI64
 	SubPtrs
+	SwitchI32  // N
+	SwitchI64  // N
 	Text       // N
 	Variable   // N + ext: size
 	Variable16 // N

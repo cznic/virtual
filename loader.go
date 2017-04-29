@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"go/token"
 	"math"
+	"sort"
 	"unicode/utf16"
 	"unsafe"
 
@@ -111,6 +112,7 @@ type loader struct {
 	ptrSize     int
 	stackAlign  int
 	strings     map[ir.StringID]int
+	switches    map[*ir.Switch]int
 	tc          ir.TypeCache
 	tsLabels    map[int]*ir.AddressValue
 	wstrings    map[ir.StringID]int
@@ -135,6 +137,7 @@ func newLoader(objects []ir.Object) *loader {
 		ptrSize:     int(ptrItem.Size),
 		stackAlign:  int(ptrItem.Align),
 		strings:     map[ir.StringID]int{},
+		switches:    map[*ir.Switch]int{},
 		tc:          ir.TypeCache{},
 		tsLabels:    map[int]*ir.AddressValue{},
 		wstrings:    map[ir.StringID]int{},
@@ -1540,12 +1543,15 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			l.emit(l.pos(x), Operation{Opcode: Jz, N: n})
 		case *ir.Label:
 			n := -int(x.NameID)
+			var nfo labelNfo
 			switch {
 			case n != 0:
-				l.namedLabels[labelNfo{index: index, nm: x.NameID}] = len(l.out.Code)
+				nfo = labelNfo{index: index, nm: x.NameID}
 			default:
 				n = x.Number
+				nfo = labelNfo{index: index, nm: ir.NameID(-n)}
 			}
+			l.namedLabels[nfo] = len(l.out.Code)
 			labels[n] = len(l.out.Code)
 			l.emit(l.pos(x), Operation{Opcode: Label, N: n})
 		case *ir.Leq:
@@ -2130,6 +2136,15 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 			}
 		case *ir.JmpP:
 			l.emit(l.pos(x), Operation{Opcode: JmpP})
+		case *ir.Switch:
+			switch x.TypeID {
+			case idInt32, idUint32:
+				l.emit(l.pos(x), Operation{Opcode: SwitchI32, N: l.m[l.switches[x]]})
+			case idInt64, idUint64:
+				l.emit(l.pos(x), Operation{Opcode: SwitchI64, N: l.m[l.switches[x]]})
+			default:
+				panic(fmt.Errorf("internal error %s", x.TypeID))
+			}
 		default:
 			panic(fmt.Errorf("TODO %T\n\t%#05x\t%v", x, ip, x))
 		}
@@ -2279,6 +2294,68 @@ func (l *loader) size(v ir.Value, t ir.Type) (r int) {
 }
 
 func (l *loader) load() error {
+	var buf buffer.Bytes
+	var swo []ir.Object
+	for fi, v := range l.objects {
+		switch x := v.(type) {
+		case *ir.FunctionDefinition:
+			fn := x.NameID
+			for _, v := range x.Body {
+				switch x := v.(type) {
+				case *ir.Switch:
+					var a switchPairs
+					for i, v := range x.Values {
+						a = append(a, switchPair{v, &x.Labels[i]})
+					}
+					sort.Sort(a)
+					buf.Reset()
+					fmt.Fprintf(&buf, "struct{int64")
+					for _, v := range a {
+						switch x := v.Value.(type) {
+						case *ir.Int32Value:
+							fmt.Fprintf(&buf, ",int32")
+						case *ir.Int64Value:
+							fmt.Fprintf(&buf, ",int64")
+						default:
+							panic(fmt.Sprintf("%T", x))
+						}
+					}
+					for i := 0; i <= len(a); i++ {
+						fmt.Fprintf(&buf, ",*struct{}")
+					}
+					buf.WriteByte('}')
+					cv := &ir.CompositeValue{Values: []ir.Value{&ir.Int32Value{Value: int32(len(a))}}}
+					d := &ir.DataDefinition{
+						ObjectBase: ir.ObjectBase{
+							Position: x.Position,
+							Linkage:  ir.InternalLinkage,
+							TypeID:   ir.TypeID(dict.ID(buf.Bytes())),
+						},
+						Value: cv,
+					}
+					for _, v := range a {
+						cv.Values = append(cv.Values, v.Value)
+					}
+					for _, v := range a {
+						cv.Values = append(cv.Values, &ir.AddressValue{
+							Index:  fi,
+							Label:  ir.NameID(-v.Label.Number),
+							NameID: fn,
+						})
+					}
+					cv.Values = append(cv.Values, &ir.AddressValue{
+						Index:  fi,
+						Label:  ir.NameID(-x.Default.Number),
+						NameID: fn,
+					})
+					index := len(l.objects) + len(swo)
+					l.switches[x] = index
+					swo = append(swo, d)
+				}
+			}
+		}
+	}
+	l.objects = append(l.objects, swo...)
 	var ds int
 	for i, v := range l.objects { // Allocate global initialized data.
 		switch x := v.(type) {

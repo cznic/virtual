@@ -25,8 +25,10 @@ const (
 	f32StackSz   = i32StackSz
 	f64StackSz   = i64StackSz
 	i16StackSz   = (2 + stackAlign - 1) &^ (stackAlign - 1)
-	i32StackSz   = (4 + stackAlign - 1) &^ (stackAlign - 1)
-	i64StackSz   = (8 + stackAlign - 1) &^ (stackAlign - 1)
+	i32Size      = 4
+	i64Size      = 8
+	i32StackSz   = (i32Size + stackAlign - 1) &^ (stackAlign - 1)
+	i64StackSz   = (i64Size + stackAlign - 1) &^ (stackAlign - 1)
 	i8StackSz    = (1 + stackAlign - 1) &^ (stackAlign - 1)
 	intSize      = mathutil.IntBits / 8
 	longStackSz  = (longBits/8 + stackAlign - 1) &^ (stackAlign - 1)
