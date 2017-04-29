@@ -206,7 +206,7 @@ func (c *cpu) trace() string {
 	for i := range a {
 		a[i] = readPtr(c.sp + uintptr(i*ptrStackSz))
 	}
-	return fmt.Sprintf("%s\t%#x: %x; %v\n", s[:len(s)-1], c.sp, a, pos)
+	return fmt.Sprintf("%s\t%#x: %x\n", s[:len(s)-1], c.sp, a)
 }
 
 func (c *cpu) run(ip uintptr) (int, error) {
@@ -256,6 +256,7 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			}
 		}
 		c.ip++
+	main:
 		switch op.Opcode {
 		case AP: // -> ptr
 			c.sp -= i32StackSz
@@ -1521,6 +1522,52 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			v := readPtr(c.sp)
 			c.sp += ptrStackSz
 			addPtr(c.sp, -v)
+		case SwitchI32:
+			v := readI32(c.sp)
+			c.sp += i32StackSz
+			tab := c.ds + uintptr(op.N)
+			cases := int(readI32(tab))
+			values := tab + i64Size
+			labels := roundupP(values+uintptr(cases)*i32Size, ptrSize)
+			l := 0
+			h := cases - 1
+			for l <= h {
+				m := (l + h) >> 1
+				k := readI32(values + uintptr(m)*i32Size)
+				switch {
+				case v > k:
+					l = m + 1
+				case v == k:
+					c.ip = readPtr(labels + uintptr(m)*ptrSize)
+					break main
+				default:
+					h = m - 1
+				}
+			}
+			c.ip = readPtr(labels + uintptr(cases)*ptrSize)
+		case SwitchI64:
+			v := readI64(c.sp)
+			c.sp += i64StackSz
+			tab := c.ds + uintptr(op.N)
+			cases := int(readI32(tab))
+			values := tab + i64Size
+			labels := values + uintptr(cases)*i64Size
+			l := 0
+			h := cases - 1
+			for l <= h {
+				m := (l + h) >> 1
+				k := readI64(values + uintptr(m)*i64Size)
+				switch {
+				case v > k:
+					l = m + 1
+				case v == k:
+					c.ip = readPtr(labels + uintptr(m)*ptrSize)
+					break main
+				default:
+					h = m - 1
+				}
+			}
+			c.ip = readPtr(labels + uintptr(cases)*ptrSize)
 		case Text:
 			c.sp -= ptrStackSz
 			writePtr(c.sp, c.ts+uintptr(op.N))

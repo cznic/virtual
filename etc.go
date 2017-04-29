@@ -16,9 +16,13 @@ import (
 )
 
 var (
+	idInt32  = ir.TypeID(dict.SID("int32"))
 	idInt32P = ir.TypeID(dict.SID("*int32"))
+	idInt64  = ir.TypeID(dict.SID("int64"))
 	idInt8P  = ir.TypeID(dict.SID("*int8"))
 	idStart  = ir.NameID(dict.SID("_start"))
+	idUint32 = ir.TypeID(dict.SID("uint32"))
+	idUint64 = ir.TypeID(dict.SID("uint64"))
 	idVoidP  = ir.TypeID(dict.SID("*struct{}"))
 )
 
@@ -30,6 +34,9 @@ func (e KillError) Error() string { return "SIGKILL" }
 
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
 func roundup(n, m int) int { return (n + m - 1) &^ (m - 1) }
+
+// if n%m != 0 { n += m-n%m }. m must be a power of 2.
+func roundupP(n, m uintptr) uintptr { return (n + m - 1) &^ (m - 1) }
 
 // if n%m != 0 { n += m-n%m }. m must be a power of 2.
 func roundupULong(n, m uint64) uint64 { return (n + m - 1) &^ (m - 1) }
@@ -505,6 +512,10 @@ func dumpCode(w io.Writer, code []Operation, start int, funcs, lines []PCInfo) e
 					return err
 				}
 			}
+		case SwitchI32, SwitchI64:
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sds%+#x\t; %v\n", start+i, width, lo, op.N, pos); err != nil {
+				return err
+			}
 		case Text:
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*sts%+#x\t; %v\n", start+i, width, "push", op.N, pos); err != nil {
 				return err
@@ -537,3 +548,25 @@ func dumpCode(w io.Writer, code []Operation, start int, funcs, lines []PCInfo) e
 	}
 	return nil
 }
+
+type switchPair struct {
+	ir.Value
+	*ir.Label
+}
+
+type switchPairs []switchPair
+
+func (s switchPairs) Len() int { return len(s) }
+
+func (s switchPairs) Less(i, j int) bool {
+	switch x := s[i].Value.(type) {
+	case *ir.Int32Value:
+		return x.Value < s[j].Value.(*ir.Int32Value).Value
+	case *ir.Int64Value:
+		return x.Value < s[j].Value.(*ir.Int64Value).Value
+	default:
+		panic(fmt.Errorf("%T", x))
+	}
+}
+
+func (s switchPairs) Swap(i, j int) { s[i], s[j] = s[j], s[i] }

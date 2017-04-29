@@ -16,271 +16,337 @@ func winStub(name string) {
 	panic(fmt.Errorf("%s not supported on linux", name))
 }
 
-// //sys: BOOL   	AreFileApisANSI(); 
+// //sys: BOOL   	AreFileApisANSI();
 func (c *cpu) AreFileApisANSI() {
 	winStub("AreFileApisANSI")
 }
-// //sys: HANDLE 	CreateFileA(LPCTSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile); 
+
+// //sys: HANDLE 	CreateFileA(LPCTSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 func (c *cpu) CreateFileA() {
 	winStub("CreateFileA")
 }
-// //sys: HANDLE 	CreateFileW(LPCTSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile); 
+
+// //sys: HANDLE 	CreateFileW(LPCTSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
 func (c *cpu) CreateFileW() {
 	winStub("CreateFileW")
 }
-// //sys: HANDLE 	CreateFileMappingA(HANDLE hFile, LPSECURITY_ATTRIBUTES lpAttributes, DWORD flProtect, DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow, LPCTSTR lpName); 
+
+// //sys: HANDLE 	CreateFileMappingA(HANDLE hFile, LPSECURITY_ATTRIBUTES lpAttributes, DWORD flProtect, DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow, LPCTSTR lpName);
 func (c *cpu) CreateFileMappingA() {
 	winStub("CreateFileMappingA")
 }
-// //sys: HANDLE 	CreateFileMappingW(HANDLE hFile, LPSECURITY_ATTRIBUTES lpAttributes, DWORD flProtect, DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow, LPCTSTR lpName); 
+
+// //sys: HANDLE 	CreateFileMappingW(HANDLE hFile, LPSECURITY_ATTRIBUTES lpAttributes, DWORD flProtect, DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow, LPCTSTR lpName);
 func (c *cpu) CreateFileMappingW() {
 	winStub("CreateFileMappingW")
 }
-// //sys: HANDLE 	CreateMutexW(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCTSTR lpName); 
+
+// //sys: HANDLE 	CreateMutexW(LPSECURITY_ATTRIBUTES lpMutexAttributes, BOOL bInitialOwner, LPCTSTR lpName);
 func (c *cpu) CreateMutexW() {
 	winStub("CreateMutexW")
 }
-// //sys: BOOL   	CloseHandle(HANDLE hObject); 
+
+// //sys: BOOL   	CloseHandle(HANDLE hObject);
 func (c *cpu) CloseHandle() {
 	winStub("CloseHandle")
 }
-// //sys: void   	DeleteCriticalSection(LPCRITICAL_SECTION lpCriticalSection); 
+
+// //sys: void   	DeleteCriticalSection(LPCRITICAL_SECTION lpCriticalSection);
 func (c *cpu) DeleteCriticalSection() {
 	winStub("DeleteCriticalSection")
 }
-// //sys: BOOL   	DeleteFileA(LPCTSTR lpFileName); 
+
+// //sys: BOOL   	DeleteFileA(LPCTSTR lpFileName);
 func (c *cpu) DeleteFileA() {
 	winStub("DeleteFileA")
 }
-// //sys: BOOL   	DeleteFileW(LPCTSTR lpFileName); 
+
+// //sys: BOOL   	DeleteFileW(LPCTSTR lpFileName);
 func (c *cpu) DeleteFileW() {
 	winStub("DeleteFileW")
 }
-// //sys: void   	EnterCriticalSection(LPCRITICAL_SECTION lpCriticalSection); 
+
+// //sys: void   	EnterCriticalSection(LPCRITICAL_SECTION lpCriticalSection);
 func (c *cpu) EnterCriticalSection() {
 	winStub("EnterCriticalSection")
 }
-// //sys: BOOL   	FlushFileBuffers(HANDLE hFile); 
+
+// //sys: BOOL   	FlushFileBuffers(HANDLE hFile);
 func (c *cpu) FlushFileBuffers() {
 	winStub("FlushFileBuffers")
 }
-// //sys: BOOL     FlushViewOfFile(LPCVOID lpBaseAddress, SIZE_T dwNumberOfBytesToFlush); 
+
+// //sys: BOOL     FlushViewOfFile(LPCVOID lpBaseAddress, SIZE_T dwNumberOfBytesToFlush);
 func (c *cpu) FlushViewOfFile() {
 	winStub("FlushViewOfFile")
 }
-// //sys: DWORD  	FormatMessageA(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId, LPTSTR lpBuffer, DWORD nSize, va_list* Arguments); 
+
+// //sys: DWORD  	FormatMessageA(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId, LPTSTR lpBuffer, DWORD nSize, va_list* Arguments);
 func (c *cpu) FormatMessageA() {
 	winStub("FormatMessageA")
 }
-// //sys: DWORD  	FormatMessageW(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId, LPTSTR lpBuffer, DWORD nSize, va_list* Arguments); 
+
+// //sys: DWORD  	FormatMessageW(DWORD dwFlags, LPCVOID lpSource, DWORD dwMessageId, DWORD dwLanguageId, LPTSTR lpBuffer, DWORD nSize, va_list* Arguments);
 func (c *cpu) FormatMessageW() {
 	winStub("FormatMessageW")
 }
-// //sys: BOOL   	FreeLibrary(HMODULE hModule); 
+
+// //sys: BOOL   	FreeLibrary(HMODULE hModule);
 func (c *cpu) FreeLibrary() {
 	winStub("FreeLibrary")
 }
-// //sys: DWORD  	GetCurrentProcessId(); 
+
+// //sys: DWORD  	GetCurrentProcessId();
 func (c *cpu) GetCurrentProcessId() {
 	winStub("GetCurrentProcessId")
 }
-// //sys: BOOL   	GetDiskFreeSpaceA(LPCTSTR lpRootPathName, LPDWORD lpSectorsPerCluster, LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters, LPDWORD lpTotalNumberOfClusters); 
+
+// //sys: BOOL   	GetDiskFreeSpaceA(LPCTSTR lpRootPathName, LPDWORD lpSectorsPerCluster, LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters, LPDWORD lpTotalNumberOfClusters);
 func (c *cpu) GetDiskFreeSpaceA() {
 	winStub("GetDiskFreeSpaceA")
 }
-// //sys: BOOL   	GetDiskFreeSpaceW(LPCTSTR lpRootPathName, LPDWORD lpSectorsPerCluster, LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters, LPDWORD lpTotalNumberOfClusters); 
+
+// //sys: BOOL   	GetDiskFreeSpaceW(LPCTSTR lpRootPathName, LPDWORD lpSectorsPerCluster, LPDWORD lpBytesPerSector, LPDWORD lpNumberOfFreeClusters, LPDWORD lpTotalNumberOfClusters);
 func (c *cpu) GetDiskFreeSpaceW() {
 	winStub("GetDiskFreeSpaceW")
 }
-// //sys: BOOL   	GetFileAttributesExW(LPCTSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation); 
+
+// //sys: BOOL   	GetFileAttributesExW(LPCTSTR lpFileName, GET_FILEEX_INFO_LEVELS fInfoLevelId, LPVOID lpFileInformation);
 func (c *cpu) GetFileAttributesExW() {
 	winStub("GetFileAttributesExW")
 }
-// //sys: DWORD  	GetFileAttributesA(LPCTSTR lpFileName); 
+
+// //sys: DWORD  	GetFileAttributesA(LPCTSTR lpFileName);
 func (c *cpu) GetFileAttributesA() {
 	winStub("GetFileAttributesA")
 }
-// //sys: DWORD  	GetFileAttributesW(LPCTSTR lpFileName); 
+
+// //sys: DWORD  	GetFileAttributesW(LPCTSTR lpFileName);
 func (c *cpu) GetFileAttributesW() {
 	winStub("GetFileAttributesW")
 }
-// //sys: DWORD  	GetFileSize(HANDLE hFile, LPDWORD lpFileSizeHigh); 
+
+// //sys: DWORD  	GetFileSize(HANDLE hFile, LPDWORD lpFileSizeHigh);
 func (c *cpu) GetFileSize() {
 	winStub("GetFileSize")
 }
-// //sys: DWORD  	GetFullPathNameA( LPCTSTR lpFileName, DWORD nBufferLength, LPTSTR lpBuffer, LPTSTR* lpFilePart); 
+
+// //sys: DWORD  	GetFullPathNameA( LPCTSTR lpFileName, DWORD nBufferLength, LPTSTR lpBuffer, LPTSTR* lpFilePart);
 func (c *cpu) GetFullPathNameA() {
 	winStub("GetFullPathNameA")
 }
-// //sys: DWORD  	GetFullPathNameW( LPCTSTR lpFileName, DWORD nBufferLength, LPTSTR lpBuffer, LPTSTR* lpFilePart); 
+
+// //sys: DWORD  	GetFullPathNameW( LPCTSTR lpFileName, DWORD nBufferLength, LPTSTR lpBuffer, LPTSTR* lpFilePart);
 func (c *cpu) GetFullPathNameW() {
 	winStub("GetFullPathNameW")
 }
-// //sys: FARPROC 	GetProcAddress(HMODULE hModule, LPCSTR lpProcName); 
+
+// //sys: FARPROC 	GetProcAddress(HMODULE hModule, LPCSTR lpProcName);
 func (c *cpu) GetProcAddress() {
 	winStub("GetProcAddress")
 }
-// //sys: HANDLE   GetProcessHeap(); 
+
+// //sys: HANDLE   GetProcessHeap();
 func (c *cpu) GetProcessHeap() {
 	winStub("GetProcessHeap")
 }
-// //sys: void   	GetSystemInfo(LPSYSTEM_INFO lpSystemInfo); 
+
+// //sys: void   	GetSystemInfo(LPSYSTEM_INFO lpSystemInfo);
 func (c *cpu) GetSystemInfo() {
 	winStub("GetSystemInfo")
 }
-// //sys: void   	GetSystemTime(LPSYSTEMTIME lpSystemTime); 
+
+// //sys: void   	GetSystemTime(LPSYSTEMTIME lpSystemTime);
 func (c *cpu) GetSystemTime() {
 	winStub("GetSystemTime")
 }
-// //sys: void     GetSystemTimeAsFileTime(LPFILETIME lpSystemTimeAsFileTime); 
+
+// //sys: void     GetSystemTimeAsFileTime(LPFILETIME lpSystemTimeAsFileTime);
 func (c *cpu) GetSystemTimeAsFileTime() {
 	winStub("GetSystemTimeAsFileTime")
 }
-// //sys: DWORD    GetTempPathA(DWORD nBufferLength, LPTSTR lpBuffer); 
+
+// //sys: DWORD    GetTempPathA(DWORD nBufferLength, LPTSTR lpBuffer);
 func (c *cpu) GetTempPathA() {
 	winStub("GetTempPathA")
 }
-// //sys: DWORD    GetTempPathW(DWORD nBufferLength, LPTSTR lpBuffer); 
+
+// //sys: DWORD    GetTempPathW(DWORD nBufferLength, LPTSTR lpBuffer);
 func (c *cpu) GetTempPathW() {
 	winStub("GetTempPathW")
 }
-// //sys: DWORD  	GetTickCount(); 
+
+// //sys: DWORD  	GetTickCount();
 func (c *cpu) GetTickCount() {
 	winStub("GetTickCount")
 }
-// //sys: BOOL   	GetVersionExA(LPOSVERSIONINFO lpVersionInfo); 
+
+// //sys: BOOL   	GetVersionExA(LPOSVERSIONINFO lpVersionInfo);
 func (c *cpu) GetVersionExA() {
 	winStub("GetVersionExA")
 }
-// //sys: BOOL   	GetVersionExW(LPOSVERSIONINFO lpVersionInfo); 
+
+// //sys: BOOL   	GetVersionExW(LPOSVERSIONINFO lpVersionInfo);
 func (c *cpu) GetVersionExW() {
 	winStub("GetVersionExW")
 }
-// //sys: LPVOID 	HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes); 
+
+// //sys: LPVOID 	HeapAlloc(HANDLE hHeap, DWORD dwFlags, SIZE_T dwBytes);
 func (c *cpu) HeapAlloc() {
 	winStub("HeapAlloc")
 }
-// //sys: SIZE_T   HeapCompact(HANDLE hHeap, DWORD dwFlags); 
+
+// //sys: SIZE_T   HeapCompact(HANDLE hHeap, DWORD dwFlags);
 func (c *cpu) HeapCompact() {
 	winStub("HeapCompact")
 }
-// //sys: HANDLE   HeapCreate(DWORD flOptions, SIZE_T dwInitialSize, SIZE_T dwMaximumSize); 
+
+// //sys: HANDLE   HeapCreate(DWORD flOptions, SIZE_T dwInitialSize, SIZE_T dwMaximumSize);
 func (c *cpu) HeapCreate() {
 	winStub("HeapCreate")
 }
-// //sys: BOOL     HeapDestroy(HANDLE hHeap); 
+
+// //sys: BOOL     HeapDestroy(HANDLE hHeap);
 func (c *cpu) HeapDestroy() {
 	winStub("HeapDestroy")
 }
-// //sys: BOOL     HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem); 
+
+// //sys: BOOL     HeapFree(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem);
 func (c *cpu) HeapFree() {
 	winStub("HeapFree")
 }
-// //sys: LPVOID   HeapReAlloc(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes); 
+
+// //sys: LPVOID   HeapReAlloc(HANDLE hHeap, DWORD dwFlags, LPVOID lpMem, SIZE_T dwBytes);
 func (c *cpu) HeapReAlloc() {
 	winStub("HeapReAlloc")
 }
-// //sys: SIZE_T   HeapSize(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem); 
+
+// //sys: SIZE_T   HeapSize(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
 func (c *cpu) HeapSize() {
 	winStub("HeapSize")
 }
-// //sys: BOOL     HeapValidate(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem); 
+
+// //sys: BOOL     HeapValidate(HANDLE hHeap, DWORD dwFlags, LPCVOID lpMem);
 func (c *cpu) HeapValidate() {
 	winStub("HeapValidate")
 }
-// //sys: void   	InitializeCriticalSection(LPCRITICAL_SECTION lpCriticalSection); 
+
+// //sys: void   	InitializeCriticalSection(LPCRITICAL_SECTION lpCriticalSection);
 func (c *cpu) InitializeCriticalSection() {
 	winStub("InitializeCriticalSection")
 }
-// //sys: void   	LeaveCriticalSection(LPCRITICAL_SECTION lpCriticalSection); 
+
+// //sys: void   	LeaveCriticalSection(LPCRITICAL_SECTION lpCriticalSection);
 func (c *cpu) LeaveCriticalSection() {
 	winStub("LeaveCriticalSection")
 }
-// //sys: HMODULE  LoadLibraryA(LPCTSTR lpFileName); 
+
+// //sys: HMODULE  LoadLibraryA(LPCTSTR lpFileName);
 func (c *cpu) LoadLibraryA() {
 	winStub("LoadLibraryA")
 }
-// //sys: HMODULE  LoadLibraryW(LPCTSTR lpFileName); 
+
+// //sys: HMODULE  LoadLibraryW(LPCTSTR lpFileName);
 func (c *cpu) LoadLibraryW() {
 	winStub("LoadLibraryW")
 }
-// //sys: HLOCAL 	LocalFree(HLOCAL hMem); 
+
+// //sys: HLOCAL 	LocalFree(HLOCAL hMem);
 func (c *cpu) LocalFree() {
 	winStub("LocalFree")
 }
-// //sys: BOOL     LockFile(HANDLE hFile, DWORD dwFileOffsetLow, DWORD dwFileOffsetHigh, DWORD nNumberOfBytesToLockLow, DWORD nNumberOfBytesToLockHigh); 
+
+// //sys: BOOL     LockFile(HANDLE hFile, DWORD dwFileOffsetLow, DWORD dwFileOffsetHigh, DWORD nNumberOfBytesToLockLow, DWORD nNumberOfBytesToLockHigh);
 func (c *cpu) LockFile() {
 	winStub("LockFile")
 }
-// //sys: BOOL   	LockFileEx(HANDLE hFile, DWORD dwFlags, DWORD dwReserved, DWORD nNumberOfBytesToLockLow, DWORD nNumberOfBytesToLockHigh, LPOVERLAPPED lpOverlapped); 
+
+// //sys: BOOL   	LockFileEx(HANDLE hFile, DWORD dwFlags, DWORD dwReserved, DWORD nNumberOfBytesToLockLow, DWORD nNumberOfBytesToLockHigh, LPOVERLAPPED lpOverlapped);
 func (c *cpu) LockFileEx() {
 	winStub("LockFileEx")
 }
-// //sys: LPVOID   MapViewOfFile(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, SIZE_T dwNumberOfBytesToMap); 
+
+// //sys: LPVOID   MapViewOfFile(HANDLE hFileMappingObject, DWORD dwDesiredAccess, DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow, SIZE_T dwNumberOfBytesToMap);
 func (c *cpu) MapViewOfFile() {
 	winStub("MapViewOfFile")
 }
-// //sys: int 	  	MultiByteToWideChar(UINT CodePage, DWORD dwFlags, LPCSTR lpMultiByteStr,	int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar); 
+
+// //sys: int 	  	MultiByteToWideChar(UINT CodePage, DWORD dwFlags, LPCSTR lpMultiByteStr,	int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar);
 func (c *cpu) MultiByteToWideChar() {
 	winStub("MultiByteToWideChar")
 }
-// //sys: void     OutputDebugStringA(LPCTSTR lpOutputString); 
+
+// //sys: void     OutputDebugStringA(LPCTSTR lpOutputString);
 func (c *cpu) OutputDebugStringA() {
 	winStub("OutputDebugStringA")
 }
-// //sys: void     OutputDebugStringW(LPCTSTR lpOutputString); 
+
+// //sys: void     OutputDebugStringW(LPCTSTR lpOutputString);
 func (c *cpu) OutputDebugStringW() {
 	winStub("OutputDebugStringW")
 }
-// //sys: BOOL   	QueryPerformanceCounter(LARGE_INTEGER* lpPerformanceCount); 
+
+// //sys: BOOL   	QueryPerformanceCounter(LARGE_INTEGER* lpPerformanceCount);
 func (c *cpu) QueryPerformanceCounter() {
 	winStub("QueryPerformanceCounter")
 }
-// //sys: BOOL   	ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped); 
+
+// //sys: BOOL   	ReadFile(HANDLE hFile, LPVOID lpBuffer, DWORD nNumberOfBytesToRead, LPDWORD lpNumberOfBytesRead, LPOVERLAPPED lpOverlapped);
 func (c *cpu) ReadFile() {
 	winStub("ReadFile")
 }
-// //sys: BOOL     SetEndOfFile(HANDLE hFile); 
+
+// //sys: BOOL     SetEndOfFile(HANDLE hFile);
 func (c *cpu) SetEndOfFile() {
 	winStub("SetEndOfFile")
 }
-// //sys: DWORD    SetFilePointer(HANDLE hFile, LONG lDistanceToMove, PLONG lpDistanceToMoveHigh, DWORD dwMoveMethod); 
+
+// //sys: DWORD    SetFilePointer(HANDLE hFile, LONG lDistanceToMove, PLONG lpDistanceToMoveHigh, DWORD dwMoveMethod);
 func (c *cpu) SetFilePointer() {
 	winStub("SetFilePointer")
 }
-// //sys: void     Sleep(DWORD dwMilliseconds); 
+
+// //sys: void     Sleep(DWORD dwMilliseconds);
 func (c *cpu) Sleep() {
 	winStub("Sleep")
 }
-// //sys: BOOL     SystemTimeToFileTime(SYSTEMTIME* lpSystemTime, LPFILETIME lpFileTime); 
+
+// //sys: BOOL     SystemTimeToFileTime(SYSTEMTIME* lpSystemTime, LPFILETIME lpFileTime);
 func (c *cpu) SystemTimeToFileTime() {
 	winStub("SystemTimeToFileTime")
 }
-// //sys: BOOL     UnlockFile(HANDLE hFile, DWORD dwFileOffsetLow, DWORD dwFileOffsetHigh, DWORD nNumberOfBytesToUnlockLow, DWORD nNumberOfBytesToUnlockHigh); 
+
+// //sys: BOOL     UnlockFile(HANDLE hFile, DWORD dwFileOffsetLow, DWORD dwFileOffsetHigh, DWORD nNumberOfBytesToUnlockLow, DWORD nNumberOfBytesToUnlockHigh);
 func (c *cpu) UnlockFile() {
 	winStub("UnlockFile")
 }
-// //sys: BOOL   	UnlockFileEx(HANDLE hFile, DWORD dwReserved, DWORD nNumberOfBytesToUnlockLow, DWORD nNumberOfBytesToUnlockHigh, LPOVERLAPPED lpOverlapped); 
+
+// //sys: BOOL   	UnlockFileEx(HANDLE hFile, DWORD dwReserved, DWORD nNumberOfBytesToUnlockLow, DWORD nNumberOfBytesToUnlockHigh, LPOVERLAPPED lpOverlapped);
 func (c *cpu) UnlockFileEx() {
 	winStub("UnlockFileEx")
 }
-// //sys: BOOL     UnmapViewOfFile(LPCVOID lpBaseAddress); 
+
+// //sys: BOOL     UnmapViewOfFile(LPCVOID lpBaseAddress);
 func (c *cpu) UnmapViewOfFile() {
 	winStub("UnmapViewOfFile")
 }
-// //sys: DWORD    WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds); 
+
+// //sys: DWORD    WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
 func (c *cpu) WaitForSingleObject() {
 	winStub("WaitForSingleObject")
 }
-// //sys: DWORD    WaitForSingleObjectEx(HANDLE hHandle, DWORD dwMilliseconds, BOOL bAlertable); 
+
+// //sys: DWORD    WaitForSingleObjectEx(HANDLE hHandle, DWORD dwMilliseconds, BOOL bAlertable);
 func (c *cpu) WaitForSingleObjectEx() {
 	winStub("WaitForSingleObjectEx")
 }
-// //sys: int    	WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPCWSTR lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCSTR lpDefaultChar, LPBOOL lpUsedDefaultChar); 
+
+// //sys: int    	WideCharToMultiByte(UINT CodePage, DWORD dwFlags, LPCWSTR lpWideCharStr, int cchWideChar, LPSTR lpMultiByteStr, int cbMultiByte, LPCSTR lpDefaultChar, LPBOOL lpUsedDefaultChar);
 func (c *cpu) WideCharToMultiByte() {
 	winStub("WideCharToMultiByte")
 }
-// //sys: BOOL   	WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped); 
+
+// //sys: BOOL   	WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
 func (c *cpu) WriteFile() {
 	winStub("WriteFile")
 }
