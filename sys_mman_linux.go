@@ -25,9 +25,12 @@ func (c *cpu) mmap64() {
 	sp, prot := popI32(sp)
 	sp, len := popLong(sp)
 	addr := readPtr(sp)
-	r, _, _ := syscall.Syscall6(syscall.SYS_MMAP, addr, uintptr(len), uintptr(prot), uintptr(flags), uintptr(fildes), uintptr(off))
+	r, _, err := syscall.Syscall6(syscall.SYS_MMAP, addr, uintptr(len), uintptr(prot), uintptr(flags), uintptr(fildes), uintptr(off))
 	if strace {
-		fmt.Fprintf(os.Stderr, "mmap(%#x, %#x, %#x, %#x, %#x, %#x) %#x\n", addr, len, prot, flags, fildes, off, r)
+		fmt.Fprintf(os.Stderr, "mmap(%#x, %#x, %#x, %#x, %#x, %#x) (%#x, %v)\n", addr, len, prot, flags, fildes, off, r, err)
+	}
+	if err != 0 {
+		c.setErrno(err)
 	}
 	writePtr(c.rp, r)
 }
@@ -38,7 +41,7 @@ func (c *cpu) munmap() {
 	addr := readPtr(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_MUNMAP, addr, uintptr(len), 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "munmap(%#x, %#x) %#x\n", addr, len, r, err)
+		fmt.Fprintf(os.Stderr, "munmap(%#x, %#x) (%#x, %v)\n", addr, len, r, err)
 	}
 	if err != 0 {
 		c.setErrno(err)

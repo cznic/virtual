@@ -2052,7 +2052,6 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 				case ir.Pointer:
 					if v.Value == 0 {
 						panic(fmt.Errorf("%s: %v", x.Position, x.TypeID))
-						break
 					}
 
 					switch l.ptrSize {

@@ -81,7 +81,7 @@ func (c *cpu) ftruncate64() {
 	fildes := readI32(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_FTRUNCATE, uintptr(fildes), uintptr(length), 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "ftruncate(%#x, %#x) %v %v %q\n", fildes, length, r, err)
+		fmt.Fprintf(os.Stderr, "ftruncate(%#x, %#x) %v, %v\n", fildes, length, r, err)
 	}
 	if err != 0 {
 		c.setErrno(err)
