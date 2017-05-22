@@ -259,7 +259,7 @@ func (c *cpu) run(ip uintptr) (int, error) {
 	main:
 		switch op.Opcode {
 		case AP: // -> ptr
-			c.sp -= i32StackSz
+			c.sp -= ptrStackSz
 			writePtr(c.sp, c.ap+uintptr(op.N))
 		case AddF32: // a, b -> a + b
 			b := readF32(c.sp)
@@ -1044,11 +1044,11 @@ func (c *cpu) run(ip uintptr) (int, error) {
 		case NegIndexU16: // addr, index -> addr - n*index
 			x := readU16(c.sp)
 			c.sp += i16StackSz
-			addPtr(c.sp, uintptr(uint16(-op.N)*x))
+			addPtr(c.sp, uintptr(-op.N*int(x)))
 		case NegIndexU32: // addr, index -> addr - n*index
 			x := readU32(c.sp)
 			c.sp += i32StackSz
-			addPtr(c.sp, uintptr(uint32(-op.N)*x))
+			addPtr(c.sp, uintptr(-op.N*int(x)))
 		case NegIndexI32: // addr, index -> addr - n*index
 			x := readI32(c.sp)
 			c.sp += i32StackSz
@@ -1056,11 +1056,11 @@ func (c *cpu) run(ip uintptr) (int, error) {
 		case NegIndexI64: // addr, index -> addr - n*index
 			x := readI64(c.sp)
 			c.sp += i64StackSz
-			addPtr(c.sp, uintptr(int64(-op.N)*x))
+			addPtr(c.sp, uintptr(-op.N*int(x)))
 		case NegIndexU64: // addr, index -> addr - n*index
 			x := readU64(c.sp)
 			c.sp += i64StackSz
-			addPtr(c.sp, uintptr(uint64(-op.N)*x))
+			addPtr(c.sp, uintptr(-op.N*int(x)))
 		case NeqC64: // a, b -> a |= b
 			b := readC64(c.sp)
 			c.sp += c64StackSz
