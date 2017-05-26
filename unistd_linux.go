@@ -86,7 +86,7 @@ func (c *cpu) ftruncate64() {
 	if err != 0 {
 		c.setErrno(err)
 	}
-	writePtr(c.rp, r)
+	writeI32(c.rp, int32(r))
 }
 
 // char *getcwd(char *buf, size_t size);
