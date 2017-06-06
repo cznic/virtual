@@ -407,6 +407,7 @@ const (
 	time
 	tolower
 	unlink
+	usleep
 	utimes
 	vfprintf
 	vprintf

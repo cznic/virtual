@@ -9,6 +9,7 @@ import (
 	"math"
 	"os"
 	"syscall"
+	tim "time"
 	"unsafe"
 
 	"github.com/cznic/ccir/libc/unistd"
@@ -31,6 +32,7 @@ func init() {
 		dict.SID("sleep"):       sleep,
 		dict.SID("sysconf"):     sysconf,
 		dict.SID("unlink"):      unlink,
+		dict.SID("usleep"):      usleep,
 		dict.SID("write"):       write,
 	})
 }
@@ -203,4 +205,14 @@ func (c *cpu) write() {
 		c.thread.setErrno(err)
 	}
 	writeLong(c.rp, int64(r))
+}
+
+// int usleep(useconds_t usec);
+func (c *cpu) usleep() {
+	usec := readU32(c.sp)
+	tim.Sleep(tim.Duration(usec) * tim.Microsecond)
+	if strace {
+		fmt.Fprintf(os.Stderr, "usleep(%#x)", usec)
+	}
+	writeI32(c.rp, 0)
 }
