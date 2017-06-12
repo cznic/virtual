@@ -349,6 +349,7 @@ const (
 	lseek64
 	lstat64
 	malloc
+	malloc_usable_size
 	memcmp
 	memcpy
 	memmove

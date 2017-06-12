@@ -9,13 +9,15 @@ import (
 	"math"
 	"os"
 	"syscall"
+	tim "time"
 	"unsafe"
 )
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("read"):  read,
-		dict.SID("close"): close_,
+		dict.SID("read"):   read,
+		dict.SID("close"):  close_,
+		dict.SID("usleep"): usleep,
 	})
 }
 
@@ -77,3 +79,13 @@ func (c *cpu) unlink() { panic("unreachable") }
 
 // ssize_t write(int fd, const void *buf, size_t count);
 func (c *cpu) write() { panic("unreachable") }
+
+// int usleep(useconds_t usec);
+func (c *cpu) usleep() {
+	usec := readU32(c.sp)
+	tim.Sleep(tim.Duration(usec) * tim.Microsecond)
+	if strace {
+		fmt.Fprintf(os.Stderr, "usleep(%#x)", usec)
+	}
+	writeI32(c.rp, 0)
+}
