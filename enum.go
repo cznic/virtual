@@ -329,8 +329,10 @@ const (
 	frameAddress
 	fread
 	free
+	fseek
 	fstat64
 	fsync
+	ftell
 	ftruncate64
 	fwrite
 	getcwd
@@ -383,7 +385,9 @@ const (
 	read
 	readlink
 	realloc
+	register_stdfiles
 	returnAddress
+	rewind
 	rmdir
 	round
 	setjmp
@@ -393,7 +397,6 @@ const (
 	sprintf
 	sqrt
 	stat64
-	register_stdfiles
 	strcat
 	strchr
 	strcmp
@@ -403,6 +406,7 @@ const (
 	strncpy
 	strrchr
 	sysconf
+	system
 	tan
 	tanh
 	time
