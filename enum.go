@@ -277,12 +277,14 @@ const (
 
 	// builtins
 
+	__ctype_b_loc
 	__signbit
 	__signbitf
 	abort
 	abs
 	access
 	acos
+	atoi
 	alloca
 	asin
 	atan

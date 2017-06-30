@@ -16,6 +16,7 @@ func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("abort"):   abort,
 		dict.SID("abs"):     abs,
+		dict.SID("atoi"):    atoi,
 		dict.SID("calloc"):  calloc,
 		dict.SID("exit"):    exit,
 		dict.SID("free"):    free,
