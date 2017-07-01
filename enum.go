@@ -371,7 +371,10 @@ const (
 	popcountll
 	pow
 	printf
+	pthread_cond_signal
+	pthread_cond_wait
 	pthread_create
+	pthread_detach
 	pthread_equal
 	pthread_join
 	pthread_mutex_destroy
@@ -392,6 +395,7 @@ const (
 	rewind
 	rmdir
 	round
+	sched_yield
 	setjmp
 	sin
 	sinh
@@ -403,6 +407,7 @@ const (
 	strchr
 	strcmp
 	strcpy
+	strerror_r
 	strlen
 	strncmp
 	strncpy
