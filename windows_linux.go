@@ -4,7 +4,7 @@
 
 //go:generate go run generator.go
 
-// +build !windows
+// +build !windows,!darwin
 
 package virtual
 
