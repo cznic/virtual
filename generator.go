@@ -13,7 +13,9 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"regexp"
+	"runtime"
 	"strings"
 )
 
@@ -309,16 +311,32 @@ func main() {
 		log.Fatal("cannot write windows_impl.go: ", err)
 	}
 
-	// build stubs for linux
+	// build stubs for GOOS
 	out.Reset()
 	if err := fileHeader(&out, "!windows", []string{"fmt"}); err != nil {
 		log.Fatal("Cannot write file header: ", err)
 	}
-	if _, err := fmt.Fprintf(&out, "func winStub(name string) {\n\tpanic(fmt.Errorf(\"%%s not supported on linux\", name))\n}\n\n"); err != nil {
+	if _, err := fmt.Fprintf(&out, "func winStub(name string) {\n\tpanic(fmt.Errorf(\"%%s not supported on %s\", name))\n}\n\n", goOs()); err != nil {
 		log.Fatal("Cannot write winStub!", err)
 	}
 	compileWinFile(&out, compileWinSyscallStubs)
-	if err := ioutil.WriteFile("windows_impl_linux.go", out.Bytes(), 0655); err != nil {
-		log.Fatal("cannot write windows_impl_linux.go: ", err)
+	if err := ioutil.WriteFile(fmt.Sprintf("windows_impl_%s.go", goOs()), out.Bytes(), 0655); err != nil {
+		log.Fatalf("cannot write windows_impl_%s.go: ", goOs(), err)
 	}
+}
+
+func goArch() string {
+	if s := os.Getenv("GOARCH"); s != "" {
+		return s
+	}
+
+	return runtime.GOARCH
+}
+
+func goOs() string {
+	if s := os.Getenv("GOOS"); s != "" {
+		return s
+	}
+
+	return runtime.GOOS
 }
