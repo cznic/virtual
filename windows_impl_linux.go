@@ -13,7 +13,7 @@ import (
 )
 
 func winStub(name string) {
-	panic(fmt.Errorf("%s not supported outside windows", name))
+	panic(fmt.Errorf("%s not supported on linux", name))
 }
 
 // //sys: BOOL   	AreFileApisANSI();
@@ -349,16 +349,4 @@ func (c *cpu) WideCharToMultiByte() {
 // //sys: BOOL   	WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nNumberOfBytesToWrite, LPDWORD lpNumberOfBytesWritten, LPOVERLAPPED lpOverlapped);
 func (c *cpu) WriteFile() {
 	winStub("WriteFile")
-}
-
-func (c *cpu) InterlockedCompareExchange() {
-	winStub("InterlockedCompareExchange")
-}
-
-func (c *cpu) GetCurrentThreadId() {
-	winStub("GetCurrentThreadId")
-}
-
-func (c *cpu) GetLastError() {
-	winStub("GetLastError")
 }
