@@ -2308,19 +2308,19 @@ func (l *loader) load() error {
 					}
 					sort.Sort(a)
 					buf.Reset()
-					fmt.Fprintf(&buf, "struct{int64")
+					fmt.Fprintf(&buf, "struct{ int64")
 					for _, v := range a {
 						switch x := v.Value.(type) {
 						case *ir.Int32Value:
-							fmt.Fprintf(&buf, ",int32")
+							fmt.Fprintf(&buf, ", int32")
 						case *ir.Int64Value:
-							fmt.Fprintf(&buf, ",int64")
+							fmt.Fprintf(&buf, ", int64")
 						default:
 							panic(fmt.Sprintf("%T", x))
 						}
 					}
 					for i := 0; i <= len(a); i++ {
-						fmt.Fprintf(&buf, ",*struct{}")
+						fmt.Fprintf(&buf, ", *struct{}")
 					}
 					buf.WriteByte('}')
 					cv := &ir.CompositeValue{Values: []ir.Value{&ir.Int32Value{Value: int32(len(a))}}}
