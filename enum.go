@@ -277,6 +277,7 @@ const (
 
 	// builtins
 
+	__assert_fail
 	__ctype_b_loc
 	__signbit
 	__signbitf
@@ -284,10 +285,10 @@ const (
 	abs
 	access
 	acos
-	atoi
 	alloca
 	asin
 	atan
+	atoi
 	bswap64
 	builtin
 	calloc
