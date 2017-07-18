@@ -447,6 +447,8 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			v := readF64(c.sp)
 			c.sp += f64StackSz - i32StackSz
 			writeU32(c.sp, uint32(v))
+		case ConvF64U64:
+			writeU64(c.sp, uint64(readF64(c.sp)))
 		case ConvF64I64:
 			writeI64(c.sp, int64(readF64(c.sp)))
 		case ConvF64I8:
