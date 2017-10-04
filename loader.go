@@ -124,7 +124,7 @@ func newLoader(objects []ir.Object) *loader {
 		panic(err)
 	}
 
-	ptrItem, _ := model[ir.Pointer]
+	ptrItem := model[ir.Pointer]
 	return &loader{
 		csLabels:    map[int]*ir.AddressValue{},
 		dsLabels:    map[int]*ir.AddressValue{},

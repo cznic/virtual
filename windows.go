@@ -67,7 +67,7 @@ func (c *cpu) InterlockedCompareExchange() {
 			// to do a separate read, which is subject to race. such a race did occur here.
 			// the caller will compare the return value against initial, which since we didn't
 			// swap it has to be different. that's what we enforce here
-			// NOTE: this case should only hapen very unlikely and won't have any sideffects
+			// NOTE: this case should only happen very unlikely and won't have any sideffects
 			fmt.Fprintln(os.Stderr, "InterlockedCompareExchange: caught race")
 			initial = comparand + 1
 		}

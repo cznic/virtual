@@ -16,6 +16,7 @@ import (
 
 	"github.com/cznic/internal/buffer"
 	"github.com/cznic/mathutil"
+	"github.com/cznic/memory"
 	"github.com/edsrzf/mmap-go"
 )
 
@@ -145,6 +146,8 @@ type Machine struct {
 	ProfileLines        map[PCInfo]int
 	ProfileRate         int       // N: Sample every Nth instruction.
 	Threads             []*Thread //TODO Unexport?
+	alloc               memory.Allocator
+	allocMu             sync.Mutex
 	brk                 uintptr
 	bss                 uintptr
 	bssSize             int
@@ -271,10 +274,13 @@ func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writ
 // CString allocates a C string initialized from s.
 func (m *Machine) CString(s string) uintptr {
 	n := len(s)
-	p := m.malloc(len(s) + 1)
-	i := p - m.ds
-	copy(m.dsMem[i:], s)
-	m.dsMem[i+uintptr(n)] = 0
+	p := m.malloc(n + 1)
+	if p == 0 {
+		return 0
+	}
+
+	copy((*[math.MaxInt32]byte)(unsafe.Pointer(p))[:n], s)
+	(*[math.MaxInt32]byte)(unsafe.Pointer(p))[n] = 0
 	return p
 }
 
@@ -307,6 +313,9 @@ func (m *Machine) Close() (err error) {
 		}
 	}
 	m.threadsMu.Unlock()
+	if e := m.alloc.Close(); e != nil && err == nil {
+		err = e
+	}
 	return err
 }
 
@@ -321,39 +330,31 @@ func (m *Machine) Kill() {
 	m.stopMu.Unlock()
 }
 
-func (m *Machine) free(p uintptr) { //TODO
+func (m *Machine) free(p uintptr) {
+	m.allocMu.Lock()
+	m.alloc.UnsafeFree(unsafe.Pointer(p))
+	m.allocMu.Unlock()
 }
 
 func (m *Machine) calloc(n int) uintptr {
-	p := m.malloc(n)
-	if p != 0 {
-		for p := p; n != 0; n-- {
-			writeI8(p, 0)
-			p++
-		}
-	}
-	return p
+	m.allocMu.Lock()
+	p, _ := m.alloc.UnsafeCalloc(n)
+	m.allocMu.Unlock()
+	return uintptr(p)
 }
 
-func (m *Machine) malloc(n int) uintptr { //TODO real malloc
-	if n != 0 {
-		p := m.brk
-		if m.sbrk(n)-m.ds < uintptr(len(m.dsMem)) {
-			return p
-		}
-	}
-
-	return 0
+func (m *Machine) malloc(n int) uintptr {
+	m.allocMu.Lock()
+	p, _ := m.alloc.UnsafeMalloc(n)
+	m.allocMu.Unlock()
+	return uintptr(p)
 }
 
-func (m *Machine) realloc(p uintptr, n int) uintptr { //TODO real realloc
-	q := m.malloc(n)
-	if q == 0 {
-		return 0
-	}
-
-	movemem(q, p, n)
-	return q
+func (m *Machine) realloc(p uintptr, n int) uintptr {
+	m.allocMu.Lock()
+	q, _ := m.alloc.UnsafeRealloc(unsafe.Pointer(p), n)
+	m.allocMu.Unlock()
+	return uintptr(q)
 }
 
 // NewThread returns a newly created Thread or an error, if any. Its Close

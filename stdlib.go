@@ -9,6 +9,7 @@ import (
 	"os"
 	"sort"
 
+	"github.com/cznic/ccir/libc/errno"
 	"github.com/cznic/mathutil"
 )
 
@@ -49,6 +50,9 @@ func (c *cpu) calloc() {
 	if strace {
 		fmt.Fprintf(os.Stderr, "calloc(%#x) %#x\n", size, p)
 	}
+	if p == 0 {
+		c.setErrno(errno.XENOMEM)
+	}
 	writePtr(c.rp, p)
 }
 
@@ -70,6 +74,9 @@ func (c *cpu) malloc() {
 	}
 	if strace {
 		fmt.Fprintf(os.Stderr, "malloc(%#x) %#x\n", size, p)
+	}
+	if p == 0 {
+		c.setErrno(errno.XENOMEM)
 	}
 	writePtr(c.rp, p)
 }
@@ -177,6 +184,9 @@ func (c *cpu) realloc() {
 	r := c.m.realloc(ptr, int(size))
 	if strace {
 		fmt.Fprintf(os.Stderr, "realloc(%#x, %#x) %#x\n", ptr, size, r)
+	}
+	if size != 0 && r == 0 {
+		c.setErrno(errno.XENOMEM)
 	}
 	writePtr(c.rp, r)
 }
