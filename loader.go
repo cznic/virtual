@@ -131,7 +131,7 @@ func (b *Binary) ReadFrom(r io.Reader) (n int64, err error) {
 	buf := gr.Header.Extra[len(magic):]
 	a := bytes.Split(buf, []byte{'|'})
 	if len(a) != 3 {
-		return int64(c), fmt.Errorf("unrecognized file format")
+		return int64(c), fmt.Errorf("corrupted file")
 	}
 
 	if s := string(a[0]); s != runtime.GOOS {
@@ -144,7 +144,7 @@ func (b *Binary) ReadFrom(r io.Reader) (n int64, err error) {
 
 	v, err := strconv.ParseUint(string(a[2]), 10, 64)
 	if err != nil {
-		return int64(c), fmt.Errorf("invalid architecture %q", a[2])
+		return int64(c), err
 	}
 
 	if v != binaryVersion {
