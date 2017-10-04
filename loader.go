@@ -6,10 +6,15 @@ package virtual
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/gob"
 	"fmt"
 	"go/token"
+	"io"
 	"math"
+	"runtime"
 	"sort"
+	tm "time"
 	"unicode/utf16"
 	"unsafe"
 
@@ -18,10 +23,20 @@ import (
 	"github.com/cznic/mathutil"
 )
 
-const ffiProlog = 2 // Call $+2, FFIReturn, Func, ...
+var (
+	_ io.ReaderFrom = (*Binary)(nil)
+	_ io.Writer     = (*counter)(nil)
+	_ io.WriterTo   = (*Binary)(nil)
+)
+
+const (
+	binaryVersion = 1 // Compatibility version of Binary.
+	ffiProlog     = 2 // Call $+2, FFIReturn, Func, ...
+)
 
 var (
 	builtins   = map[ir.NameID]Opcode{}
+	magic      = []byte{0x03, 0x91, 0x7a, 0xef, 0x55, 0xad, 0xcc, 0xce}
 	nonReturns = map[Opcode]struct{}{
 		abort: {},
 		exit:  {},
@@ -70,6 +85,13 @@ func (p *PCInfo) Position() token.Position {
 	return token.Position{Line: p.Line, Column: p.Column, Filename: string(dict.S(int(p.Name)))}
 }
 
+type counter int64
+
+func (c *counter) Write(b []byte) (int, error) {
+	*c += counter(len(b))
+	return len(b), nil
+}
+
 // Binary represents a loaded program image. It can be run via Exec.
 type Binary struct {
 	BSS        int
@@ -87,6 +109,37 @@ func newBinary() *Binary {
 	return &Binary{
 		Sym: map[ir.NameID]int{},
 	}
+}
+
+// ReadFrom reads b from r. Not yet implemented.
+func (b *Binary) ReadFrom(r io.Reader) (n int64, err error) {
+	*b = Binary{}
+	b.Sym = map[ir.NameID]int{}
+	panic("TODO")
+}
+
+// WriteTo writes b to w.
+func (b *Binary) WriteTo(w io.Writer) (n int64, err error) {
+	var c counter
+	gw := gzip.NewWriter(io.MultiWriter(w, &c))
+	gw.Header.Comment = "VM binary/executable"
+	var buf buffer.Bytes
+	buf.Write(magic)
+	fmt.Fprintf(&buf, fmt.Sprintf("%s|%s|%v", runtime.GOOS, runtime.GOARCH, binaryVersion))
+	gw.Header.Extra = buf.Bytes()
+	buf.Close()
+	gw.Header.ModTime = tm.Now()
+	gw.Header.OS = 255 // Unknown OS.
+	enc := gob.NewEncoder(gw)
+	if err := enc.Encode(b); err != nil {
+		return int64(c), err
+	}
+
+	if err := gw.Close(); err != nil {
+		return int64(c), err
+	}
+
+	return int64(c), nil
 }
 
 type nfo struct {
