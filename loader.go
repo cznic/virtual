@@ -14,6 +14,7 @@ import (
 	"math"
 	"runtime"
 	"sort"
+	"strconv"
 	tm "time"
 	"unicode/utf16"
 	"unsafe"
@@ -113,9 +114,45 @@ func newBinary() *Binary {
 
 // ReadFrom reads b from r. Not yet implemented.
 func (b *Binary) ReadFrom(r io.Reader) (n int64, err error) {
+	var c counter
 	*b = Binary{}
 	b.Sym = map[ir.NameID]int{}
-	panic("TODO")
+
+	r = io.TeeReader(r, &c)
+	gr, err := gzip.NewReader(r)
+	if err != nil {
+		return 0, err
+	}
+
+	if len(gr.Header.Extra) < len(magic) || !bytes.Equal(gr.Header.Extra[:len(magic)], magic) {
+		return int64(c), fmt.Errorf("unrecognized file format")
+	}
+
+	buf := gr.Header.Extra[len(magic):]
+	a := bytes.Split(buf, []byte{'|'})
+	if len(a) != 3 {
+		return int64(c), fmt.Errorf("unrecognized file format")
+	}
+
+	if s := string(a[0]); s != runtime.GOOS {
+		return int64(c), fmt.Errorf("invalid platform %q", s)
+	}
+
+	if s := string(a[1]); s != runtime.GOARCH {
+		return int64(c), fmt.Errorf("invalid architecture %q", s)
+	}
+
+	v, err := strconv.ParseUint(string(a[2]), 10, 64)
+	if err != nil {
+		return int64(c), fmt.Errorf("invalid architecture %q", a[2])
+	}
+
+	if v != binaryVersion {
+		return int64(c), fmt.Errorf("invalid version number %v", v)
+	}
+
+	err = gob.NewDecoder(gr).Decode(b)
+	return int64(c), err
 }
 
 // WriteTo writes b to w.
