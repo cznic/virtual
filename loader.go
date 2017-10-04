@@ -112,7 +112,7 @@ func newBinary() *Binary {
 	}
 }
 
-// ReadFrom reads b from r. Not yet implemented.
+// ReadFrom reads b from r.
 func (b *Binary) ReadFrom(r io.Reader) (n int64, err error) {
 	var c counter
 	*b = Binary{}
