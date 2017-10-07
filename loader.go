@@ -5,6 +5,7 @@
 package virtual
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/gob"
@@ -15,6 +16,7 @@ import (
 	"runtime"
 	"sort"
 	"strconv"
+	"strings"
 	tm "time"
 	"unicode/utf16"
 	"unsafe"
@@ -114,11 +116,29 @@ func newBinary() *Binary {
 
 // ReadFrom reads b from r.
 func (b *Binary) ReadFrom(r io.Reader) (n int64, err error) {
+	var br *bufio.Reader
 	var c counter
 	*b = Binary{}
 	b.Sym = map[ir.NameID]int{}
 
-	r = io.TeeReader(r, &c)
+	var ok bool
+	if br, ok = r.(*bufio.Reader); !ok {
+		br = bufio.NewReader(r)
+	}
+
+	if runtime.GOOS == "linux" {
+		s, err := br.ReadString('\n')
+		if err != nil {
+			return int64(c), err
+		}
+
+		if !strings.HasPrefix(s, "#!") {
+			return int64(c), fmt.Errorf("invalid file header: %q\n", s)
+		}
+		c = counter(len(s))
+	}
+
+	r = io.TeeReader(br, &c)
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return 0, err
