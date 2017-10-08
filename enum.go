@@ -373,6 +373,7 @@ const (
 	popcountll
 	pow
 	printf
+	puts
 	pthread_cond_signal
 	pthread_cond_wait
 	pthread_create

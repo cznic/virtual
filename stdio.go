@@ -36,6 +36,7 @@ func init() {
 		dict.SID("ftell"):               ftell,
 		dict.SID("fwrite"):              fwrite,
 		dict.SID("printf"):              printf,
+		dict.SID("puts"):                puts,
 		dict.SID("rewind"):              rewind,
 		dict.SID("sprintf"):             sprintf,
 		dict.SID("vfprintf"):            vfprintf,
@@ -453,6 +454,18 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 func (c *cpu) printf() {
 	ap := c.rp - ptrStackSz
 	writeI32(c.rp, goFprintf(c.m.stdout, readPtr(ap), ap))
+}
+
+// int puts(char *__s);
+func (c *cpu) puts() {
+	p := readPtr(c.sp)
+	s := GoString(p)
+	w := files.writer(stdout, c)
+	var r int32
+	if _, err := fmt.Fprintf(w, "%s\n", s); err != nil {
+		r = stdio.XEOF
+	}
+	writeI32(c.rp, r)
 }
 
 // int sprintf(char *str, const char *format, ...);

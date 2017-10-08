@@ -1787,6 +1787,8 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.register_stdfiles)
 		case printf:
 			c.builtin(c.printf)
+		case puts:
+			c.builtin(c.puts)
 		case sprintf:
 			c.builtin(c.sprintf)
 		case fopen64:
