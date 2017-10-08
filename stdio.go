@@ -433,6 +433,9 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 
 					b2.WriteByte(byte(c))
 				}
+			case '%':
+				b.WriteByte('%')
+				written++
 			default:
 				panic(fmt.Errorf("TODO %q", "%"+string(ch)))
 			}
