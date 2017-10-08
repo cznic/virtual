@@ -1643,6 +1643,8 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.acos)
 		case atan:
 			c.builtin(c.atan)
+		case atoi:
+			c.builtin(c.atoi)
 		case exp:
 			c.builtin(c.exp)
 		case fabs:

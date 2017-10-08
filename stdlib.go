@@ -38,6 +38,22 @@ func (c *cpu) abs() {
 	writeI32(c.rp, j)
 }
 
+// int atoi(char *__nptr);
+func (c *cpu) atoi() {
+	nptr := readPtr(c.sp)
+	var r int32
+	for {
+		ch := readU8(nptr)
+		nptr++
+		if ch < '0' || ch > '9' {
+			writeI32(c.rp, r)
+			return
+		}
+
+		r = 10*r + int32(ch) - '0'
+	}
+}
+
 // void *calloc(size_t nmemb, size_t size);
 func (c *cpu) calloc() {
 	sp, size := popLong(c.sp)
