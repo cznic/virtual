@@ -24,6 +24,7 @@ func init() {
 	registerBuiltins(map[int]Opcode{
 		dict.SID("__register_stdfiles"): register_stdfiles,
 		dict.SID("fclose"):              fclose,
+		dict.SID("ferror"):              ferror,
 		dict.SID("fflush"):              fflush,
 		dict.SID("fgetc"):               fgetc,
 		dict.SID("fgets"):               fgets,
@@ -54,22 +55,35 @@ func (c *cpu) register_stdfiles() {
 	stdin = readPtr(sp)
 }
 
+type stream struct {
+	*os.File
+	eof bool
+	err error
+}
+
 var (
 	files = &fmap{
-		m: map[uintptr]*os.File{},
+		m: map[uintptr]*stream{},
 	}
 	nullReader = bytes.NewBuffer(nil)
 )
 
 type fmap struct {
-	m  map[uintptr]*os.File
+	m  map[uintptr]*stream
 	mu sync.Mutex
 }
 
 func (m *fmap) add(f *os.File, u uintptr) {
 	m.mu.Lock()
-	m.m[u] = f
+	m.m[u] = &stream{File: f}
 	m.mu.Unlock()
+}
+
+func (m *fmap) get(u uintptr) *stream {
+	m.mu.Lock()
+	r := m.m[u]
+	m.mu.Unlock()
+	return r
 }
 
 func (m *fmap) reader(u uintptr, c *cpu) io.Reader {
@@ -107,7 +121,7 @@ func (m *fmap) extract(u uintptr) *os.File {
 	f := m.m[u]
 	delete(m.m, u)
 	m.mu.Unlock()
-	return f
+	return f.File
 }
 
 type file struct{ _ int32 }
@@ -137,6 +151,23 @@ func (c *cpu) fclose() {
 	}
 
 	writeI32(c.rp, 0)
+}
+
+// int ferror(FILE *stream);
+func (c *cpu) ferror() {
+	u := readPtr(c.sp)
+	s := files.get(u)
+	var r int32
+	switch {
+	case s == nil:
+		r = -1
+		c.setErrno(errno.XEBADF)
+	default:
+		if s.err != nil {
+			r = 1
+		}
+	}
+	writeI32(c.rp, r)
 }
 
 // int fgetc(FILE *stream);

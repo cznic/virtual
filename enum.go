@@ -319,6 +319,7 @@ const (
 	fchmod
 	fchown
 	fclose
+	ferror
 	fcntl
 	fflush
 	ffs

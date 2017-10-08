@@ -33,7 +33,7 @@ var (
 )
 
 const (
-	binaryVersion = 1 // Compatibility version of Binary.
+	binaryVersion = 2 // Compatibility version of Binary.
 	ffiProlog     = 2 // Call $+2, FFIReturn, Func, ...
 )
 

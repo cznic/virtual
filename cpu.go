@@ -1793,6 +1793,8 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.fwrite)
 		case fclose:
 			c.builtin(c.fclose)
+		case ferror:
+			c.builtin(c.ferror)
 		case fread:
 			c.builtin(c.fread)
 		case fgetc:
