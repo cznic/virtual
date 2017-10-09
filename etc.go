@@ -479,28 +479,28 @@ func dumpCode(w io.Writer, code []Operation, start int, funcs, lines []PCInfo) e
 				return err
 			}
 		case builtin:
-			if i != 0 {
-				fmt.Fprintln(w)
-			}
+			//TODO- if i != 0 {
+			//TODO- 	fmt.Fprintln(w)
+			//TODO- }
 			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n", start+i, width, lo, pos); err != nil {
 				return err
 			}
 		case exit, abort:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n\n\n", start+i, width, "#"+lo, pos); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n\n", start+i, width, "#"+lo, pos); err != nil {
 				return err
 			}
 		case FFIReturn, Return:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n\n\n", start+i, width, lo, pos); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s\t; %v\n\n", start+i, width, lo, pos); err != nil {
 				return err
 			}
 		case Jmp, Jz, Jnz:
-			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\t; %v\n\n\n", start+i, width, lo, uint(op.N), pos); err != nil {
+			if _, err := fmt.Fprintf(w, "%#05x\t\t%-*s%#x\t; %v\n\n", start+i, width, lo, uint(op.N), pos); err != nil {
 				return err
 			}
 		case Func:
-			if i != 0 {
-				fmt.Fprintln(w)
-			}
+			//TODO- if i != 0 {
+			//TODO- 	fmt.Fprintln(w)
+			//TODO- }
 			fmt.Fprintf(w, "# %v\n", pcInfo(start+i, funcs).Name)
 			switch {
 			case op.N != 0:
