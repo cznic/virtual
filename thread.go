@@ -19,10 +19,12 @@ var (
 	_ FFIResult   = PtrResult{}
 )
 
+// FFIArgument is immplemented by all types of FFI arguments.
 type FFIArgument interface {
 	arg()
 }
 
+// FFIResult is immplemented by all types of FFI results.
 type FFIResult interface {
 	result()
 }

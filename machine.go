@@ -321,6 +321,7 @@ func (m *Machine) Close() (err error) {
 
 func (m *Machine) pcInfo(pc int, infos []PCInfo) *PCInfo { return pcInfo(pc, infos) }
 
+// Kill sends a kill signal to m.
 func (m *Machine) Kill() {
 	m.stopMu.Lock()
 	if !m.stopped {

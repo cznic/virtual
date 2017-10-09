@@ -136,7 +136,7 @@ func (b *Binary) ReadFrom(r io.Reader) (n int64, err error) {
 		}
 
 		if !strings.HasPrefix(s, "#!") {
-			return int64(c), fmt.Errorf("invalid file header: %q\n", s)
+			return int64(c), fmt.Errorf("invalid file header: %q", s)
 		}
 		c = counter(len(s))
 	}

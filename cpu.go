@@ -8,12 +8,14 @@ import (
 	"bytes"
 	"errors"
 	"go/token"
+	"io"
 	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
 	"runtime/debug"
 	"syscall"
+	"text/tabwriter"
 
 	"fmt"
 	"unsafe"
@@ -188,28 +190,23 @@ func (c *cpu) stackTrace() (err error) {
 
 var prev token.Position
 
-func (c *cpu) trace() string {
-	pos := c.m.pcInfo(int(c.ip), c.m.lines).Position() //TODO-
-	if prev.Filename == pos.Filename && prev.Line == pos.Line {
-		return ""
-	}
-
-	prev = pos
-	return fmt.Sprintf("%v\n", pos) //TODO-
-
+func (c *cpu) trace(w io.Writer) {
 	h := c.ip + 1
 	for h < uintptr(len(c.code)) && c.code[h].Opcode == Ext {
 		h++
 	}
-	s := dumpCodeStr(c.code[c.ip:h], int(c.ip), c.m.functions, c.m.lines)
-	a := make([]uintptr, 5)
-	for i := range a {
-		a[i] = readPtr(c.sp + uintptr(i*ptrStackSz))
-	}
-	return fmt.Sprintf("%s\t%#x: %x\n", s[:len(s)-1], c.sp, a)
+	w.Write(dumpCodeStr(c.code[c.ip:h], int(c.ip), c.m.functions, c.m.lines))
 }
 
 func (c *cpu) run(ip uintptr) (int, error) {
+	var tracew *tabwriter.Writer
+	if trace {
+		tracew = new(tabwriter.Writer)
+		tracew.Init(os.Stderr, 0, 8, 0, '\t', 0)
+
+		defer tracew.Flush()
+
+	}
 	c.code = c.m.code
 	c.ip = ip
 	//fmt.Printf("%#v\n", c)
@@ -234,8 +231,7 @@ func (c *cpu) run(ip uintptr) (int, error) {
 		}
 
 		if trace {
-			fmt.Print(c.trace())
-			os.Stdout.Sync()
+			c.trace(tracew)
 		}
 		op := c.code[c.ip]
 		if profile {
