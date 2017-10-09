@@ -27,6 +27,48 @@ var (
 	dict = xc.Dict
 )
 
+// Option represents an optional argument of New or Exec.
+type Option func(*options) error
+
+type options struct {
+	profileFunctions    bool
+	profileInstructions bool
+	profileLines        bool
+	profileRate         int
+}
+
+// ProfileFunctions turns profiling of functions on.
+func ProfileFunctions() Option {
+	return func(o *options) error {
+		o.profileFunctions = true
+		return nil
+	}
+}
+
+// ProfileLines turns profiling of source lines on.
+func ProfileLines() Option {
+	return func(o *options) error {
+		o.profileLines = true
+		return nil
+	}
+}
+
+// ProfileInstructions turns profiling of instructions on.
+func ProfileInstructions() Option {
+	return func(o *options) error {
+		o.profileInstructions = true
+		return nil
+	}
+}
+
+// ProfileRate set the profilig rate.
+func ProfileRate(rate int) Option {
+	return func(o *options) error {
+		o.profileRate = rate
+		return nil
+	}
+}
+
 // New runs the program in b and returns its exit status or an error, if any.
 // It's the caller responsibility to ensure the binary was produced for the
 // correct architecture and platform.
@@ -38,7 +80,14 @@ var (
 // The returned machine is ready, if applicable, for calling individual
 // external functions. Its Close method must be called eventually to free any
 // resources it has acquired from the OS.
-func New(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int, tracePath string) (m *Machine, exitStatus int, err error) {
+func New(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int, tracePath string, opts ...Option) (m *Machine, exitStatus int, err error) {
+	var o options
+	for _, opt := range opts {
+		if err := opt(&o); err != nil {
+			return nil, -1, err
+		}
+	}
+
 	pc, ok := b.Sym[idStart]
 	if !ok {
 		return nil, -1, fmt.Errorf("missing symbol: %s", idStart)
@@ -47,6 +96,17 @@ func New(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, he
 	if m, err = newMachine(b, heapSize, stdin, stdout, stderr, tracePath); err != nil {
 		return nil, -1, err
 	}
+
+	if o.profileFunctions {
+		m.ProfileFunctions = map[PCInfo]int{}
+	}
+	if o.profileLines {
+		m.ProfileLines = map[PCInfo]int{}
+	}
+	if o.profileInstructions {
+		m.ProfileInstructions = map[Opcode]int{}
+	}
+	m.ProfileRate = o.profileRate
 
 	t, err := m.NewThread(stackSize)
 	if err != nil {
@@ -79,9 +139,9 @@ func New(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, he
 
 // Exec is a convenience wrapper around New. It takes care of calling the
 // Close method of the Machine returned by New.
-func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int, tracePath string) (exitStatus int, err error) {
+func Exec(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, heapSize, stackSize int, tracePath string, opts ...Option) (exitStatus int, err error) {
 	var m *Machine
-	m, exitStatus, err = New(b, args, stdin, stdout, stderr, heapSize, stackSize, tracePath)
+	m, exitStatus, err = New(b, args, stdin, stdout, stderr, heapSize, stackSize, tracePath, opts...)
 	if m != nil {
 		if e := m.Close(); e != nil && err == nil {
 			err = e
