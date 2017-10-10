@@ -19,7 +19,12 @@ import (
 
 type CallbackFunc func(wr io.Writer, tyMap map[string]Type, comment, ret, name, rawArgs string)
 
-var compiledFuncs []string = []string{}
+type endpoint struct {
+	lib  string
+	name string
+}
+
+var compiledFuncs []endpoint = []endpoint{}
 var dumpCpuMap = flag.Bool("dump-ops", false, "Generate the opcode map for the switch/case in op.go")
 
 func fileHeader(wr io.Writer, tag string, imports []string) error {
@@ -216,7 +221,7 @@ func compileWinFile(wr io.Writer, callback CallbackFunc) {
 	content := string(bytes)
 
 	reTy := regexp.MustCompile("//ty:(.*?): (.*)")
-	reSys := regexp.MustCompile("//sys: (.*?) (.*?)\\((.*)\\);")
+	reSys := regexp.MustCompile("//sys:(.*?): (.*?) (.*?)\\((.*)\\);")
 
 	// get type mappings for function signatures
 	tyMatches := reTy.FindAllStringSubmatch(content, -1)
@@ -247,13 +252,18 @@ func compileWinFile(wr io.Writer, callback CallbackFunc) {
 	// compile syscalls
 	sysMatches := reSys.FindAllStringSubmatch(content, -1)
 	for _, match := range sysMatches {
+		// the library name
+		lib := strings.TrimSpace(match[1])
 		// the return type of the function
-		ret := strings.TrimSpace(match[1])
+		ret := strings.TrimSpace(match[2])
 		// the function name
-		name := strings.TrimSpace(match[2])
+		name := strings.TrimSpace(match[3])
 		// the arguments
-		rawArgs := strings.TrimSpace(match[3])
-		compiledFuncs = append(compiledFuncs, name)
+		rawArgs := strings.TrimSpace(match[4])
+		compiledFuncs = append(compiledFuncs, endpoint{
+			lib:  lib,
+			name: name,
+		})
 		callback(wr, tyMap, match[0], ret, name, rawArgs)
 	}
 }
@@ -269,17 +279,23 @@ func main() {
 	}
 	compileWinFile(&out, compileWinSyscall)
 
-	// procCreateFileW             = modkernel32.NewProc("CreateFileW")
-	if _, err := fmt.Fprintf(&buf, "var (\n\tmodkernel32           = syscall.NewLazyDLL(\"kernel32.dll\")\n"); err != nil {
+	if _, err := fmt.Fprintf(&buf, "var (\n"); err != nil {
 		log.Fatal("cannot begin external proc declaration: ", err)
 	}
 
+	libs := make(map[string]struct{})
 	for _, fn := range compiledFuncs {
-		if _, err := fmt.Fprintf(&buf, "\tproc%-30s = modkernel32.NewProc(\"%s\")\n", fn, fn); err != nil {
+		if _, ok := libs[fn.lib]; !ok {
+			if _, err := fmt.Fprintf(&buf, "\tmod%s           = syscall.NewLazyDLL(\"%s.dll\")\n", fn.lib, fn.lib); err != nil {
+				log.Fatal("cannot begin external proc declaration: ", err)
+			}
+			libs[fn.lib] = struct{}{}
+		}
+		if _, err := fmt.Fprintf(&buf, "\tproc%-30s = mod%s.NewProc(\"%s\")\n", fn.name, fn.lib, fn.name); err != nil {
 			log.Fatal("cannot write sid mapping: ", err)
 		}
 		if *dumpCpuMap {
-			fmt.Printf("\t\tcase %s:\n\t\t\tc.builtin(c.%s)\n", fn, fn)
+			fmt.Printf("\t\tcase %s:\n\t\t\tc.builtin(c.%s)\n", fn.name, fn.name)
 		}
 	}
 
@@ -292,7 +308,7 @@ func main() {
 		log.Fatal("cannot write registerBuiltins: ", err)
 	}
 	for _, fn := range compiledFuncs {
-		if _, err := fmt.Fprintf(&buf, "\t\tdict.SID(\"%s\"): %s,\n", fn, fn); err != nil {
+		if _, err := fmt.Fprintf(&buf, "\t\tdict.SID(\"%s\"): %s,\n", fn.name, fn.name); err != nil {
 			log.Fatal("cannot write sid mapping: ", err)
 		}
 	}
