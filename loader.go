@@ -14,6 +14,7 @@ import (
 	"io"
 	"math"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -2595,7 +2596,7 @@ func LoadMain(objects []ir.Object) (_ *Binary, err error) {
 			case nil:
 				// nop
 			default:
-				err = fmt.Errorf("Load: %v", x)
+				err = fmt.Errorf("virtual.LoadMain: %v\n%s", x, debug.Stack())
 			}
 		}()
 	}
