@@ -101,6 +101,25 @@ func (m *fmap) reader(u uintptr, c *cpu) io.Reader {
 	return f
 }
 
+func (m *fmap) seeker(u uintptr, c *cpu) io.Seeker {
+	switch u {
+	case stdin:
+		s, _ := c.m.stdin.(io.Seeker)
+		return s
+	case stdout:
+		s, _ := c.m.stdout.(io.Seeker)
+		return s
+	case stderr:
+		s, _ := c.m.stderr.(io.Seeker)
+		return s
+	}
+
+	m.mu.Lock()
+	f := m.m[u]
+	m.mu.Unlock()
+	return f
+}
+
 func (m *fmap) writer(u uintptr, c *cpu) io.Writer {
 	switch u {
 	case stdin:
@@ -235,7 +254,7 @@ func (c *cpu) fopen64() {
 		var f *os.File
 		var err error
 		switch mode := GoString(mode); mode {
-		case "r":
+		case "r", "rb":
 			if f, err = os.OpenFile(p, os.O_RDONLY, 0666); err != nil {
 				switch {
 				case os.IsNotExist(err):
@@ -292,6 +311,61 @@ func (c *cpu) fread() {
 		c.setErrno(errno.XEIO)
 	}
 	writeLong(c.rp, int64(n)/size)
+}
+
+// int fseek(FILE *stream, long offset, int whence);
+func (c *cpu) fseek() {
+	sp, whence := popI32(c.sp)
+	sp, offset := popLong(sp)
+	stream := readPtr(sp)
+	s := files.seeker(stream, c)
+	if s == nil {
+		c.setErrno(errno.XEBADF)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	var err error
+	switch whence {
+	case stdio.XSEEK_CUR:
+		_, err = s.Seek(offset, os.SEEK_CUR)
+	case stdio.XSEEK_END:
+		_, err = s.Seek(offset, os.SEEK_END)
+	case stdio.XSEEK_SET:
+		_, err = s.Seek(offset, os.SEEK_SET)
+	default:
+		c.setErrno(errno.XEINVAL)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	if err != nil {
+		c.setErrno(err)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	writeI32(c.rp, 0)
+}
+
+// long ftell(FILE *stream);
+func (c *cpu) ftell() {
+	stream := readPtr(c.sp)
+	s := files.seeker(stream, c)
+	if s == nil {
+		c.setErrno(errno.XEBADF)
+		writeLong(c.rp, -1)
+		return
+	}
+
+	off, err := s.Seek(0, os.SEEK_CUR)
+	if err != nil {
+		c.setErrno(err)
+		writeLong(c.rp, -1)
+		return
+	}
+
+	writeLong(c.rp, off)
 }
 
 // size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
@@ -469,6 +543,20 @@ func (c *cpu) puts() {
 		r = stdio.XEOF
 	}
 	writeI32(c.rp, r)
+}
+
+// void rewind(FILE *stream);
+func (c *cpu) rewind() {
+	stream := readPtr(c.sp)
+	s := files.seeker(stream, c)
+	if s == nil {
+		c.setErrno(errno.XEBADF)
+		return
+	}
+
+	if _, err := s.Seek(0, os.SEEK_SET); err != nil {
+		c.setErrno(err)
+	}
 }
 
 // int sprintf(char *str, const char *format, ...);

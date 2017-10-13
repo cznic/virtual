@@ -36,7 +36,7 @@ var (
 const (
 	// binaryVersion must be incremented every time an instruction is added
 	// or removed or when any instruction op codes is changed.
-	binaryVersion = 5 // Compatibility version of Binary.
+	binaryVersion = 6 // Compatibility version of Binary.
 
 	ffiProlog = 2 // Call $+2, FFIReturn, Func, ...
 )
@@ -1288,7 +1288,7 @@ func (l *loader) loadFunctionDefinition(index int, f *ir.FunctionDefinition) {
 					case 8:
 						// ok
 					}
-				case ir.Pointer, ir.Array:
+				case ir.Pointer, ir.Array, ir.Function:
 					// ok
 				default:
 					panic(fmt.Errorf("%s: TODO %v", x.Position, u.Kind()))

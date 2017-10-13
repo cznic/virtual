@@ -1785,6 +1785,8 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.printf)
 		case puts:
 			c.builtin(c.puts)
+		case rewind:
+			c.builtin(c.rewind)
 		case sprintf:
 			c.builtin(c.sprintf)
 		case fopen64:
@@ -1797,6 +1799,10 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.ferror)
 		case fread:
 			c.builtin(c.fread)
+		case fseek:
+			c.builtin(c.fseek)
+		case ftell:
+			c.builtin(c.ftell)
 		case fgetc:
 			c.builtin(c.fgetc)
 		case fgets:
