@@ -429,6 +429,7 @@ const (
 	vfprintf
 	vprintf
 	write
+	writev
 
 	// windows
 	_beginthreadex

@@ -12,7 +12,8 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("recv"): recv,
+		dict.SID("recv"):   recv,
+		dict.SID("writev"): writev,
 	})
 }
 
@@ -29,6 +30,21 @@ func (c *cpu) recv() {
 	h.Len = int(len)
 	n, _, err := syscall.Recvfrom(int(fd), b, int(flags))
 	if err != nil {
+		c.setErrno(err)
+		writeLong(c.rp, -1)
+		return
+	}
+
+	writeLong(c.rp, int64(n))
+}
+
+// ssize_t writev(int fd, const struct iovec *iov, int iovcnt);
+func (c *cpu) writev() {
+	sp, iovcnt := popI32(c.sp)
+	sp, iov := popPtr(sp)
+	fd := readI32(sp)
+	n, _, err := syscall.Syscall(syscall.SYS_WRITEV, uintptr(fd), iov, uintptr(iovcnt))
+	if err != 0 {
 		c.setErrno(err)
 		writeLong(c.rp, -1)
 		return
