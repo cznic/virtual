@@ -12,8 +12,15 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("recv"):   recv,
-		dict.SID("writev"): writev,
+		dict.SID("connect"):     connect,
+		dict.SID("getpeername"): getpeername,
+		dict.SID("getsockname"): getsockname,
+		dict.SID("getsockopt"):  getsockopt,
+		dict.SID("recv"):        recv,
+		dict.SID("setsockopt"):  setsockopt,
+		dict.SID("shutdown"):    shutdown,
+		dict.SID("socket"):      socket,
+		dict.SID("writev"):      writev,
 	})
 }
 

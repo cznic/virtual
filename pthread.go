@@ -14,6 +14,9 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
+		dict.SID("pthread_cond_broadcast"):    pthread_cond_broadcast,
+		dict.SID("pthread_cond_destroy"):      pthread_cond_destroy,
+		dict.SID("pthread_cond_init"):         pthread_cond_init,
 		dict.SID("pthread_cond_signal"):       pthread_cond_signal,
 		dict.SID("pthread_cond_wait"):         pthread_cond_wait,
 		dict.SID("pthread_create"):            pthread_create,

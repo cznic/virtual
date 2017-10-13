@@ -24,6 +24,7 @@ func init() {
 		dict.SID("ftruncate64"): ftruncate64,
 		dict.SID("getcwd"):      getcwd,
 		dict.SID("geteuid"):     geteuid,
+		dict.SID("gethostname"): gethostname,
 		dict.SID("getpid"):      getpid,
 		dict.SID("lseek64"):     lseek64,
 		dict.SID("read"):        read,

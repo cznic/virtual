@@ -277,6 +277,8 @@ const (
 
 	// builtins
 
+	XauDisposeAuth
+	XauGetBestAuthByAddr
 	__assert_fail
 	__ctype_b_loc
 	__signbit
@@ -301,6 +303,7 @@ const (
 	clz
 	clzl
 	clzll
+	connect
 	copysign
 	cos
 	cosh
@@ -319,8 +322,8 @@ const (
 	fchmod
 	fchown
 	fclose
-	ferror
 	fcntl
+	ferror
 	fflush
 	ffs
 	ffsl
@@ -342,8 +345,15 @@ const (
 	getcwd
 	getenv
 	geteuid
+	gethostbyname
+	gethostname
+	getpeername
 	getpid
+	getsockname
+	getsockopt
 	gettimeofday
+	htonl
+	htons
 	isinf
 	isinff
 	isinfl
@@ -373,7 +383,9 @@ const (
 	popcountll
 	pow
 	printf
-	puts
+	pthread_cond_broadcast
+	pthread_cond_destroy
+	pthread_cond_init
 	pthread_cond_signal
 	pthread_cond_wait
 	pthread_create
@@ -389,6 +401,7 @@ const (
 	pthread_mutexattr_init
 	pthread_mutexattr_settype
 	pthread_self
+	puts
 	qsort
 	read
 	readlink
@@ -402,9 +415,13 @@ const (
 	sched_yield
 	select_
 	setjmp
+	setsockopt
+	shutdown
 	sin
 	sinh
 	sleep
+	snprintf
+	socket
 	sprintf
 	sqrt
 	stat64
@@ -417,6 +434,7 @@ const (
 	strncmp
 	strncpy
 	strrchr
+	strtoul
 	sysconf
 	system
 	tan

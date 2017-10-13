@@ -38,6 +38,7 @@ func init() {
 		dict.SID("printf"):              printf,
 		dict.SID("puts"):                puts,
 		dict.SID("rewind"):              rewind,
+		dict.SID("snprintf"):            snprintf,
 		dict.SID("sprintf"):             sprintf,
 		dict.SID("vfprintf"):            vfprintf,
 		dict.SID("vprintf"):             vprintf,
