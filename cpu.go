@@ -1865,6 +1865,8 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.munmap)
 		case usleep:
 			c.builtin(c.usleep)
+		case select_:
+			c.builtin(c.select_)
 
 		// windows
 		case AreFileApisANSI:

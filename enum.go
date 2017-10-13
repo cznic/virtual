@@ -399,6 +399,7 @@ const (
 	rmdir
 	round
 	sched_yield
+	select_
 	setjmp
 	sin
 	sinh
