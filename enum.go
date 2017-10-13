@@ -393,6 +393,7 @@ const (
 	read
 	readlink
 	realloc
+	recv
 	register_stdfiles
 	returnAddress
 	rewind
