@@ -1871,6 +1871,10 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.builtin(c.recv)
 		case writev:
 			c.builtin(c.writev)
+		case snprintf:
+			c.builtin(c.snprintf)
+		case socket:
+			c.builtin(c.socket)
 
 		// windows
 		case AreFileApisANSI:

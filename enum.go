@@ -280,7 +280,6 @@ const (
 	XauDisposeAuth
 	XauGetBestAuthByAddr
 	__assert_fail
-	__ctype_b_loc
 	__signbit
 	__signbitf
 	abort

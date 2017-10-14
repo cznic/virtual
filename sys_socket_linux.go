@@ -2,9 +2,13 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+//TODO strace
+
 package virtual
 
 import (
+	"fmt"
+	"os"
 	"reflect"
 	"syscall"
 	"unsafe"
@@ -43,6 +47,24 @@ func (c *cpu) recv() {
 	}
 
 	writeLong(c.rp, int64(n))
+}
+
+// int socket(int domain, int type, int protocol);
+func (c *cpu) socket() {
+	sp, protocol := popI32(c.sp)
+	sp, typ := popI32(c.sp)
+	domain := readI32(sp)
+	fd, err := syscall.Socket(int(domain), int(typ), int(protocol))
+	if strace {
+		fmt.Fprintf(os.Stderr, "socket(%#x, %#x, %#x) %v %v\n", domain, typ, protocol, fd, err)
+	}
+	if err != nil {
+		c.setErrno(err)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	writeI32(c.rp, int32(fd))
 }
 
 // ssize_t writev(int fd, const struct iovec *iov, int iovcnt);

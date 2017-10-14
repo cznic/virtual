@@ -291,7 +291,7 @@ func (c *cpu) fprintf() {
 	ap := c.rp - ptrStackSz
 	stream := readPtr(ap)
 	ap -= ptrStackSz
-	writeI32(c.rp, goFprintf(files.writer(stream, c), readPtr(ap), ap))
+	writeI32(c.rp, goFprintf(files.writer(stream, c), readPtr(ap), ap, -1))
 }
 
 // size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
@@ -389,7 +389,7 @@ func (c *cpu) fwrite() {
 	writeLong(c.rp, int64(n)/size)
 }
 
-func goFprintf(w io.Writer, format, argp uintptr) int32 {
+func goFprintf(w io.Writer, format, argp uintptr, limit int64) int32 {
 	var b buffer.Bytes
 	written := 0
 	for {
@@ -397,7 +397,11 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 		format++
 		switch ch {
 		case 0:
-			_, err := b.WriteTo(w)
+			bts := b.Bytes()
+			if limit >= 0 && int64(len(bts)) > limit {
+				bts = bts[:limit]
+			}
+			_, err := w.Write(bts)
 			b.Close()
 			if err != nil {
 				return -1
@@ -518,7 +522,11 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 			b.WriteByte(byte(ch))
 			written++
 			if ch == '\n' {
-				if _, err := b.WriteTo(w); err != nil {
+				bts := b.Bytes()
+				if limit >= 0 && int64(len(bts)) > limit {
+					bts = bts[:limit]
+				}
+				if _, err := w.Write(bts); err != nil {
 					b.Close()
 					return -1
 				}
@@ -531,7 +539,7 @@ func goFprintf(w io.Writer, format, argp uintptr) int32 {
 // int printf(const char *format, ...);
 func (c *cpu) printf() {
 	ap := c.rp - ptrStackSz
-	writeI32(c.rp, goFprintf(c.m.stdout, readPtr(ap), ap))
+	writeI32(c.rp, goFprintf(c.m.stdout, readPtr(ap), ap, -1))
 }
 
 // int puts(char *__s);
@@ -560,12 +568,23 @@ func (c *cpu) rewind() {
 	}
 }
 
+// int snprintf(char *str, size_t size, const char *format, ...);
+func (c *cpu) snprintf() {
+	ap := c.rp - ptrStackSz
+	w := memWriter(readPtr(ap))
+	ap -= ptrStackSz
+	size := readLong(ap)
+	ap -= longStackSz
+	writeI32(c.rp, goFprintf(&w, readPtr(ap), ap, size))
+	writeI8(uintptr(w), 0)
+}
+
 // int sprintf(char *str, const char *format, ...);
 func (c *cpu) sprintf() {
 	ap := c.rp - ptrStackSz
 	w := memWriter(readPtr(ap))
 	ap -= ptrStackSz
-	writeI32(c.rp, goFprintf(&w, readPtr(ap), ap))
+	writeI32(c.rp, goFprintf(&w, readPtr(ap), ap, -1))
 	writeI8(uintptr(w), 0)
 }
 
@@ -574,12 +593,12 @@ func (c *cpu) vfprintf() {
 	sp, ap := popPtr(c.sp)
 	sp, format := popPtr(sp)
 	stream := readPtr(sp)
-	writeI32(c.rp, goFprintf(files.writer(stream, c), format, ap))
+	writeI32(c.rp, goFprintf(files.writer(stream, c), format, ap, -1))
 }
 
 // int vprintf(const char *format, va_list ap);
 func (c *cpu) vprintf() {
 	sp, ap := popPtr(c.sp)
 	format := readPtr(sp)
-	writeI32(c.rp, goFprintf(c.m.stdout, format, ap))
+	writeI32(c.rp, goFprintf(c.m.stdout, format, ap, -1))
 }

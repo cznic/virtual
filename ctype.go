@@ -6,9 +6,8 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("__ctype_b_loc"): __ctype_b_loc,
-		dict.SID("isprint"):       isprint,
-		dict.SID("tolower"):       tolower,
+		dict.SID("isprint"): isprint,
+		dict.SID("tolower"): tolower,
 	})
 }
 
