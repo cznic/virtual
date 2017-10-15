@@ -56,7 +56,7 @@ func (c *cpu) socket() {
 	domain := readI32(sp)
 	fd, err := syscall.Socket(int(domain), int(typ), int(protocol))
 	if strace {
-		fmt.Fprintf(os.Stderr, "socket(%#x, %#x, %#x) %v %v\n", domain, typ, protocol, fd, err)
+		fmt.Fprintf(os.Stderr, "socket(%#x, %#x, %#x) %v %v\t; %s\n", domain, typ, protocol, fd, err, c.pos())
 	}
 	if err != nil {
 		c.setErrno(err)

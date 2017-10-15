@@ -26,7 +26,7 @@ func (c *cpu) fstat64() {
 	fildes := readI32(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_FSTAT, uintptr(fildes), buf, 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "fstat(%v, %#x) %v %v\n", fildes, buf, r, err)
+		fmt.Fprintf(os.Stderr, "fstat(%v, %#x) %v %v\t; %s\n", fildes, buf, r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -40,7 +40,7 @@ func (c *cpu) lstat64() {
 	file := readPtr(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_LSTAT, file, buf, 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "lstat(%q, %#x) %v %v\n", GoString(file), buf, r, err)
+		fmt.Fprintf(os.Stderr, "lstat(%q, %#x) %v %v\t; %s\n", GoString(file), buf, r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -54,7 +54,7 @@ func (c *cpu) stat64() {
 	file := readPtr(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_STAT, file, buf, 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "stat(%q, %#x) %v %v\n", GoString(file), buf, r, err)
+		fmt.Fprintf(os.Stderr, "stat(%q, %#x) %v %v\t; %s\n", GoString(file), buf, r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)

@@ -51,6 +51,7 @@ type cpu struct {
 	code    []Operation
 	ds      uintptr // Data segment
 	fpStack []uintptr
+	ip0     uintptr // Last instruction fetched
 	m       *Machine
 	rpStack []uintptr
 	stop    chan struct{}
@@ -92,6 +93,15 @@ func writeU16(p uintptr, v uint16)        { *(*uint16)(unsafe.Pointer(p)) = v }
 func writeU32(p uintptr, v uint32)        { *(*uint32)(unsafe.Pointer(p)) = v }
 func writeU64(p uintptr, v uint64)        { *(*uint64)(unsafe.Pointer(p)) = v }
 func writeU8(p uintptr, v uint8)          { *(*uint8)(unsafe.Pointer(p)) = v }
+
+func (c *cpu) fn() *PCInfo   { return pcInfo(int(c.ip0), c.m.functions) }
+func (c *cpu) line() *PCInfo { return pcInfo(int(c.ip0), c.m.lines) }
+
+func (c *cpu) pos() string {
+	f := c.fn()
+	l := c.line()
+	return fmt.Sprintf("%s: %s", l.Position(), f.Name)
+}
 
 func (c *cpu) bool(b bool) {
 	if b {
@@ -234,6 +244,7 @@ func (c *cpu) run(ip uintptr) (int, error) {
 			c.trace(tracew)
 		}
 		op := c.code[c.ip]
+		c.ip0 = c.ip
 		if profile {
 			if c.m.ProfileRate == 0 || i%c.m.ProfileRate == 0 {
 				if c.m.ProfileFunctions != nil {

@@ -62,10 +62,13 @@ func (c *cpu) calloc() {
 	hi, lo := mathutil.MulUint128_64(uint64(nmemb), uint64(size))
 	var p uintptr
 	if hi == 0 || lo <= mathutil.MaxInt {
+		if lo == 0 {
+			lo = 1
+		}
 		p = c.m.calloc(int(lo))
 	}
 	if strace {
-		fmt.Fprintf(os.Stderr, "calloc(%#x) %#x\n", size, p)
+		fmt.Fprintf(os.Stderr, "calloc(%#x) %#x\t; %s\n", size, p, c.pos())
 	}
 	if p == 0 {
 		c.setErrno(errno.XENOMEM)
@@ -77,7 +80,7 @@ func (c *cpu) calloc() {
 func (c *cpu) free() {
 	ptr := readPtr(c.sp)
 	if strace {
-		fmt.Fprintf(os.Stderr, "freep(%#x)\n", ptr)
+		fmt.Fprintf(os.Stderr, "freep(%#x)\t; %s\n", ptr, c.pos())
 	}
 	c.m.free(ptr)
 }
@@ -87,10 +90,13 @@ func (c *cpu) malloc() {
 	size := readLong(c.sp)
 	var p uintptr
 	if size <= mathutil.MaxInt {
+		if size == 0 {
+			size = 1
+		}
 		p = c.m.malloc(int(size))
 	}
 	if strace {
-		fmt.Fprintf(os.Stderr, "malloc(%#x) %#x\n", size, p)
+		fmt.Fprintf(os.Stderr, "malloc(%#x) %#x\t; %s\n", size, p, c.pos())
 	}
 	if p == 0 {
 		c.setErrno(errno.XENOMEM)
@@ -200,7 +206,7 @@ func (c *cpu) realloc() {
 	ptr := readPtr(sp)
 	r := c.m.realloc(ptr, int(size))
 	if strace {
-		fmt.Fprintf(os.Stderr, "realloc(%#x, %#x) %#x\n", ptr, size, r)
+		fmt.Fprintf(os.Stderr, "realloc(%#x, %#x) %#x\t; %s\n", ptr, size, r, c.pos())
 	}
 	if size != 0 && r == 0 {
 		c.setErrno(errno.XENOMEM)

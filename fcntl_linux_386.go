@@ -28,7 +28,7 @@ func (c *cpu) fcntl() {
 	arg := readPtr(ap)
 	r, _, err := syscall.Syscall(syscall.SYS_FCNTL64, uintptr(fildes), uintptr(cmd), arg)
 	if strace {
-		fmt.Fprintf(os.Stderr, "fcntl(%v, %v, %#x) %v %v\n", fildes, cmdString(cmd), arg, r, err)
+		fmt.Fprintf(os.Stderr, "fcntl(%v, %v, %#x) %v %v\t; %s\t; %s\n", fildes, cmdString(cmd), arg, r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -46,7 +46,7 @@ func (c *cpu) open64() {
 	mode := readU32(ap)
 	r, _, err := syscall.Syscall(syscall.SYS_OPEN, pathname, uintptr(flags), uintptr(mode))
 	if strace {
-		fmt.Fprintf(os.Stderr, "open(%q, %v, %#o) %v %v\n", GoString(pathname), modeString(flags), mode, r, err)
+		fmt.Fprintf(os.Stderr, "open(%q, %v, %#o) %v %v\t; %s\n", GoString(pathname), modeString(flags), mode, r, err, c.pos())
 	}
 	if err != 0 {
 		c.thread.setErrno(err)

@@ -44,7 +44,7 @@ func (c *cpu) access() {
 	path := readPtr(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_ACCESS, path, uintptr(amode), 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "access(%q) %v %v\n", GoString(path), r, err)
+		fmt.Fprintf(os.Stderr, "access(%q) %v %v\t; %s\t; %s\n", GoString(path), r, err, c.pos(), c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -57,7 +57,7 @@ func (c *cpu) close() {
 	fd := readI32(c.sp)
 	r, _, err := syscall.Syscall(syscall.SYS_CLOSE, uintptr(fd), 0, 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "close(%v) %v %v\n", fd, r, err)
+		fmt.Fprintf(os.Stderr, "close(%v) %v %v\t; %s\n", fd, r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -70,7 +70,7 @@ func (c *cpu) fsync() {
 	fildes := readI32(c.sp)
 	r, _, err := syscall.Syscall(syscall.SYS_FSYNC, uintptr(fildes), 0, 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "fsync(%v) %v %v\n", fildes, r, err)
+		fmt.Fprintf(os.Stderr, "fsync(%v) %v %v\t; %s\n", fildes, r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -84,7 +84,7 @@ func (c *cpu) ftruncate64() {
 	fildes := readI32(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_FTRUNCATE, uintptr(fildes), uintptr(length), 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "ftruncate(%#x, %#x) %v, %v\n", fildes, length, r, err)
+		fmt.Fprintf(os.Stderr, "ftruncate(%#x, %#x) %v, %v\t; %s\n", fildes, length, r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -98,7 +98,7 @@ func (c *cpu) getcwd() {
 	buf := readPtr(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_GETCWD, buf, uintptr(size), 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "getcwd(%#x, %#x) %v %v %q\n", buf, size, r, err, GoString(buf))
+		fmt.Fprintf(os.Stderr, "getcwd(%#x, %#x) %v %v %q\t; %s\n", buf, size, r, err, GoString(buf), c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -110,7 +110,7 @@ func (c *cpu) getcwd() {
 func (c *cpu) geteuid() {
 	r, _, _ := syscall.RawSyscall(syscall.SYS_GETEUID, 0, 0, 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "geteuid() %v\n", r)
+		fmt.Fprintf(os.Stderr, "geteuid() %v\t; %s\n", r, c.pos())
 	}
 	writeU32(c.rp, uint32(r))
 }
@@ -119,7 +119,7 @@ func (c *cpu) geteuid() {
 func (c *cpu) getpid() {
 	r, _, _ := syscall.RawSyscall(syscall.SYS_GETPID, 0, 0, 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "getpid() %v\n", r)
+		fmt.Fprintf(os.Stderr, "getpid() %v\t; %s\n", r, c.pos())
 	}
 	writeI32(c.rp, int32(r))
 }
@@ -131,7 +131,7 @@ func (c *cpu) lseek64() {
 	fildes := readI32(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_LSEEK, uintptr(fildes), uintptr(offset), uintptr(whence))
 	if strace {
-		fmt.Fprintf(os.Stderr, "lseek(%v, %v, %v) %v %v\n", fildes, offset, whence, r, err)
+		fmt.Fprintf(os.Stderr, "lseek(%v, %v, %v) %v %v\t; %s\n", fildes, offset, whence, r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -146,7 +146,7 @@ func (c *cpu) read() { //TODO stdin
 	fd := readI32(sp)
 	r, _, err := syscall.Syscall(syscall.SYS_READ, uintptr(fd), buf, uintptr(count))
 	if strace {
-		fmt.Fprintf(os.Stderr, "read(%v, %#x, %v) %v %v\n", fd, buf, count, r, err)
+		fmt.Fprintf(os.Stderr, "read(%v, %#x, %v) %v %v\t; %s\n", fd, buf, count, r, err, c.pos())
 	}
 	if err != 0 {
 		c.thread.setErrno(err)
@@ -169,7 +169,7 @@ func (c *cpu) unlink() {
 	path := readPtr(c.sp)
 	r, _, err := syscall.Syscall(syscall.SYS_UNLINK, path, 0, 0)
 	if strace {
-		fmt.Fprintf(os.Stderr, "unlink(%q) %v %v\n", GoString(path), r, err)
+		fmt.Fprintf(os.Stderr, "unlink(%q) %v %v\t; %s\n", GoString(path), r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)
@@ -200,7 +200,7 @@ func (c *cpu) write() {
 	}
 	r, _, err := syscall.Syscall(syscall.SYS_WRITE, uintptr(fd), buf, uintptr(count))
 	if strace {
-		fmt.Fprintf(os.Stderr, "write(%v, %#x, %v) %v %v\n", fd, buf, count, r, err)
+		fmt.Fprintf(os.Stderr, "write(%v, %#x, %v) %v %v\t; %s\n", fd, buf, count, r, err, c.pos())
 	}
 	if err != 0 {
 		c.thread.setErrno(err)

@@ -266,7 +266,7 @@ func (c *cpu) fopen64() {
 					c.setErrno(errno.XEACCES)
 				}
 			}
-		case "w":
+		case "w", "wb":
 			if f, err = os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666); err != nil {
 				switch {
 				case os.IsPermission(err):
