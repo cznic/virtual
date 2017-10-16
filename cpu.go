@@ -54,6 +54,7 @@ type cpu struct {
 	ip0     uintptr // Last instruction fetched
 	m       *Machine
 	rpStack []uintptr
+	rtdsc   uint64
 	stop    chan struct{}
 	thread  *Thread
 	tls     uintptr
@@ -208,7 +209,7 @@ func (c *cpu) trace(w io.Writer) {
 	w.Write(dumpCodeStr(c.code[c.ip:h], int(c.ip), c.m.functions, c.m.lines))
 }
 
-func (c *cpu) run(ip uintptr) (int, error) {
+func (c *cpu) run(ip uintptr) (exitStatus int, err error) {
 	var tracew *tabwriter.Writer
 	if trace {
 		tracew = new(tabwriter.Writer)
@@ -221,18 +222,13 @@ func (c *cpu) run(ip uintptr) (int, error) {
 	c.ip = ip
 	//fmt.Printf("%#v\n", c)
 	defer func() {
-		if err := recover(); err != nil {
-			switch {
-			case Testing:
-				panic(fmt.Errorf("%v\n%s\n%s", err, c.stackTrace(), debug.Stack()))
-			default:
-				panic(fmt.Errorf("%v\n%s", err, c.stackTrace()))
-			}
+		if e := recover(); e != nil && err == nil {
+			err = fmt.Errorf("PANIC: %v\nrtdsc %#x, last instruction fetch: %#05x\t%s\n%s\n%s", e, c.rtdsc, c.ip0, c.pos(), c.stackTrace(), debug.Stack())
 		}
 	}()
 
-	for i := 0; ; i++ {
-		if i%1024 == 0 {
+	for ; ; c.rtdsc++ {
+		if c.rtdsc%1024 == 0 {
 			select {
 			case <-c.m.stop:
 				return -1, KillError{}
@@ -246,7 +242,7 @@ func (c *cpu) run(ip uintptr) (int, error) {
 		op := c.code[c.ip]
 		c.ip0 = c.ip
 		if profile {
-			if c.m.ProfileRate == 0 || i%c.m.ProfileRate == 0 {
+			if c.m.ProfileRate == 0 || c.rtdsc%uint64(c.m.ProfileRate) == 0 {
 				if c.m.ProfileFunctions != nil {
 					nfo := *c.m.pcInfo(int(c.ip), c.m.functions)
 					nfo.PC = 0
@@ -1625,9 +1621,8 @@ func (c *cpu) run(ip uintptr) (int, error) {
 		case builtin:
 			var ip uintptr
 			c.sp, ip = popPtr(c.sp)
-			es, err := c.run(c.ip)
-			if err != nil {
-				return es, err
+			if exitStatus, err = c.run(c.ip); err != nil {
+				return exitStatus, err
 			}
 
 			c.ip = ip
