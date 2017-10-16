@@ -10,8 +10,12 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
+	"strings"
 	"syscall"
 	"unsafe"
+
+	sockconst "github.com/cznic/ccir/libc/sys/socket"
 )
 
 func init() {
@@ -26,6 +30,65 @@ func init() {
 		dict.SID("socket"):      socket,
 		dict.SID("writev"):      writev,
 	})
+}
+
+func socketAF(i int32) string {
+	switch i {
+	case sockconst.XAF_ALG:
+		return "AF_ALG"
+	case sockconst.XAF_APPLETALK:
+		return "AF_APPLETALK"
+	case sockconst.XAF_ATMPVC:
+		return "AF_ATMPVC"
+	case sockconst.XAF_AX25:
+		return "AF_AX25"
+	case sockconst.XAF_INET:
+		return "AF_INET"
+	case sockconst.XAF_INET6:
+		return "AF_INET6"
+	case sockconst.XAF_IPX:
+		return "AF_IPX"
+	case sockconst.XAF_NETLINK:
+		return "AF_NETLINK"
+	case sockconst.XAF_PACKET:
+		return "AF_PACKET"
+	case sockconst.XAF_UNIX:
+		return "AF_UNIX"
+	case sockconst.XAF_UNSPEC:
+		return "AF_UNSPEC"
+	case sockconst.XAF_X25:
+		return "AF_X25"
+	default:
+		return fmt.Sprintf("%#x", i)
+	}
+}
+
+func socketType(i int32) string {
+	var a []string
+	if i&sockconst.XSOCK_NONBLOCK != 0 {
+		a = append(a, "SOCK_NONBLOCK")
+	}
+	if i&sockconst.XSOCK_CLOEXEC != 0 {
+		a = append(a, "SOCK_CLOEXEC")
+	}
+	switch i &^ (sockconst.XSOCK_NONBLOCK | sockconst.XSOCK_CLOEXEC) {
+	case sockconst.XSOCK_DGRAM:
+		a = append(a, "SOCK_DGRAM")
+	case sockconst.XSOCK_PACKET:
+		a = append(a, "SOCK_PACKET")
+	case sockconst.XSOCK_RAW:
+		a = append(a, "SOCK_RAW")
+	case sockconst.XSOCK_RDM:
+		a = append(a, "SOCK_RDM")
+	case sockconst.XSOCK_SEQPACKET:
+		a = append(a, "SOCK_SEQPACKET")
+	case sockconst.XSOCK_STREAM:
+		a = append(a, "SOCK_STREAM")
+	default:
+		a = append(a, fmt.Sprintf("%#x", i))
+	}
+	sort.Strings(a)
+	return strings.Join(a, "|")
 }
 
 // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
@@ -52,11 +115,11 @@ func (c *cpu) recv() {
 // int socket(int domain, int type, int protocol);
 func (c *cpu) socket() {
 	sp, protocol := popI32(c.sp)
-	sp, typ := popI32(c.sp)
+	sp, typ := popI32(sp)
 	domain := readI32(sp)
 	fd, err := syscall.Socket(int(domain), int(typ), int(protocol))
 	if strace {
-		fmt.Fprintf(os.Stderr, "socket(%#x, %#x, %#x) %v %v\t; %s\n", domain, typ, protocol, fd, err, c.pos())
+		fmt.Fprintf(os.Stderr, "socket(%s, %s, %#x) %v %v\t; %s\n", socketAF(domain), socketType(typ), protocol, fd, err, c.pos())
 	}
 	if err != nil {
 		c.setErrno(err)
