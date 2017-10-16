@@ -91,6 +91,42 @@ func socketType(i int32) string {
 	return strings.Join(a, "|")
 }
 
+// int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+func (c *cpu) connect() {
+	sp, addrlen := popU32(c.sp)
+	sp, addr := popPtr(sp)
+	fd := readI32(sp)
+	_, _, err := syscall.Syscall(syscall.SYS_CONNECT, uintptr(fd), addr, uintptr(addrlen))
+	if strace {
+		fmt.Fprintf(os.Stderr, "connext(%#x, %#x, %#x) %v\t; %s\n", fd, addr, addrlen, err, c.pos())
+	}
+	if err != 0 {
+		c.setErrno(err)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	writeI32(c.rp, 0)
+}
+
+// int getpeername(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+func (c *cpu) getpeername() {
+	sp, addrlen := popPtr(c.sp)
+	sp, addr := popPtr(sp)
+	fd := readI32(sp)
+	_, _, err := syscall.Syscall(syscall.SYS_GETPEERNAME, uintptr(fd), addr, addrlen)
+	if strace {
+		fmt.Fprintf(os.Stderr, "getpeername(%#x, %#x, %#x) %v\t; %s\n", fd, addr, addrlen, err, c.pos())
+	}
+	if err != 0 {
+		c.setErrno(err)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	writeI32(c.rp, 0)
+}
+
 // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 func (c *cpu) recv() {
 	sp, flags := popI32(c.sp)
@@ -103,6 +139,9 @@ func (c *cpu) recv() {
 	h.Data = buf
 	h.Len = int(len)
 	n, _, err := syscall.Recvfrom(int(fd), b, int(flags))
+	if strace {
+		fmt.Fprintf(os.Stderr, "recv(%#x, %#x, %#x, %#x) %v %v\t; %s\n", fd, buf, len, flags, n, err, c.pos())
+	}
 	if err != nil {
 		c.setErrno(err)
 		writeLong(c.rp, -1)
@@ -136,6 +175,9 @@ func (c *cpu) writev() {
 	sp, iov := popPtr(sp)
 	fd := readI32(sp)
 	n, _, err := syscall.Syscall(syscall.SYS_WRITEV, uintptr(fd), iov, uintptr(iovcnt))
+	if strace {
+		fmt.Fprintf(os.Stderr, "writev(%#x, %#x, %#x) %v %v\t; %s\n", fd, iov, iovcnt, n, err, c.pos())
+	}
 	if err != 0 {
 		c.setErrno(err)
 		writeLong(c.rp, -1)

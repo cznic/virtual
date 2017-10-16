@@ -115,6 +115,27 @@ func (c *cpu) geteuid() {
 	writeU32(c.rp, uint32(r))
 }
 
+// int gethostname(char *name, size_t len);
+func (c *cpu) gethostname() {
+	sp, maxlen := popLong(c.sp)
+	name := readPtr(sp)
+	nm, err := os.Hostname()
+	if int64(len(nm))+1 > maxlen {
+		nm = nm[:maxlen-1]
+	}
+	if strace {
+		fmt.Fprintf(os.Stderr, "gethostname(%#x, %#x) %q %v\t; %s\n", name, maxlen, nm, err, c.pos())
+	}
+	if err != nil {
+		c.setErrno(err)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	CopyString(name, nm, true)
+	writeI32(c.rp, 0)
+}
+
 // pid_t getpid(void);
 func (c *cpu) getpid() {
 	r, _, _ := syscall.RawSyscall(syscall.SYS_GETPID, 0, 0, 0)

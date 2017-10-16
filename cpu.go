@@ -68,6 +68,7 @@ func popI32(p uintptr) (uintptr, int32)   { return p + i32StackSz, readI32(p) }
 func popI64(p uintptr) (uintptr, int64)   { return p + i64StackSz, readI64(p) }
 func popLong(p uintptr) (uintptr, int64)  { return p + longStackSz, readLong(p) }
 func popPtr(p uintptr) (uintptr, uintptr) { return p + ptrStackSz, readPtr(p) }
+func popU32(p uintptr) (uintptr, uint32)  { return p + i32StackSz, readU32(p) }
 func readC128(p uintptr) complex128       { return *(*complex128)(unsafe.Pointer(p)) }
 func readC64(p uintptr) complex64         { return *(*complex64)(unsafe.Pointer(p)) }
 func readF32(p uintptr) float32           { return *(*float32)(unsafe.Pointer(p)) }
@@ -1881,6 +1882,12 @@ func (c *cpu) run(ip uintptr) (exitStatus int, err error) {
 			c.builtin(c.snprintf)
 		case socket:
 			c.builtin(c.socket)
+		case connect:
+			c.builtin(c.connect)
+		case getpeername:
+			c.builtin(c.getpeername)
+		case gethostname:
+			c.builtin(c.gethostname)
 
 		// windows
 		case AreFileApisANSI:
