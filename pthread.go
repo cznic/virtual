@@ -9,18 +9,19 @@ import (
 	"os"
 	"sync"
 
+	"github.com/cznic/ccir/libc/errno"
 	"github.com/cznic/ccir/libc/pthread"
 )
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("pthread_cond_broadcast"):    pthread_cond_broadcast,
-		dict.SID("pthread_cond_destroy"):      pthread_cond_destroy,
-		dict.SID("pthread_cond_init"):         pthread_cond_init,
-		dict.SID("pthread_cond_signal"):       pthread_cond_signal,
-		dict.SID("pthread_cond_wait"):         pthread_cond_wait,
-		dict.SID("pthread_create"):            pthread_create,
-		dict.SID("pthread_detach"):            pthread_detach,
+		dict.SID("pthread_cond_broadcast"): pthread_cond_broadcast,
+		dict.SID("pthread_cond_destroy"):   pthread_cond_destroy,
+		dict.SID("pthread_cond_init"):      pthread_cond_init,
+		dict.SID("pthread_cond_signal"):    pthread_cond_signal,
+		dict.SID("pthread_cond_wait"):      pthread_cond_wait,
+		dict.SID("pthread_create"):         pthread_create,
+		/// 		dict.SID("pthread_detach"):            pthread_detach,
 		dict.SID("pthread_equal"):             pthread_equal,
 		dict.SID("pthread_join"):              pthread_join,
 		dict.SID("pthread_mutex_destroy"):     pthread_mutex_destroy,
@@ -35,29 +36,29 @@ func init() {
 	})
 }
 
-type mu struct {
-	attr  int32
-	count int
-	inner sync.Mutex
-	outer sync.Mutex
-	owner uintptr
+type condMap struct {
+	m map[uintptr]*sync.Cond
+	sync.Mutex
 }
 
-//TODO type condMap struct {
-//TODO 	m map[uintptr]*sync.Cond
-//TODO 	sync.Mutex
-//TODO }
-//TODO
-//TODO func (m *condMap) cond(p uintptr, mu *mu) *sync.Cond {
-//TODO 	m.Lock()
-//TODO 	r := m.m[p]
-//TODO 	if r == nil {
-//TODO 		r = sync.NewCond(&mu.Mutex)
-//TODO 		m.m[p] = r
-//TODO 	}
-//TODO 	m.Unlock()
-//TODO 	return r
-//TODO }
+func (m *condMap) cond(p uintptr, mu *mu) *sync.Cond {
+	m.Lock()
+	r := m.m[p]
+	if r == nil {
+		r = sync.NewCond(&mu.Mutex)
+		m.m[p] = r
+	}
+	m.Unlock()
+	return r
+}
+
+type mu struct {
+	*sync.Cond
+	attr  int32
+	count int
+	owner uintptr
+	sync.Mutex
+}
 
 type mutexMap struct {
 	m map[uintptr]*mu
@@ -69,6 +70,7 @@ func (m *mutexMap) mu(p uintptr) *mu {
 	r := m.m[p]
 	if r == nil {
 		r = &mu{}
+		r.Cond = sync.NewCond(&r.Mutex)
 		m.m[p] = r
 	}
 	m.Unlock()
@@ -76,19 +78,22 @@ func (m *mutexMap) mu(p uintptr) *mu {
 }
 
 var (
-	//TODO conds   = &condMap{m: map[uintptr]*sync.Cond{}}
+	conds   = &condMap{m: map[uintptr]*sync.Cond{}}
 	mutexes = &mutexMap{m: map[uintptr]*mu{}}
 )
 
 // int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
 func (c *cpu) pthreadCondInit() {
-	panic("TODO")
-	//TODO sp, attr := popPtr(c.sp)
-	//TODO cond := readPtr(sp)
-	//TODO if attr != 0 {
-	//TODO 	panic("TODO")
-	//TODO }
-	//TODO writeI32(c.rp, 0)
+	sp, attr := popPtr(c.sp)
+	cond := readPtr(sp)
+	var r int32
+	if attr != 0 {
+		panic("TODO")
+	}
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_cond_init(%#x, %#x) %v\n", cond, attr, r)
+	}
+	writeI32(c.rp, r)
 }
 
 // extern int pthread_equal(pthread_t __thread1, pthread_t __thread2);
@@ -99,10 +104,10 @@ func (c *cpu) pthreadEqual() {
 	if thread1 == thread2 {
 		r = 1
 	}
-	writeI32(c.rp, r)
 	if ptrace {
-		fmt.Fprintf(os.Stderr, "pthread_equal(%v, %v) %v\n", thread1, thread2, r)
+		fmt.Fprintf(os.Stderr, "pthread_equal(%#x, %#x) %v\n", thread1, thread2, r)
 	}
+	writeI32(c.rp, r)
 }
 
 // extern int pthread_mutex_destroy(pthread_mutex_t * __mutex);
@@ -112,10 +117,10 @@ func (c *cpu) pthreadMutexDestroy() {
 	delete(mutexes.m, mutex)
 	mutexes.Unlock()
 	var r int32
-	writeI32(c.rp, r)
 	if ptrace {
 		fmt.Fprintf(os.Stderr, "pthread_mutex_destroy(%#x) %v\n", mutex, r)
 	}
+	writeI32(c.rp, r)
 }
 
 // extern int pthread_mutex_init(pthread_mutex_t * __mutex, pthread_mutexattr_t * __mutexattr);
@@ -128,10 +133,10 @@ func (c *cpu) pthreadMutexInit() {
 	mutex := readPtr(sp)
 	mutexes.mu(mutex).attr = attr
 	var r int32
-	writeI32(c.rp, r)
 	if ptrace {
 		fmt.Fprintf(os.Stderr, "pthread_mutex_init(%#x, %#x) %v\n", mutex, mutexattr, r)
 	}
+	writeI32(c.rp, r)
 }
 
 // extern int pthread_mutex_lock(pthread_mutex_t * __mutex);
@@ -140,31 +145,41 @@ func (c *cpu) pthreadMutexLock() {
 	mutex := readPtr(c.sp)
 	mu := mutexes.mu(mutex)
 	var r int32
-	mu.outer.Lock()
+	mu.Lock()
 	switch mu.attr {
 	case pthread.XPTHREAD_MUTEX_NORMAL:
-		mu.owner = threadID
-		mu.count = 1
-		mu.inner.Lock()
-	case pthread.XPTHREAD_MUTEX_RECURSIVE:
-		switch mu.owner {
-		case 0:
+		if mu.count == 0 {
 			mu.owner = threadID
 			mu.count = 1
-			mu.inner.Lock()
-		case threadID:
-			mu.count++
-		default:
-			panic("TODO105")
+			break
 		}
+
+		for mu.count != 0 {
+			mu.Cond.Wait()
+		}
+		mu.owner = threadID
+		mu.count = 1
+	case pthread.XPTHREAD_MUTEX_RECURSIVE:
+		if mu.count == 0 {
+			mu.owner = threadID
+			mu.count = 1
+			break
+		}
+
+		if mu.owner == threadID {
+			mu.count++
+			break
+		}
+
+		panic("TODO")
 	default:
 		panic(fmt.Errorf("attr %#x", mu.attr))
 	}
-	mu.outer.Unlock()
-	writeI32(c.rp, r)
 	if ptrace {
-		fmt.Fprintf(os.Stderr, "pthread_mutex_lock(%#x [thread id %v]) %v\n", mutex, threadID, r)
+		fmt.Fprintf(os.Stderr, "pthread_mutex_lock(%#x: %+v [thread id %v]) %v\n", mutex, mu, threadID, r)
 	}
+	mu.Unlock()
+	writeI32(c.rp, r)
 }
 
 // int pthread_mutex_trylock(pthread_mutex_t *mutex);
@@ -173,64 +188,67 @@ func (c *cpu) pthreadMutexTryLock() {
 	mutex := readPtr(c.sp)
 	mu := mutexes.mu(mutex)
 	var r int32
-	mu.outer.Lock()
+	mu.Lock()
 	switch mu.attr {
 	case pthread.XPTHREAD_MUTEX_NORMAL:
-		switch mu.owner {
-		case 0:
-			mu.owner = threadID
+		if mu.count == 0 {
 			mu.count = 1
-			mu.inner.Lock()
-		case threadID:
-			panic("TODO127")
-		default:
-			panic("TODO129")
+			mu.owner = threadID
+			break
 		}
+
+		r = errno.XEBUSY
 	default:
 		panic(fmt.Errorf("attr %#x", mu.attr))
 	}
-	mu.outer.Unlock()
-	writeI32(c.rp, r)
 	if ptrace {
-		fmt.Fprintf(os.Stderr, "pthread_mutex_trylock(%#x [thread id %v]) %v\n", mutex, threadID, r)
+		fmt.Fprintf(os.Stderr, "pthread_mutex_trylock(%#x: %+v [thread id %v]) %v\n", mutex, mu, threadID, r)
 	}
+	mu.Unlock()
+	writeI32(c.rp, r)
 }
 
 // extern int pthread_mutex_unlock(pthread_mutex_t * __mutex);
 func (c *cpu) pthreadMutexUnlock() {
 	threadID := c.tlsp.threadID
 	mutex := readPtr(c.sp)
-	mu := mutexes.mu(readPtr(c.sp))
+	mu := mutexes.mu(mutex)
 	var r int32
-	mu.outer.Lock()
+	mu.Lock()
 	switch mu.attr {
 	case pthread.XPTHREAD_MUTEX_NORMAL:
+		if mu.count == 0 {
+			panic("TODO")
+		}
+
 		mu.owner = 0
 		mu.count = 0
-		mu.inner.Unlock()
+		mu.Cond.Broadcast()
 	case pthread.XPTHREAD_MUTEX_RECURSIVE:
-		switch mu.owner {
-		case 0:
-			panic("TODO140")
-		case threadID:
+		if mu.count == 0 {
+			panic("TODO")
+		}
+
+		if mu.owner == threadID {
 			mu.count--
 			if mu.count != 0 {
 				break
 			}
 
 			mu.owner = 0
-			mu.inner.Unlock()
-		default:
-			panic("TODO144")
+			mu.Cond.Broadcast()
+			break
 		}
+
+		panic("TODO")
 	default:
 		panic(fmt.Errorf("TODO %#x", mu.attr))
 	}
-	mu.outer.Unlock()
-	writeI32(c.rp, r)
 	if ptrace {
-		fmt.Fprintf(os.Stderr, "pthread_mutex_unlock(%#x [thread id %v]) %v\n", mutex, threadID, r)
+		fmt.Fprintf(os.Stderr, "pthread_mutex_unlock(%#x: %+v [thread id %v]) %v\n", mutex, mu, threadID, r)
 	}
+	mu.Unlock()
+	writeI32(c.rp, r)
 }
 
 // extern int pthread_mutexattr_destroy(pthread_mutexattr_t * __attr);
@@ -238,10 +256,10 @@ func (c *cpu) pthreadMutexAttrDestroy() {
 	var r int32
 	attr := readPtr(c.sp)
 	writeI32(attr, -1)
-	writeI32(c.rp, r)
 	if ptrace {
 		fmt.Fprintf(os.Stderr, "pthread_mutexattr_destroy(%#x) %v\n", attr, r)
 	}
+	writeI32(c.rp, r)
 }
 
 // extern int pthread_mutexattr_init(pthread_mutexattr_t * __attr);
@@ -249,10 +267,10 @@ func (c *cpu) pthreadMutexAttrInit() {
 	var r int32
 	attr := readPtr(c.sp)
 	writeI32(attr, 0)
-	writeI32(c.rp, r)
 	if ptrace {
 		fmt.Fprintf(os.Stderr, "pthread_mutexattr_init(%#x) %v\n", attr, r)
 	}
+	writeI32(c.rp, r)
 }
 
 // extern int pthread_mutexattr_settype(pthread_mutexattr_t * __attr, int __kind);
@@ -261,10 +279,10 @@ func (c *cpu) pthreadMutexAttrSetType() {
 	sp, kind := popI32(c.sp)
 	attr := readPtr(sp)
 	writeI32(attr, kind)
-	writeI32(c.rp, r)
 	if ptrace {
 		fmt.Fprintf(os.Stderr, "pthread_mutexattr_settype(%#x, %v) %v\n", attr, kind, r)
 	}
+	writeI32(c.rp, r)
 }
 
 // pthread_t pthread_self(void);
