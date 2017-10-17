@@ -289,6 +289,7 @@ const (
 	atan
 	atexit
 	atoi
+	bswap32
 	bswap64
 	builtin
 	bzero

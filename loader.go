@@ -36,7 +36,7 @@ var (
 const (
 	// binaryVersion must be incremented every time an instruction is added
 	// or removed or when any instruction op codes is changed.
-	binaryVersion = 14 // Compatibility version of Binary.
+	binaryVersion = 15 // Compatibility version of Binary.
 
 	ffiProlog = 2 // Call $+2, FFIReturn, Func, ...
 )

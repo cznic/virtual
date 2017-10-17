@@ -36,22 +36,6 @@ func init() {
 	})
 }
 
-type condMap struct {
-	m map[uintptr]*sync.Cond
-	sync.Mutex
-}
-
-func (m *condMap) cond(p uintptr, mu *mu) *sync.Cond {
-	m.Lock()
-	r := m.m[p]
-	if r == nil {
-		r = sync.NewCond(&mu.Mutex)
-		m.m[p] = r
-	}
-	m.Unlock()
-	return r
-}
-
 type mu struct {
 	*sync.Cond
 	attr  int32
@@ -77,10 +61,38 @@ func (m *mutexMap) mu(p uintptr) *mu {
 	return r
 }
 
+type condMap struct {
+	m map[uintptr]*sync.Cond
+	sync.Mutex
+}
+
+func (m *condMap) cond(p uintptr, mu *mu) *sync.Cond {
+	m.Lock()
+	r := m.m[p]
+	if r == nil {
+		r = sync.NewCond(&mu.Mutex)
+		m.m[p] = r
+	}
+	m.Unlock()
+	return r
+}
+
 var (
 	conds   = &condMap{m: map[uintptr]*sync.Cond{}}
 	mutexes = &mutexMap{m: map[uintptr]*mu{}}
 )
+
+// int pthread_cond_broadcast(pthread_cond_t *cond);
+func (c *cpu) pthreadCondBroadcast() {
+	cond := readPtr(c.sp)
+	mu := &mu{}
+	conds.cond(cond, mu).Broadcast()
+	var r int32
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_cond_broadcast(%#x) %v\n", cond, r)
+	}
+	writeI32(c.rp, r)
+}
 
 // int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
 func (c *cpu) pthreadCondInit() {
@@ -92,6 +104,18 @@ func (c *cpu) pthreadCondInit() {
 	}
 	if ptrace {
 		fmt.Fprintf(os.Stderr, "pthread_cond_init(%#x, %#x) %v\n", cond, attr, r)
+	}
+	writeI32(c.rp, r)
+}
+
+// int pthread_cond_signal(pthread_cond_t *cond);
+func (c *cpu) pthreadCondSignal() {
+	cond := readPtr(c.sp)
+	mu := &mu{}
+	conds.cond(cond, mu).Signal()
+	var r int32
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_cond_signal(%#x) %v\n", cond, r)
 	}
 	writeI32(c.rp, r)
 }

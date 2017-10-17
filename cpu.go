@@ -1749,6 +1749,8 @@ func (c *cpu) run(ip uintptr) (exitStatus int, err error) {
 			c.builtin(c.signbit)
 		case __signbitf:
 			c.builtin(c.signbitf)
+		case bswap32:
+			c.builtin(c.bswap32)
 		case bswap64:
 			c.builtin(c.bswap64)
 		case frameAddress:
@@ -1893,6 +1895,14 @@ func (c *cpu) run(ip uintptr) (exitStatus int, err error) {
 			c.builtin(c.getsockname)
 		case bzero:
 			c.builtin(c.bzero)
+		case pthread_cond_init:
+			c.builtin(c.pthreadCondInit)
+		case htonl:
+			c.builtin(c.htonl)
+		case pthread_cond_broadcast:
+			c.builtin(c.pthreadCondBroadcast)
+		case pthread_cond_signal:
+			c.builtin(c.pthreadCondSignal)
 
 		// windows
 		case AreFileApisANSI:

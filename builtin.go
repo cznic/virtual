@@ -10,6 +10,7 @@ import (
 
 func init() {
 	registerBuiltins(map[int]Opcode{
+		dict.SID("__builtin_bswap32"):        bswap32,
 		dict.SID("__builtin_bswap64"):        bswap64,
 		dict.SID("__builtin_clrsb"):          clrsb,
 		dict.SID("__builtin_clrsbl"):         clrsbl,
@@ -30,6 +31,18 @@ func init() {
 		dict.SID("__builtin_return_address"): returnAddress,
 		dict.SID("__builtin_trap"):           abort,
 	})
+}
+
+// uint32_t __builtin_bswap32 (uint32_t x)
+func (c *cpu) bswap32() {
+	x := readU32(c.sp)
+	writeU32(
+		c.rp,
+		x&0x000000ff<<24|
+			x&0x0000ff00<<8|
+			x&0x00ff0000>>8|
+			x&0xff000000>>24,
+	)
 }
 
 // uint64_t __builtin_bswap64 (uint64_t x)
