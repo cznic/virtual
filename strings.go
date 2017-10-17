@@ -6,12 +6,23 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
+		dict.SID("bzero"):  bzero,
 		dict.SID("ffs"):    ffs,
 		dict.SID("ffsl"):   ffsl,
 		dict.SID("ffsll"):  ffsll,
 		dict.SID("index"):  strchr,
 		dict.SID("rindex"): strrchr,
 	})
+}
+
+// void bzero(void *s, size_t n);
+func (c *cpu) bzero() {
+	sp, n := popULong(c.sp)
+	s := readPtr(sp)
+	for ; n > 0; n-- {
+		writeI8(s, 0)
+		s++
+	}
 }
 
 // int ffs(int i);

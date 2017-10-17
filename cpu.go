@@ -62,39 +62,40 @@ type cpu struct {
 	ts      uintptr // Text segment
 }
 
-func addPtr(p uintptr, v uintptr)         { *(*uintptr)(unsafe.Pointer(p)) += v }
-func popF64(p uintptr) (uintptr, float64) { return p + f64StackSz, readF64(p) }
-func popI32(p uintptr) (uintptr, int32)   { return p + i32StackSz, readI32(p) }
-func popI64(p uintptr) (uintptr, int64)   { return p + i64StackSz, readI64(p) }
-func popLong(p uintptr) (uintptr, int64)  { return p + longStackSz, readLong(p) }
-func popPtr(p uintptr) (uintptr, uintptr) { return p + ptrStackSz, readPtr(p) }
-func popU32(p uintptr) (uintptr, uint32)  { return p + i32StackSz, readU32(p) }
-func readC128(p uintptr) complex128       { return *(*complex128)(unsafe.Pointer(p)) }
-func readC64(p uintptr) complex64         { return *(*complex64)(unsafe.Pointer(p)) }
-func readF32(p uintptr) float32           { return *(*float32)(unsafe.Pointer(p)) }
-func readF64(p uintptr) float64           { return *(*float64)(unsafe.Pointer(p)) }
-func readI16(p uintptr) int16             { return *(*int16)(unsafe.Pointer(p)) }
-func readI32(p uintptr) int32             { return *(*int32)(unsafe.Pointer(p)) }
-func readI64(p uintptr) int64             { return *(*int64)(unsafe.Pointer(p)) }
-func readI8(p uintptr) int8               { return *(*int8)(unsafe.Pointer(p)) }
-func readPtr(p uintptr) uintptr           { return *(*uintptr)(unsafe.Pointer(p)) }
-func readU16(p uintptr) uint16            { return *(*uint16)(unsafe.Pointer(p)) }
-func readU32(p uintptr) uint32            { return *(*uint32)(unsafe.Pointer(p)) }
-func readU64(p uintptr) uint64            { return *(*uint64)(unsafe.Pointer(p)) }
-func readU8(p uintptr) uint8              { return *(*uint8)(unsafe.Pointer(p)) }
-func writeC128(p uintptr, v complex128)   { *(*complex128)(unsafe.Pointer(p)) = v }
-func writeC64(p uintptr, v complex64)     { *(*complex64)(unsafe.Pointer(p)) = v }
-func writeF32(p uintptr, v float32)       { *(*float32)(unsafe.Pointer(p)) = v }
-func writeF64(p uintptr, v float64)       { *(*float64)(unsafe.Pointer(p)) = v }
-func writeI16(p uintptr, v int16)         { *(*int16)(unsafe.Pointer(p)) = v }
-func writeI32(p uintptr, v int32)         { *(*int32)(unsafe.Pointer(p)) = v }
-func writeI64(p uintptr, v int64)         { *(*int64)(unsafe.Pointer(p)) = v }
-func writeI8(p uintptr, v int8)           { *(*int8)(unsafe.Pointer(p)) = v }
-func writePtr(p uintptr, v uintptr)       { *(*uintptr)(unsafe.Pointer(p)) = v }
-func writeU16(p uintptr, v uint16)        { *(*uint16)(unsafe.Pointer(p)) = v }
-func writeU32(p uintptr, v uint32)        { *(*uint32)(unsafe.Pointer(p)) = v }
-func writeU64(p uintptr, v uint64)        { *(*uint64)(unsafe.Pointer(p)) = v }
-func writeU8(p uintptr, v uint8)          { *(*uint8)(unsafe.Pointer(p)) = v }
+func addPtr(p uintptr, v uintptr)          { *(*uintptr)(unsafe.Pointer(p)) += v }
+func popF64(p uintptr) (uintptr, float64)  { return p + f64StackSz, readF64(p) }
+func popI32(p uintptr) (uintptr, int32)    { return p + i32StackSz, readI32(p) }
+func popI64(p uintptr) (uintptr, int64)    { return p + i64StackSz, readI64(p) }
+func popLong(p uintptr) (uintptr, int64)   { return p + longStackSz, readLong(p) }
+func popPtr(p uintptr) (uintptr, uintptr)  { return p + ptrStackSz, readPtr(p) }
+func popU32(p uintptr) (uintptr, uint32)   { return p + i32StackSz, readU32(p) }
+func popULong(p uintptr) (uintptr, uint64) { return p + longStackSz, readULong(p) }
+func readC128(p uintptr) complex128        { return *(*complex128)(unsafe.Pointer(p)) }
+func readC64(p uintptr) complex64          { return *(*complex64)(unsafe.Pointer(p)) }
+func readF32(p uintptr) float32            { return *(*float32)(unsafe.Pointer(p)) }
+func readF64(p uintptr) float64            { return *(*float64)(unsafe.Pointer(p)) }
+func readI16(p uintptr) int16              { return *(*int16)(unsafe.Pointer(p)) }
+func readI32(p uintptr) int32              { return *(*int32)(unsafe.Pointer(p)) }
+func readI64(p uintptr) int64              { return *(*int64)(unsafe.Pointer(p)) }
+func readI8(p uintptr) int8                { return *(*int8)(unsafe.Pointer(p)) }
+func readPtr(p uintptr) uintptr            { return *(*uintptr)(unsafe.Pointer(p)) }
+func readU16(p uintptr) uint16             { return *(*uint16)(unsafe.Pointer(p)) }
+func readU32(p uintptr) uint32             { return *(*uint32)(unsafe.Pointer(p)) }
+func readU64(p uintptr) uint64             { return *(*uint64)(unsafe.Pointer(p)) }
+func readU8(p uintptr) uint8               { return *(*uint8)(unsafe.Pointer(p)) }
+func writeC128(p uintptr, v complex128)    { *(*complex128)(unsafe.Pointer(p)) = v }
+func writeC64(p uintptr, v complex64)      { *(*complex64)(unsafe.Pointer(p)) = v }
+func writeF32(p uintptr, v float32)        { *(*float32)(unsafe.Pointer(p)) = v }
+func writeF64(p uintptr, v float64)        { *(*float64)(unsafe.Pointer(p)) = v }
+func writeI16(p uintptr, v int16)          { *(*int16)(unsafe.Pointer(p)) = v }
+func writeI32(p uintptr, v int32)          { *(*int32)(unsafe.Pointer(p)) = v }
+func writeI64(p uintptr, v int64)          { *(*int64)(unsafe.Pointer(p)) = v }
+func writeI8(p uintptr, v int8)            { *(*int8)(unsafe.Pointer(p)) = v }
+func writePtr(p uintptr, v uintptr)        { *(*uintptr)(unsafe.Pointer(p)) = v }
+func writeU16(p uintptr, v uint16)         { *(*uint16)(unsafe.Pointer(p)) = v }
+func writeU32(p uintptr, v uint32)         { *(*uint32)(unsafe.Pointer(p)) = v }
+func writeU64(p uintptr, v uint64)         { *(*uint64)(unsafe.Pointer(p)) = v }
+func writeU8(p uintptr, v uint8)           { *(*uint8)(unsafe.Pointer(p)) = v }
 
 func (c *cpu) fn() *PCInfo   { return pcInfo(int(c.ip0), c.m.functions) }
 func (c *cpu) line() *PCInfo { return pcInfo(int(c.ip0), c.m.lines) }
@@ -1888,6 +1889,10 @@ func (c *cpu) run(ip uintptr) (exitStatus int, err error) {
 			c.builtin(c.getpeername)
 		case gethostname:
 			c.builtin(c.gethostname)
+		case getsockname:
+			c.builtin(c.getsockname)
+		case bzero:
+			c.builtin(c.bzero)
 
 		// windows
 		case AreFileApisANSI:

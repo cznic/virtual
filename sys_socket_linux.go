@@ -127,6 +127,24 @@ func (c *cpu) getpeername() {
 	writeI32(c.rp, 0)
 }
 
+// int getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+func (c *cpu) getsockname() {
+	sp, addrlen := popPtr(c.sp)
+	sp, addr := popPtr(sp)
+	fd := readI32(sp)
+	_, _, err := syscall.Syscall(syscall.SYS_GETSOCKNAME, uintptr(fd), addr, addrlen)
+	if strace {
+		fmt.Fprintf(os.Stderr, "getsockname(%#x, %#x, %#x) %v\t; %s\n", fd, addr, addrlen, err, c.pos())
+	}
+	if err != 0 {
+		c.setErrno(err)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	writeI32(c.rp, 0)
+}
+
 // ssize_t recv(int sockfd, void *buf, size_t len, int flags);
 func (c *cpu) recv() {
 	sp, flags := popI32(c.sp)

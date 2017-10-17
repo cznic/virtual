@@ -43,6 +43,22 @@ type mu struct {
 	owner uintptr
 }
 
+//TODO type condMap struct {
+//TODO 	m map[uintptr]*sync.Cond
+//TODO 	sync.Mutex
+//TODO }
+//TODO
+//TODO func (m *condMap) cond(p uintptr, mu *mu) *sync.Cond {
+//TODO 	m.Lock()
+//TODO 	r := m.m[p]
+//TODO 	if r == nil {
+//TODO 		r = sync.NewCond(&mu.Mutex)
+//TODO 		m.m[p] = r
+//TODO 	}
+//TODO 	m.Unlock()
+//TODO 	return r
+//TODO }
+
 type mutexMap struct {
 	m map[uintptr]*mu
 	sync.Mutex
@@ -60,8 +76,20 @@ func (m *mutexMap) mu(p uintptr) *mu {
 }
 
 var (
+	//TODO conds   = &condMap{m: map[uintptr]*sync.Cond{}}
 	mutexes = &mutexMap{m: map[uintptr]*mu{}}
 )
+
+// int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
+func (c *cpu) pthreadCondInit() {
+	panic("TODO")
+	//TODO sp, attr := popPtr(c.sp)
+	//TODO cond := readPtr(sp)
+	//TODO if attr != 0 {
+	//TODO 	panic("TODO")
+	//TODO }
+	//TODO writeI32(c.rp, 0)
+}
 
 // extern int pthread_equal(pthread_t __thread1, pthread_t __thread2);
 func (c *cpu) pthreadEqual() {

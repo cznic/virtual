@@ -277,8 +277,6 @@ const (
 
 	// builtins
 
-	XauDisposeAuth
-	XauGetBestAuthByAddr
 	__assert_fail
 	__signbit
 	__signbitf
@@ -289,9 +287,11 @@ const (
 	alloca
 	asin
 	atan
+	atexit
 	atoi
 	bswap64
 	builtin
+	bzero
 	calloc
 	ceil
 	cimagf
