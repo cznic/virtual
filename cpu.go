@@ -1903,6 +1903,8 @@ func (c *cpu) run(ip uintptr) (exitStatus int, err error) {
 			c.builtin(c.pthreadCondBroadcast)
 		case pthread_cond_signal:
 			c.builtin(c.pthreadCondSignal)
+		case pause:
+			c.builtin(c.pause)
 
 		// windows
 		case AreFileApisANSI:

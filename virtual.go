@@ -16,6 +16,7 @@ package virtual
 import (
 	"fmt"
 	"io"
+	"os/signal"
 
 	"github.com/cznic/xc"
 )
@@ -31,10 +32,19 @@ var (
 type Option func(*options) error
 
 type options struct {
-	profileFunctions    bool
-	profileInstructions bool
-	profileLines        bool
-	profileRate         int
+	attachProcessSignals bool
+	profileFunctions     bool
+	profileInstructions  bool
+	profileLines         bool
+	profileRate          int
+}
+
+// AttachProcessSignals sends all process signals to the Machine.
+func AttachProcessSignals() Option {
+	return func(o *options) error {
+		o.attachProcessSignals = true
+		return nil
+	}
 }
 
 // ProfileFunctions turns profiling of functions on.
@@ -105,6 +115,9 @@ func New(b *Binary, args []string, stdin io.Reader, stdout, stderr io.Writer, he
 	}
 	if o.profileInstructions {
 		m.ProfileInstructions = map[Opcode]int{}
+	}
+	if o.attachProcessSignals {
+		signal.Notify(m.signal)
 	}
 	m.ProfileRate = o.profileRate
 

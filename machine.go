@@ -156,6 +156,7 @@ type Machine struct {
 	dsMem               mmap.MMap
 	functions           []PCInfo
 	lines               []PCInfo
+	signal              chan os.Signal
 	stderr              io.Writer
 	stdin               io.Reader
 	stdout              io.Writer
@@ -260,6 +261,7 @@ func newMachine(b *Binary, heapSize int, stdin io.Reader, stdout, stderr io.Writ
 		dsMem:     dsMem,
 		functions: functions,
 		lines:     lines,
+		signal:    make(chan os.Signal, 1),
 		stderr:    stderr,
 		stdin:     stdin,
 		stdout:    stdout,

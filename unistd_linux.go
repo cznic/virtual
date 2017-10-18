@@ -12,6 +12,7 @@ import (
 	tim "time"
 	"unsafe"
 
+	"github.com/cznic/ccir/libc/errno"
 	"github.com/cznic/ccir/libc/unistd"
 )
 
@@ -27,6 +28,7 @@ func init() {
 		dict.SID("gethostname"): gethostname,
 		dict.SID("getpid"):      getpid,
 		dict.SID("lseek64"):     lseek64,
+		dict.SID("pause"):       pause,
 		dict.SID("read"):        read,
 		dict.SID("readlink"):    readlink,
 		dict.SID("rmdir"):       rmdir,
@@ -158,6 +160,13 @@ func (c *cpu) lseek64() {
 		c.setErrno(err)
 	}
 	writeLong(c.rp, int64(r))
+}
+
+// int pause(void);
+func (c *cpu) pause() { //TODO This is incomplete signal handling.
+	<-c.m.signal
+	c.setErrno(errno.XEINTR)
+	writeI32(c.rp, -1)
 }
 
 // ssize_t read(int fd, void *buf, size_t count);

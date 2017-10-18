@@ -36,7 +36,7 @@ var (
 const (
 	// binaryVersion must be incremented every time an instruction is added
 	// or removed or when any instruction op codes is changed.
-	binaryVersion = 15 // Compatibility version of Binary.
+	binaryVersion = 16 // Compatibility version of Binary.
 
 	ffiProlog = 2 // Call $+2, FFIReturn, Func, ...
 )
@@ -178,8 +178,15 @@ func (b *Binary) ReadFrom(r io.Reader) (n int64, err error) {
 		return int64(c), err
 	}
 
-	if v != binaryVersion {
-		return int64(c), fmt.Errorf("invalid version number %v", v)
+	switch {
+	case v < 16:
+		if v != binaryVersion {
+			return int64(c), fmt.Errorf("%T.ReadFrom: invalid version number %v", b, v)
+		}
+	default:
+		if v > binaryVersion {
+			return int64(c), fmt.Errorf("%T.ReadFrom: incompatible version number %v", b, v)
+		}
 	}
 
 	err = gob.NewDecoder(gr).Decode(b)

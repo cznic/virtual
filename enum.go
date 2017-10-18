@@ -523,4 +523,9 @@ const (
 	WaitForSingleObjectEx
 	WideCharToMultiByte
 	WriteFile
+
+	// Since binaryVersion >= 16 opcodes may be only added, not deleted or
+	// assigned different values.
+
+	pause
 )
