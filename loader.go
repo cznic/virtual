@@ -118,6 +118,13 @@ func newBinary() *Binary {
 	}
 }
 
+// LookupFunction returns the address of an external function and whether it
+// was found.
+func (b *Binary) LookupFunction(f string) (int, bool) {
+	pc, ok := b.Sym[ir.NameID(dict.SID(f))]
+	return pc, ok
+}
+
 // ReadFrom reads b from r.
 func (b *Binary) ReadFrom(r io.Reader) (n int64, err error) {
 	var br *bufio.Reader
