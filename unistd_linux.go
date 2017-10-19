@@ -14,6 +14,7 @@ import (
 
 	"github.com/cznic/ccir/libc/errno"
 	"github.com/cznic/ccir/libc/unistd"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func init() {
@@ -27,6 +28,7 @@ func init() {
 		dict.SID("geteuid"):     geteuid,
 		dict.SID("gethostname"): gethostname,
 		dict.SID("getpid"):      getpid,
+		dict.SID("isatty"):      isatty,
 		dict.SID("lseek64"):     lseek64,
 		dict.SID("pause"):       pause,
 		dict.SID("read"):        read,
@@ -145,6 +147,30 @@ func (c *cpu) getpid() {
 		fmt.Fprintf(os.Stderr, "getpid() %v\t; %s\n", r, c.pos())
 	}
 	writeI32(c.rp, int32(r))
+}
+
+// int isatty(int fd);
+func (c *cpu) isatty() {
+	fd := readI32(c.sp)
+	if fd < 0 {
+		c.setErrno(errno.XEBADF)
+		writeI32(c.rp, 0)
+		return
+	}
+
+	if fd >= 0 && fd <= 2 { //TODO incorrect fd checking
+		writeI32(c.rp, 1)
+		return
+	}
+
+	if terminal.IsTerminal(int(fd)) {
+		writeI32(c.rp, 1)
+		return
+	}
+
+	//TODO must check if valid fd, else EBADF
+	c.setErrno(errno.XENOTTY)
+	writeI32(c.rp, 0)
 }
 
 // off_t lseek64(int fildes, off_t offset, int whence);

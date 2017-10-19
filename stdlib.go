@@ -25,6 +25,7 @@ func init() {
 		dict.SID("getenv"):  getenv,
 		dict.SID("malloc"):  malloc,
 		dict.SID("qsort"):   qsort,
+		dict.SID("random"):  random,
 		dict.SID("realloc"): realloc,
 		dict.SID("strtoul"): strtoul,
 		dict.SID("system"):  system,

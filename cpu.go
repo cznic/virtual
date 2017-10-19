@@ -1911,6 +1911,16 @@ func (c *cpu) run(ip uintptr) (exitStatus int, err error) {
 			c.builtin(c.pthreadCondDestroy)
 		case shutdown:
 			c.builtin(c.shutdown)
+		case isatty:
+			c.builtin(c.isatty)
+		case strdup:
+			c.builtin(c.strdup)
+		case __sysv_signal:
+			c.builtin(c.sysvSignal)
+		case fileno:
+			c.builtin(c.fileno)
+		case fflush:
+			c.builtin(c.fflush)
 
 		// windows
 		case AreFileApisANSI:

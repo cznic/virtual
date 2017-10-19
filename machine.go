@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
+	"github.com/cznic/ccir/libc/stdlib"
 	"github.com/cznic/internal/buffer"
 	"github.com/cznic/mathutil"
 	"github.com/cznic/memory"
@@ -40,6 +41,18 @@ const (
 	stackAlign   = ptrSize
 	tlsStackSize = (unsafe.Sizeof(tls{}) + stackAlign - 1) &^ (stackAlign - 1)
 )
+
+var (
+	prngMu sync.Mutex
+	prng   *mathutil.FC32
+)
+
+func init() {
+	var err error
+	if prng, err = mathutil.NewFC32(0, stdlib.XRAND_MAX, true); err != nil {
+		panic("internal error")
+	}
+}
 
 type memWriter uintptr
 

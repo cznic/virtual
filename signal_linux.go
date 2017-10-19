@@ -6,6 +6,12 @@ package virtual
 
 func init() {
 	registerBuiltins(map[int]Opcode{
-		dict.SID("signal"): signal_,
+		dict.SID("__sysv_signal"): __sysv_signal,
+		dict.SID("signal"):        signal_,
 	})
+}
+
+// sighandler_t signal(int signum, sighandler_t handler);
+func (c *cpu) sysvSignal() {
+	writePtr(c.rp, 0) //TODO
 }

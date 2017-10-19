@@ -4,8 +4,13 @@
 
 package virtual
 
+import (
+	"github.com/cznic/ccir/libc/errno"
+)
+
 func init() {
 	registerBuiltins(map[int]Opcode{
+		dict.SID("memchr"):     memchr,
 		dict.SID("memcmp"):     memcmp,
 		dict.SID("memcpy"):     memcpy,
 		dict.SID("memmove"):    memmove,
@@ -15,6 +20,7 @@ func init() {
 		dict.SID("strchr"):     strchr,
 		dict.SID("strcmp"):     strcmp,
 		dict.SID("strcpy"):     strcpy,
+		dict.SID("strdup"):     strdup,
 		dict.SID("strerror_r"): strerror_r,
 		dict.SID("strlen"):     strlen,
 		dict.SID("strncmp"):    strncmp,
@@ -156,6 +162,32 @@ func (c *cpu) strcpy() {
 		dest++
 		if ch == 0 {
 			writePtr(c.rp, ret)
+			return
+		}
+	}
+}
+
+// char *strdup(const char *s);
+func (c *cpu) strdup() {
+	s0 := readPtr(c.sp)
+	var n int
+	for s := s0; readI8(s) != 0; s++ {
+		n++
+	}
+	d := c.m.malloc(n)
+	if d == 0 {
+		c.setErrno(errno.XENOMEM)
+		writePtr(c.rp, 0)
+		return
+	}
+
+	writePtr(c.rp, d)
+	for {
+		ch := readI8(s0)
+		s0++
+		writeI8(d, ch)
+		d++
+		if ch == 0 {
 			return
 		}
 	}

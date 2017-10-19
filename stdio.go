@@ -28,6 +28,7 @@ func init() {
 		dict.SID("fflush"):              fflush,
 		dict.SID("fgetc"):               fgetc,
 		dict.SID("fgets"):               fgets,
+		dict.SID("fileno"):              fileno,
 		dict.SID("fopen"):               fopen64,
 		dict.SID("fopen64"):             fopen64,
 		dict.SID("fprintf"):             fprintf,
@@ -35,12 +36,15 @@ func init() {
 		dict.SID("fseek"):               fseek,
 		dict.SID("ftell"):               ftell,
 		dict.SID("fwrite"):              fwrite,
+		dict.SID("getchar"):             getchar,
+		dict.SID("perror"):              perror,
 		dict.SID("printf"):              printf,
 		dict.SID("putchar"):             putchar,
 		dict.SID("puts"):                puts,
 		dict.SID("rewind"):              rewind,
 		dict.SID("snprintf"):            snprintf,
 		dict.SID("sprintf"):             sprintf,
+		dict.SID("ungetc"):              ungetc,
 		dict.SID("vfprintf"):            vfprintf,
 		dict.SID("vprintf"):             vprintf,
 	})
@@ -192,6 +196,30 @@ func (c *cpu) ferror() {
 	writeI32(c.rp, r)
 }
 
+// int fflush(FILE *stream);
+func (c *cpu) fflush() {
+	stream := readPtr(c.sp)
+	s := files.get(stream)
+	if s == nil {
+		c.setErrno(errno.XEBADF)
+		writeI32(c.rp, stdio.XEOF)
+		return
+	}
+
+	//TODO
+	//
+	// For input streams associated with seekable files (e.g., disk files,
+	// but not pipes or terminals), fflush() discards any buffered data
+	// that has been fetched from the underlying file, but has not been
+	// consumed by the application.
+	var r int32
+	if err := s.Sync(); err != nil {
+		c.setErrno(err)
+		r = stdio.XEOF
+	}
+	writeI32(c.rp, r)
+}
+
 // int fgetc(FILE *stream);
 func (c *cpu) fgetc() {
 	p := buffer.Get(1)
@@ -237,6 +265,30 @@ func (c *cpu) fgets() {
 	writePtr(c.rp, s)
 	buffer.Put(p)
 
+}
+
+// int fileno(FILE *stream);
+func (c *cpu) fileno() {
+	stream := readPtr(c.sp)
+	var r int32
+	switch stream {
+	case stdin:
+		r = 0
+	case stdout:
+		r = 1
+	case stderr:
+		r = 2
+	default:
+		s := files.get(stream)
+		if s == nil {
+			r = -1
+			c.setErrno(errno.XEBADF)
+			break
+		}
+
+		r = int32(s.Fd())
+	}
+	writeI32(c.rp, r)
 }
 
 // FILE *fopen64(const char *path, const char *mode);
@@ -535,6 +587,19 @@ func goFprintf(w io.Writer, format, argp uintptr, limit int64) int32 {
 			}
 		}
 	}
+}
+
+// int getchar(void);
+func (c *cpu) getchar() {
+	p := buffer.Get(1)
+	if _, err := files.reader(stdin, c).Read(*p); err != nil {
+		writeI32(c.rp, stdio.XEOF)
+		buffer.Put(p)
+		return
+	}
+
+	buffer.Put(p)
+	writeI32(c.rp, int32((*p)[0]))
 }
 
 // int printf(const char *format, ...);

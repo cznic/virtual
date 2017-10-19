@@ -530,4 +530,13 @@ const (
 	pause
 	putchar
 	signal_
+	isatty
+	strdup
+	__sysv_signal
+	getchar
+	random
+	fileno
+	ungetc
+	memchr
+	perror
 )
