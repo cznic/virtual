@@ -1905,6 +1905,12 @@ func (c *cpu) run(ip uintptr) (exitStatus int, err error) {
 			c.builtin(c.pthreadCondSignal)
 		case pause:
 			c.builtin(c.pause)
+		case putchar:
+			c.builtin(c.putchar)
+		case pthread_cond_destroy:
+			c.builtin(c.pthreadCondDestroy)
+		case shutdown:
+			c.builtin(c.shutdown)
 
 		// windows
 		case AreFileApisANSI:

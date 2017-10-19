@@ -169,6 +169,23 @@ func (c *cpu) recv() {
 	writeLong(c.rp, int64(n))
 }
 
+// int shutdown(int sockfd, int how);
+func (c *cpu) shutdown() {
+	sp, how := popI32(c.sp)
+	fd := readI32(sp)
+	err := syscall.Shutdown(int(fd), int(how))
+	if strace {
+		fmt.Fprintf(os.Stderr, "shutdown(%#x, %#x) %v\t; %s\n", fd, how, err, c.pos())
+	}
+	if err != nil {
+		c.setErrno(err)
+		writeI32(c.rp, -1)
+		return
+	}
+
+	writeI32(c.rp, 0)
+}
+
 // int socket(int domain, int type, int protocol);
 func (c *cpu) socket() {
 	sp, protocol := popI32(c.sp)

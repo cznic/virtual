@@ -94,6 +94,19 @@ func (c *cpu) pthreadCondBroadcast() {
 	writeI32(c.rp, r)
 }
 
+// int pthread_cond_destroy(pthread_cond_t *cond);
+func (c *cpu) pthreadCondDestroy() {
+	cond := readPtr(c.sp)
+	conds.Lock()
+	delete(conds.m, cond)
+	conds.Unlock()
+	var r int32
+	if ptrace {
+		fmt.Fprintf(os.Stderr, "pthread_cond_destroy(%#x) %v\n", cond, r)
+	}
+	writeI32(c.rp, r)
+}
+
 // int pthread_cond_init(pthread_cond_t *restrict cond, const pthread_condattr_t *restrict attr);
 func (c *cpu) pthreadCondInit() {
 	sp, attr := popPtr(c.sp)

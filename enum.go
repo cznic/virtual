@@ -528,4 +528,5 @@ const (
 	// assigned different values.
 
 	pause
+	putchar
 )
