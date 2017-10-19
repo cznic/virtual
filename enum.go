@@ -529,4 +529,5 @@ const (
 
 	pause
 	putchar
+	signal_
 )
