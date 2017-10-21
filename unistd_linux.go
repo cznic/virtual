@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"os/signal"
 	"syscall"
 	tim "time"
 	"unsafe"
@@ -190,7 +191,9 @@ func (c *cpu) lseek64() {
 
 // int pause(void);
 func (c *cpu) pause() { //TODO This is incomplete signal handling.
-	<-c.m.signal
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch)
+	<-ch
 	c.setErrno(errno.XEINTR)
 	writeI32(c.rp, -1)
 }
