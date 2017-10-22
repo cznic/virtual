@@ -1921,6 +1921,8 @@ func (c *cpu) run(ip uintptr) (exitStatus int, err error) {
 			c.builtin(c.fileno)
 		case fflush:
 			c.builtin(c.fflush)
+		case getchar:
+			c.builtin(c.getchar)
 
 		// windows
 		case AreFileApisANSI:
