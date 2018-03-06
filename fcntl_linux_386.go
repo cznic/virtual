@@ -28,7 +28,7 @@ func (c *cpu) fcntl() {
 	arg := readPtr(ap)
 	r, _, err := syscall.Syscall(syscall.SYS_FCNTL64, uintptr(fildes), uintptr(cmd), arg)
 	if strace {
-		fmt.Fprintf(os.Stderr, "fcntl(%v, %v, %#x) %v %v\t; %s\t; %s\n", fildes, cmdString(cmd), arg, r, err, c.pos())
+		fmt.Fprintf(os.Stderr, "fcntl(%v, %v, %#x) %v %v\t; %s\n", fildes, cmdString(cmd), arg, r, err, c.pos())
 	}
 	if err != 0 {
 		c.setErrno(err)

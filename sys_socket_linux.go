@@ -16,6 +16,7 @@ import (
 	"unsafe"
 
 	sockconst "github.com/cznic/ccir/libc/sys/socket"
+	"golang.org/x/sys/unix"
 )
 
 func init() {
@@ -96,7 +97,7 @@ func (c *cpu) connect() {
 	sp, addrlen := popU32(c.sp)
 	sp, addr := popPtr(sp)
 	fd := readI32(sp)
-	_, _, err := syscall.Syscall(syscall.SYS_CONNECT, uintptr(fd), addr, uintptr(addrlen))
+	_, _, err := syscall.Syscall(unix.SYS_CONNECT, uintptr(fd), addr, uintptr(addrlen))
 	if strace {
 		fmt.Fprintf(os.Stderr, "connext(%#x, %#x, %#x) %v\t; %s\n", fd, addr, addrlen, err, c.pos())
 	}
@@ -114,7 +115,7 @@ func (c *cpu) getpeername() {
 	sp, addrlen := popPtr(c.sp)
 	sp, addr := popPtr(sp)
 	fd := readI32(sp)
-	_, _, err := syscall.Syscall(syscall.SYS_GETPEERNAME, uintptr(fd), addr, addrlen)
+	_, _, err := syscall.Syscall(unix.SYS_GETPEERNAME, uintptr(fd), addr, addrlen)
 	if strace {
 		fmt.Fprintf(os.Stderr, "getpeername(%#x, %#x, %#x) %v\t; %s\n", fd, addr, addrlen, err, c.pos())
 	}
@@ -132,7 +133,7 @@ func (c *cpu) getsockname() {
 	sp, addrlen := popPtr(c.sp)
 	sp, addr := popPtr(sp)
 	fd := readI32(sp)
-	_, _, err := syscall.Syscall(syscall.SYS_GETSOCKNAME, uintptr(fd), addr, addrlen)
+	_, _, err := syscall.Syscall(unix.SYS_GETSOCKNAME, uintptr(fd), addr, addrlen)
 	if strace {
 		fmt.Fprintf(os.Stderr, "getsockname(%#x, %#x, %#x) %v\t; %s\n", fd, addr, addrlen, err, c.pos())
 	}

@@ -33,6 +33,10 @@ edit:
 
 editor: opcode_string.go
 	gofmt -l -s -w *.go
+	GOOS=linux GOARCH=386 go build
+	GOOS=linux GOARCH=amd64 go build
+	#TODO GOOS=windows GOARCH=386 go build
+	#TODO GOOS=windows GOARCH=amd64 go build
 	go test -i
 	go test 2>&1 | tee log
 	go install
