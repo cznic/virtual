@@ -1,8 +1,5 @@
-# virtual
-Package virtual implements a machine that isn't. (Work In Progress)
+`github.com/cznic/virtual` has moved to [`modernc.org/virtual`](https://godoc.org/modernc.org/virtual) ([vcs](https://gitlab.com/cznic/virtual)).
 
-Installation
+Please update your import paths to `modernc.org/virtual`.
 
-    $ go get github.com/cznic/virtual
-
-Documentation: [godoc.org/github.com/cznic/virtual](http://godoc.org/github.com/cznic/virtual)
+This repo is now archived.
